@@ -62,3 +62,14 @@ class CookieJWTAuthentication(BaseAuthentication):
 
     def authenticate_header(self, request: Request) -> str:
         return "Cookie"
+
+
+class OptionalCookieJWTAuthentication(CookieJWTAuthentication):
+    """For public endpoints (login, register, refresh, logout): a stale or revoked access cookie
+    must not block them, so an invalid token counts as signed out instead of an error."""
+
+    def authenticate(self, request: Request) -> tuple[User, Session] | None:
+        try:
+            return super().authenticate(request)
+        except errors.SessionInvalid:
+            return None

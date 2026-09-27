@@ -123,13 +123,25 @@ Always shown with:
 
 | | Transfer (§7.13) | Withdrawal (§7.12) |
 | --- | --- | --- |
-| Before the amount | Recipient step: username entry → lookup → **recipient card** (avatar, username, level). The user must confirm "This is the right person". Self and not-found are inline errors. | Bank account step: pick a registered Sheba account or add one (§12). Masked display: `IR•• •••• •••• •••• •••• ••12 34`, bank name, account holder name. |
-| Amount helper text | Min `transfer.min_coins`, remaining today (of `transfer.daily_max_coins`), available balance | Min `withdraw.min_coins`, remaining today (of `withdraw.daily_max_coins`), **withdrawable now** (see below) |
+| Before the amount | Recipient step: username entry → lookup → **recipient card** (avatar, username, level). The user must confirm "This is the right person". Self and not-found are inline errors. | Bank account step. Each user has **exactly one** Sheba account (§7.12). If none is registered, add it (§12). If one is registered, show its card with a "Change" action; nothing to choose. Masked display: `IR•• •••• •••• •••• •••• ••12 34` plus the bank name derived from the bank code. |
+| Amount helper text | Min `transfer.min_coins`, remaining in the last 24 hours (of `transfer.daily_max_coins`, rolling window, §7.13), available balance | Min `withdraw.min_coins`, remaining in the last 24 hours (of `withdraw.daily_max_coins`, rolling window, §7.12), **withdrawable now** (see below) |
 | Extra rows in the cost block | Fee, recipient receives | Fee, paid to your bank (toman at today's `coin.price_toman`, fixed at request time) |
-| Irreversibility / timing note | «انتقال سکه قابل بازگشت نیست.» / "Transfers can't be undone." | "Our finance team pays withdrawals manually. You'll get an SMS when it's paid. You can cancel while it's pending." Expected time is TBD (open question 1). |
+| Irreversibility / timing note | «انتقال سکه قابل بازگشت نیست.» / "Transfers can't be undone." | «واریز حداکثر تا یک روز کاری پس از درخواست انجام می‌شود. پس از واریز پیامک دریافت می‌کنید. تا پیش از واریز می‌توانید درخواست را لغو کنید.» / "We pay withdrawals within one business day of your request. You'll get an SMS when it's paid. You can cancel while it's pending." (§7.12; business days are Iranian working days.) |
 | Safety note | "Support will never ask you to send coins or share your password." | "Support will never ask for your SMS code." |
 | Step-up check | Password field in the review step (§2.6) | SMS code step after review (§2.6) |
-| Result | Receipt: amount, recipient, time (Jalali), transaction id; "Done" → `/wallet` | "Request submitted" with status Pending → `/wallet/withdrawals/[id]` |
+| Result | Receipt: amount, recipient, time (Jalali), transaction id; "Done" → `/wallet` | "Request submitted" with status Pending and "Expected by {date}" → `/wallet/withdrawals/[id]` |
+
+**Rolling 24-hour limits (transfer and withdrawal)**
+- Limits count everything sent or requested in the **last 24 hours**, not per calendar day (§7.12, §7.13).
+- Wording:
+  - Helper: «باقی‌مانده در ۲۴ ساعت اخیر: ۳٬۰۰۰ از ۵٬۰۰۰ سکه» / "Left in the last 24 hours: 3,000 of 5,000 coins".
+  - Never "today" or "per day".
+- When the amount exceeds what's left, the field error also says when more becomes available: "More becomes available at {time}" (the time the oldest counted item leaves the window; Jalali date plus time in fa). The value comes from the server (open question 2).
+
+**Expected payout date (withdrawal)**
+- "Expected by {date}" = the end of the next Iranian working day after the request. It is computed and returned by the server (it knows the holiday calendar), and never computed by the client (open question 1).
+- Shown on the review step (as "Expected payout: by {date}"), on the submitted screen, on the request detail, and in the requests list.
+- If the date passes while the request is still pending, the detail shows «واریز این درخواست بیش از زمان معمول طول کشیده است. در صورت نیاز با پشتیبانی تماس بگیرید.» / "This is taking longer than usual. Contact support if you need help." This is a neutral statement: no alarm styling, no blame.
 
 **Withdrawable amount (§7.12)**
 - Show "Withdrawable now: X of Y coins" when the two differ, with a one-line reason:
@@ -175,7 +187,7 @@ Confirm only irreversible or costly actions. Do not confirm reversible ones.
 | Cancel matchmaking | No confirmation (nothing is charged before a match starts; §7.3) | |
 | Leave tournament registration | Sheet with the refund amount | Only before start |
 | Cancel a pending withdrawal | Sheet: "Cancel this withdrawal? ۵۰۰ coins go back to your balance." Cancel withdrawal / Keep request. | Only while status is `pending`. If the server says it's already paid, show the paid state instead. |
-| Remove a bank account | Dialog | Blocked (with explanation) while a pending withdrawal uses it |
+| Change the bank account (replaces the only one, §7.12) | Dialog: "Your new Sheba will replace {masked old}. Future withdrawals go to the new account." | Blocked (with explanation, and a link to the pending request) while a withdrawal is pending |
 | Leave the match screen | Sheet: Stay / Leave screen / Resign (ia.md §3.4) | |
 | Close a transfer or withdrawal task flow with input entered | Dialog: "Discard?" | Nothing has been charged at that point, and the dialog says so |
 | Log out / log out other devices | Dialog | |
@@ -190,7 +202,7 @@ Confirm only irreversible or costly actions. Do not confirm reversible ones.
 | Level | Pattern | Example |
 | --- | --- | --- |
 | Field | Inline text under the field. The error icon plus text is never color-only. Focus moves to the first invalid field on submit. | Username taken, wrong code, invalid Sheba |
-| Action | Inline message inside the sheet or step, above the button, with retry if safe | Join failed: tier closed; daily transfer limit reached |
+| Action | Inline message inside the sheet or step, above the button, with retry if safe | Join failed: tier closed; 24-hour transfer limit reached |
 | Screen | Full error state in the content area: illustration, one-line cause, primary "Try again", secondary "Back" | List failed to load |
 | Global | Banner (offline, maintenance, announcement) | Server maintenance |
 
@@ -204,7 +216,7 @@ Confirm only irreversible or costly actions. Do not confirm reversible ones.
   - price or fee changed
   - pool closed
   - tournament full
-  - over daily limit
+  - over the rolling 24-hour limit
   - below minimum
 - **403 on replay:**
   - Show "This replay is only available to the two players of the match."
@@ -227,7 +239,7 @@ Structure: small illustration (decorative, `alt=""`), one-sentence explanation, 
 | `/me/referral` earnings | No earnings yet; commission starts after your friend's first purchase | Copy link |
 | `/wallet` history | No transactions yet | None |
 | `/wallet/withdrawals` | No withdrawal requests | None (Withdraw is already on `/wallet`) |
-| `/wallet/bank-accounts` | No bank account yet. You need one in your own name to withdraw. | Add bank account |
+| `/wallet/bank-accounts` | No bank account yet. Add your Sheba number to withdraw. | Add bank account |
 | Owned themes | Only the default theme | Browse themes |
 | Leaderboard predict scope | Needs at least N predictions to appear (N from `predict.min_count_for_board`) | None |
 
@@ -253,7 +265,7 @@ Structure: small illustration (decorative, `alt=""`), one-sentence explanation, 
 | Opponent's turn | Opponent's turn timer and time bank in their bar | Reactions, menu (resign, leave screen) |
 | Opening roll / forced move / no legal move | The dice themselves, with a text caption ("No legal move", "Forced move") | None needed (1–1.5 s) |
 | Payment verification | Status step list: Returned from bank → Verifying → Coins added | "Check status" button, "Back to shop"; support reference number |
-| Withdrawal processing | Status timeline on `/wallet/withdrawals/[id]`: Requested (date/time) → Pending payment by finance → Paid (bank reference) / Rejected (reason) / Cancelled. Expected processing time, if the PO provides one (open question 1). | "Cancel request" while pending; support contact |
+| Withdrawal processing | Status timeline on `/wallet/withdrawals/[id]`: Requested (date/time) → Pending payment by finance ("Expected by {date}", within one business day, §7.12) → Paid (bank reference) / Rejected (reason) / Cancelled | "Cancel request" while pending; support contact |
 | Reconnect (self) | Countdown to forfeit (§6.4) | "Retry now", leave (warns about forfeit) |
 | Opponent disconnected | Opponent's grace countdown | Wait, reactions, resign |
 | Tournament waiting for next round | Round status, which matches are still playing | Watch a running tournament match, leave screen |
@@ -421,13 +433,16 @@ Mixed-direction strings (usernames in Latin inside fa text, numbers inside sente
   - Min, max, and remaining limit shown as helper text before typing.
   - Live conversion line (coins ↔ toman).
   - Errors for below minimum, above limit, and above balance/withdrawable.
-- **Sheba:**
-  - Fixed `IR` prefix plus 24 digits, `inputmode="numeric"`, grouped display, paste accepted with or without `IR` and spaces.
-  - Client-side format and checksum validation.
-  - The bank name is shown from the bank code once 24 digits are entered.
-  - Account holder name field.
-  - A required statement: "The account must be in your own name."
-  - Verification method TBD (open question 4).
+- **Sheba (one per user, §7.12):**
+  - Fixed `IR` prefix plus 24 digits, `inputmode="numeric"`, grouped display.
+  - Paste is accepted with or without `IR`, with spaces, and with Persian digits.
+  - **Validation** (client-side for instant feedback, then server-side), each failure with its own message:
+    1. Length: exactly 24 digits after `IR`. «شماره شبا باید ۲۴ رقم بعد از IR داشته باشد.» / "A Sheba number has 24 digits after IR."
+    2. Checksum (ISO 13616 mod-97). «این شماره شبا معتبر نیست. آن را دوباره از کارت یا اپ بانک خود کپی کنید.» / "This Sheba number isn't valid. Copy it again from your bank card or banking app."
+    3. Known bank code. «بانک این شماره شبا شناخته نشد.» / "We don't recognize the bank for this Sheba number."
+  - Once valid, the bank name is shown from the bank code, as confirmation the user can check at a glance.
+  - Helper text: «شبای حساب بانکی خودتان را وارد کنید.» / "Enter the Sheba of your own bank account." The declared Sheba is accepted as the user's own; there is no ownership inquiry, no holder-name field, and no "verifying" state.
+  - Changing it replaces the old account after a confirmation (§3). It is blocked while a withdrawal is pending.
 - **Submit button:** in a sticky footer above the keyboard.
 - **On error:** focus the first invalid field and announce the error.
 
@@ -490,10 +505,16 @@ Mixed-direction strings (usernames in Latin inside fa text, numbers inside sente
 
 ## 16. Account status
 
-`/account/status`:
-- **Content:** a plain statement (suspended until <date> or banned), the reason category if the API provides one, the balance (read-only), and a support contact.
-- **Suspended users:** may view `/wallet`, `/wallet/withdrawals`, `/me/matches`, `/replay/[id]`, and `/help`, if the backend allows (see open questions).
-- **In-flight matches and withdrawals at suspension time:** backend decision (see open questions).
+Decided in CLAUDE.md §12.1. Screens are specified in auth.md (AU-13, AU-14).
+
+- **Suspended users can sign in.**
+  - **They can:** watch live matches; see their own match history, replays, and predictions; request withdrawals (and view the wallet); edit avatar, settings, and sessions; log out.
+  - **They cannot:** join queues or tables, start matches (including bot matches), place predictions, enter tournaments, buy, or transfer. Username change and shop items are treated as blocked too (auth.md open question 13).
+  - `/account/status` shows once per sign-in: the end date or "until further notice", the reason category if provided, the two lists, and support.
+  - After that, a non-dismissible banner on every non-immersive screen.
+  - **Blocked controls** stay visible, disabled, with `account.suspended.actionBlocked` and a "Details" link. They are never hidden, and never replaced with a shop prompt.
+- **Banned users cannot sign in.** The login form shows the banned panel (no session, no `/account/status` route). Pending withdrawals are held for admin decision, and the panel says so.
+- **In-flight matches at suspension time:** backend decision (open question 7).
 
 ---
 
@@ -521,8 +542,7 @@ Mixed-direction strings (usernames in Latin inside fa text, numbers inside sente
 | Data | Who sees it | How |
 | --- | --- | --- |
 | Phone number | Only the owner, in account settings and masked in OTP steps (`0912•••••34`) | Never to other users, not in transfers, receipts, profiles, or live views (§2 rule 11) |
-| Sheba | Only the owner | Masked in lists and review (last 4 digits visible); full value only in the add form while typing |
-| Account holder name | Only the owner | Shown on the bank account card |
+| Sheba | Only the owner | Masked in lists and review (last 4 digits visible), with the bank name; full value only in the add/change form while typing |
 | Transfer counterpart | Both parties | Username and avatar only |
 | Bank reference of a paid withdrawal | Only the owner | Shown in withdrawal detail, copyable |
 
@@ -530,13 +550,12 @@ Mixed-direction strings (usernames in Latin inside fa text, numbers inside sente
 
 ## Open questions
 
-1. **Withdrawal processing time.** What processing time should the app promise (e.g., "within 2 working days")? Without one, the app shows only the status and the SMS promise.
+1. **Expected payout date and rolling-limit times from the API.** The payout promise is decided (within one business day, §7.12), but the client can't know Iranian holidays. Please return `expected_by` on each withdrawal request (and a preview value before submitting). For the rolling 24-hour limits, return `remaining` and `next_available_at` for transfers and withdrawals (e.g., in `GET wallet`).
 2. **Withdrawable amount.** How is it computed when signup-bonus coins are mixed with won or bought coins (bonus spent first, or held last)? The UI will display a server-provided value; please make sure the API returns `withdrawable`.
 3. **Transfer password failures.** Does a wrong transfer password count toward the login lock (5 failures → 15 min), or does it have its own limit?
-4. **Sheba ownership check.** How is "in your own name" verified: a bank Sheba-inquiry service, manual check by finance, or national ID collection? This decides whether the add-account flow has a "verifying" state and whether a national ID field is needed.
 5. **Custom purchase amounts.** §7.11 floors the coins, so a non-multiple amount would lose the user money. Recommended: the server rejects, or charges only whole-coin amounts. This is for the main agent.
 6. **Toman equivalent on spends.** Should every spend confirmation show the toman equivalent under the coin cost? Recommended for transparency now that coins can be withdrawn. Please confirm.
-7. **Suspended accounts.** Which read-only areas can a suspended user access? What happens to a match in progress, open predictions, and pending withdrawals at suspension time?
+7. **Suspension mid-activity.** Access rules are decided (§12.1). Still open: what happens to a match in progress and to predictions already placed when an account is suspended (play on, void, or forfeit)?
 8. **Reduced motion and the dice.** Should reduced motion also replace the physics throw with the lite-mode fade? Recommended: yes.
 9. **Local bot offline (§11.5).** This needs a client-side engine and bot, but the bot is a server-side Python service (§9). Is an offline local bot in scope for Phase 1? If not, `/offline` offers only "Try again".
 10. **Push before forfeit.** Can the server send a push notification when a player disconnects mid-match ("Return within 90 s")? Without it, a player whose app was killed may forfeit without seeing the in-app warning.

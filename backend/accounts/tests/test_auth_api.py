@@ -4,6 +4,7 @@ import pytest
 from django.conf import settings
 from rest_framework.test import APIClient
 
+from accounts import ratelimit
 from accounts.models import Otp, Session, User
 from accounts.signals import user_registered
 
@@ -101,6 +102,33 @@ class TestRegister:
         )
         assert res.json()["code"] == "PASSWORD_WEAK"
 
+    def test_lang_at_signup(self, client, fixed_code):
+        assert register(client, lang="en").json()["lang"] == "en"
+
+    def test_expired_verification_token(self, client, fixed_code):
+        token = verification(client)
+        body = {
+            "verification_token": token,
+            "username": "Reza_90",
+            "password": "S3cure-pass!",
+            "age_confirmed": True,
+        }
+        with mock.patch("accounts.otp.VERIFICATION_MAX_AGE_SECONDS", -1):
+            res = client.post("/api/v1/auth/register", body, format="json")
+        assert res.json()["code"] == "AUTH_VERIFICATION_INVALID"
+        assert res.json()["details"] == {"reason": "expired"}
+
+    def test_username_availability(self, client, fixed_code):
+        register(client, username="Reza_90")
+
+        def check(username):
+            return client.get("/api/v1/auth/username-available", {"username": username}).json()
+
+        assert check("reza_90") == {"available": False, "reason": "taken"}
+        assert check("Sara_1") == {"available": True, "reason": None}
+        assert check("admin") == {"available": False, "reason": "reserved"}
+        assert check("x") == {"available": False, "reason": "format"}
+
     def test_age_must_be_confirmed(self, client, fixed_code):
         assert register(client, age_confirmed=False).json()["code"] == "AGE_NOT_CONFIRMED"
 
@@ -163,18 +191,28 @@ class TestOtp:
         )
         assert res.json()["code"] == "AUTH_OTP_EXPIRED"
 
+    def test_resend_cooldown(self, client):
+        res = client.post("/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json")
+        assert res.json() == {"expires_in": 120, "resend_after": 60}
+        res = client.post("/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json")
+        assert res.status_code == 429
+        assert res.json()["details"]["reason"] == "cooldown"
+        assert 0 < res.json()["details"]["retry_after"] <= 60
+
     def test_rate_limit_per_phone(self, client):
         for _ in range(3):
+            ratelimit.reset(f"otp:resend:{PHONE}:register")
             assert (
                 client.post(
                     "/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json"
                 ).status_code
                 == 202
             )
+        ratelimit.reset(f"otp:resend:{PHONE}:register")
         res = client.post("/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json")
         assert res.status_code == 429
         assert res.json()["code"] == "AUTH_OTP_RATE_LIMITED"
-        assert res.json()["details"]["retry_after"] > 0
+        assert 0 < res.json()["details"]["retry_after"] <= 600
 
     def test_rate_limit_per_ip(self, client):
         for i in range(3):
@@ -211,6 +249,16 @@ class TestLoginAndSessions:
         c2.cookies[settings.ACCESS_COOKIE] = res.cookies[settings.ACCESS_COOKIE].value
         assert c2.get("/api/v1/me").json()["code"] == "AUTH_SESSION_INVALID"
 
+    def test_stale_access_cookie_does_not_block_public_endpoints(self, client, fixed_code):
+        register(client)
+        c2 = APIClient()
+        c2.cookies[settings.ACCESS_COOKIE] = "expired-or-garbage"
+        res = c2.post("/api/v1/auth/login", {"phone": PHONE, "password": "S3cure-pass!"}, format="json")
+        assert res.status_code == 200
+        c2.cookies[settings.ACCESS_COOKIE] = "expired-or-garbage"
+        assert c2.post("/api/v1/auth/refresh").status_code == 200
+        assert c2.get("/api/v1/me").status_code == 200
+
     def test_wrong_password_never_says_which_part(self, client, fixed_code):
         register(client)
         wrong_pass = APIClient().post(
@@ -235,6 +283,7 @@ class TestLoginAndSessions:
             "/api/v1/auth/login", {"phone": PHONE, "password": "S3cure-pass!"}, format="json"
         )
         assert res.json()["code"] == "AUTH_LOCKED"
+        assert 0 < res.json()["details"]["retry_after"] <= 900
 
     def test_banned_user_cannot_log_in(self, client, fixed_code):
         register(client)
@@ -243,7 +292,13 @@ class TestLoginAndSessions:
             "/api/v1/auth/login", {"phone": PHONE, "password": "S3cure-pass!"}, format="json"
         )
         assert res.json()["code"] == "AUTH_BANNED"
+        # a wrong password never reveals the ban
+        res = APIClient().post(
+            "/api/v1/auth/login", {"phone": PHONE, "password": "wrong-pass"}, format="json"
+        )
+        assert res.json()["code"] == "AUTH_INVALID_CREDENTIALS"
         assert client.get("/api/v1/me").status_code == 401
+        assert client.post("/api/v1/auth/refresh").json()["code"] == "AUTH_BANNED"
 
     def test_refresh_rotates_and_detects_reuse(self, client, fixed_code):
         register(client)

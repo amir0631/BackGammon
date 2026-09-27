@@ -16,12 +16,12 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 
 | Spec file | Covers | Step |
 | --- | --- | --- |
-| `auth.md` | Welcome, signup (phone, 18+, terms, OTP, account), login, password reset | 2 |
-| `onboarding.md` | Avatar step, signup-bonus notice, first-time hints framework | 2–3 |
-| `profile.md` | Account hub, edit profile, username change, sessions, public profile | 2 (username change cost UI after step 3) |
+| `auth.md` | Welcome, signup (phone, 18+, terms, OTP, account, avatar step), login, password reset, logout, account suspended screen and banner, banned panel | 2 |
+| `onboarding.md` | Signup-bonus notice, first-time hints framework (the avatar step moved to `auth.md`) | 3 |
+| `profile.md` | Account hub, edit profile, username change, sessions, public profile, and the step-2 base of `/settings` (language, lite graphics, reduced animations, sound, vibration) | 2 (username change purchase active from step 3) |
 | `wallet.md` | Balance, on-hold amount, transaction history (all §7.2 types), pending payments | 3 |
 | `transfer.md` | Transfer task flow, receipt, received-transfer notice | 3 |
-| `withdrawal.md` | Bank accounts, withdrawal task flow, SMS code, requests list and detail, cancel | 3 |
+| `withdrawal.md` | Bank account (one per user: add, change), withdrawal task flow, SMS code, requests list and detail, cancel | 3 |
 | `match.md` | Game screen (player), all in-match sheets, dialogs and overlays, result sheet, finished-match summary, loading, unsupported | 5–6 |
 | `lobby.md` | Play tab, table setup, join confirmation, bot setup, insufficient-coins sheet, resume banner | 7–8 |
 | `matchmaking.md` | Search overlay, match found | 8 |
@@ -34,9 +34,10 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 | `referral.md` | Referral link, earnings | 11 |
 | `predictions.md` | Prediction sheet and pool panel, my predictions | 12 |
 | `tournaments.md` | List, detail, bracket, registration, round waiting | 13 |
-| `settings.md` | Language (fa / en), sound, haptics, lite mode, reduced animations, notifications, install app | 2 (base), 6 (graphics), 17 (push, install) |
+| `settings.md` | Additions to `/settings` after step 2: notifications and install app (the base lives in `profile.md`) | 17 |
 | `help-legal.md` | Help topics, terms, privacy | 2 |
-| `system.md` | Offline, unsupported device, account status, not found, update available, install banner and iOS guide, push permission sheet, global banners | 1, 6, 17 |
+| `system.md` | Offline, unsupported device, not found, update available, install banner and iOS guide, push permission sheet, global banners (account status is in `auth.md`) | 1, 6, 17 |
+| `admin-settings.md` | Admin panel (`admin.`): login with TOTP, shell, Settings with every registry key, edit/reset with confirmation and audit, SMS status card | 1–2 |
 
 Recommended writing order: `auth` → `wallet` → `transfer` → `withdrawal` → `coins-purchase` (support state) → `match` → `lobby` → `matchmaking`, then the rest in step order. The wallet specs move up because step 3 now ships them.
 
@@ -54,13 +55,16 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | AU-02 | Signup: phone, 18+, terms | `/signup` | S | auth | invalid phone, already registered, rate-limited, offline |
 | AU-03 | Signup: SMS code | `/signup/verify` | S | auth | code expired, wrong code, resend cooldown, rate-limited |
 | AU-04 | Signup: password, username, referral | `/signup/account` | S | auth | username taken/profane, invalid ref code, weak password |
-| AU-05 | Avatar picker | `/signup/avatar` | S | onboarding | loading avatars, skip |
-| AU-06 | Login | `/login` | S | auth | wrong credentials, locked 15 min (countdown), suspended/banned → SY-03 |
+| AU-05 | Avatar picker | `/signup/avatar` | S | auth | loading avatars, none selected, skip, save failed |
+| AU-06 | Login | `/login` | S | auth | wrong credentials, locked 15 min (countdown), suspended → AU-13, banned → AU-14 panel |
 | AU-07 | Reset: phone | `/password/reset` | S | auth | unknown phone (no account enumeration beyond the login flow) |
 | AU-08 | Reset: SMS code | `/password/reset/verify` | S | auth | as AU-03 |
-| AU-09 | Reset: new password | `/password/reset/new` | S | auth | success → login or auto-login (open question) |
+| AU-09 | Reset: new password | `/password/reset/new` | S | auth | weak password, verification expired; success → signed in here, all other sessions revoked (§12.1) |
 | AU-10 | Language picker | Sheet from AU-01 / settings | Sh | auth | fa, en |
 | AU-11 | Signup-bonus notice | Card on PL-01 (one time) | O | onboarding | granted, held for review, not granted (no notice) |
+| AU-12 | Log out | Dialog from AC-01 | D | auth | in-flight, failed (stays open), match-in-progress note |
+| AU-13 | Account suspended + global suspension banner | `/account/status` (= SY-03) + banner | S / O | auth | until date, indefinite, reason category, can / cannot lists |
+| AU-14 | Banned panel | On AU-06 / AU-09 | O | auth | login, reset, session ended by ban |
 
 ### 2.2 Play (Tab 1)
 
@@ -145,18 +149,18 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | WA-02 | Transaction detail | Sheet | Sh | wallet | per type (§7.2, including `admin_topup`, `signup_bonus`, `transfer` in/out, `withdrawal_hold` / `_payout` / `_refund`) |
 | WA-03 | Received-coins notice | Snackbar | O | wallet | top-up, transfer received, refund |
 | TR-01 | Transfer step 1: recipient | `/wallet/transfer` | T | transfer | lookup loading, found (card), not found, self, prefilled `to` |
-| TR-02 | Transfer step 2: amount | `/wallet/transfer` | T | transfer | below min, above daily remaining, above balance, fee preview |
+| TR-02 | Transfer step 2: amount | `/wallet/transfer` | T | transfer | below min, above the rolling 24 h remaining (with next-available time), above balance, fee preview |
 | TR-03 | Transfer step 3: review + password | `/wallet/transfer` | T | transfer | in-flight, wrong password, locked (countdown), refused (linked accounts), recipient unavailable, fee changed |
 | TR-04 | Transfer receipt | `/wallet/transfer` (final state) | T | transfer | — |
 | TR-05 | Discard transfer? | Dialog | D | transfer | — |
 | WD-01 | Withdraw eligibility / intro | `/wallet/withdraw` | T | withdrawal | eligible, nothing withdrawable (bonus-only, with reason), antifraud-blocked, first-time hint |
-| WD-02 | Withdraw step 1: bank account | `/wallet/withdraw` | T | withdrawal | none registered → WD-08, one, several (none pre-selected) |
-| WD-03 | Withdraw step 2: amount | `/wallet/withdraw` | T | withdrawal | below min, above daily remaining, above withdrawable, toman preview |
-| WD-04 | Withdraw step 3: review | `/wallet/withdraw` | T | withdrawal | price or fee changed |
+| WD-02 | Withdraw step 1: bank account | `/wallet/withdraw` | T | withdrawal | none registered → add (WD-08); registered → the single account card with "Change" (§7.12) |
+| WD-03 | Withdraw step 2: amount | `/wallet/withdraw` | T | withdrawal | below min, above the rolling 24 h remaining (with next-available time), above withdrawable, toman preview |
+| WD-04 | Withdraw step 3: review | `/wallet/withdraw` | T | withdrawal | price or fee changed; expected payout date (one business day) |
 | WD-05 | Withdraw step 4: SMS code | `/wallet/withdraw` | T | withdrawal | expired, wrong, resend cooldown, rate-limited, in-flight |
 | WD-06 | Withdrawal requests | `/wallet/withdrawals` | S | withdrawal | empty, list with status chips (icon + text) |
-| WD-07 | Withdrawal detail | `/wallet/withdrawals/[id]` | S | withdrawal | pending (cancel), paid (bank ref), rejected (reason), cancelled, "already paid" race |
-| WD-08 | Bank accounts / add account | `/wallet/bank-accounts` | S | withdrawal | empty, invalid Sheba, name required, verification pending (open question), remove blocked while pending |
+| WD-07 | Withdrawal detail | `/wallet/withdrawals/[id]` | S | withdrawal | pending (cancel, expected by date), pending past the expected date (neutral note), paid (bank ref), rejected (reason), cancelled, "already paid" race |
+| WD-08 | Bank account: add or change | `/wallet/bank-accounts` | S | withdrawal | empty; invalid length / checksum / unknown bank code; valid (bank name shown); change confirmation (replaces the old one); change blocked while a withdrawal is pending |
 | WD-09 | Cancel withdrawal | Sheet | Sh | withdrawal | in-flight |
 | WD-10 | Discard withdrawal? | Dialog | D | withdrawal | — |
 
@@ -173,7 +177,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | RP-01 | Replay viewer | `/replay/[id]` | I | replay | loading, playing, paused, 403, purged, bot match |
 | RP-02 | Verify dice | Sheet / side panel on RP-01 | Sh | replay | running, verified, mismatch |
 | RF-01 | Referral | `/me/referral` | S | referral | inactive until the referee's first purchase, earnings, empty |
-| ST-01 | Settings | `/settings` | S | settings | lite mode, reduced animations, sound, haptics, language (fa / en), notifications, install |
+| ST-01 | Settings | `/settings` | S | profile (base), settings (step 17 items) | language (fa / en), lite graphics, reduced animations (OS override), sound, vibration (unsupported), account items; later notifications, install |
 | HL-01 | Help index and topics | `/help`, `/help/[topic]` | S | help-legal | topics: coins and prices, fees, signup bonus, transfers, withdrawals, predictions, tournaments, replays and fair dice, variants, lite mode, account |
 | HL-02 | Terms / privacy | `/terms`, `/privacy` | S | help-legal | placeholder content (§18) |
 
@@ -183,12 +187,28 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | --- | --- | --- | --- | --- | --- |
 | SY-01 | Offline | `/offline` | S | system | retry, local bot (open question) |
 | SY-02 | Offline banner | Global | O | system | — |
-| SY-03 | Account status | `/account/status` | S | system | suspended (until date), banned |
+| SY-03 | Account status | `/account/status` | S | auth (AU-13) | suspended only; banned users have no session (AU-14) |
 | SY-04 | Not found | 404 | S | system | — |
 | SY-05 | Install banner (Android) / iOS guide | Banner + sheet | O / Sh | system | frequency rules (§11.5) |
 | SY-06 | New version available | Snackbar | O | system | never during a match or a money flow |
 | SY-07 | Announcement banner (admin content) | Global | O | system | dismissible |
 | SY-08 | Session expired | Dialog → `/login?next=` | D | system | — |
+
+### 2.10 Admin panel (`admin.`, desktop-first)
+
+Reviewed at 1440 × 900, 1280 × 800, 1024 × 768, 768 × 1024, and 390 × 844, in fa then en (admin-settings.md §6). Other §13 sections are added in step 15.
+
+| ID | Screen | Route / host | Type | Spec | Key states |
+| --- | --- | --- | --- | --- | --- |
+| AD-01 | Admin login (username, password, 6-digit TOTP) | `admin.` `/login` | S | admin-settings | invalid (generic), locked (countdown), offline |
+| AD-02 | Admin shell (header, nav, language, role) | `admin.` all routes | S | admin-settings | read-only banner for finance/support |
+| AD-03 | Settings (all registry keys, grouped by prefix) | `admin.` `/settings` | S | admin-settings | loading, search, only changed, empty search, error, read-only |
+| AD-04 | Edit setting (edit → confirm with reason) | Dialog | D | admin-settings | invalid, unchanged, consistency warnings, ack required, in flight, conflict, failed |
+| AD-05 | Reset to default | Dialog | D | admin-settings | ack, reason, in flight |
+| AD-06 | SMS status card | Card in the SMS group | O | admin-settings | test mode, not configured, unreachable, OTP pattern not active, low credit, OK |
+| AD-07 | Setting history | Drawer | Sh | admin-settings | empty, partial (latest 200), error |
+| AD-08 | Admin session expired | Dialog | D | admin-settings | — |
+| AD-09 | Access denied (IP or host) | `admin.` any route | S | admin-settings | ip, host |
 
 ---
 
@@ -223,6 +243,4 @@ The daily bonus has been removed (§7.10); no screen exists for it.
 
 ## Open questions
 
-1. **Password reset outcome.** After a reset (AU-09), does the user get signed in automatically, or return to login? Are other sessions revoked?
-2. **Achievements.** The data model has `achievement` / `user_achievement` and a `achievement_reward` transaction type, but there are no endpoints or UI in §1. Should profiles show achievements in Phase 1?
-3. **Bank accounts per user (WD-08).** How many bank accounts may a user register? Can they remove one? Is there a verification state? See patterns.md open question 4.
+1. **Achievements.** The data model has `achievement` / `user_achievement` and a `achievement_reward` transaction type, but there are no endpoints or UI in §1. Should profiles show achievements in Phase 1?

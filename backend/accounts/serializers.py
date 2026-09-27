@@ -27,6 +27,7 @@ class RegisterSerializer(serializers.Serializer[Any]):
     password = serializers.CharField(max_length=128, trim_whitespace=False)
     age_confirmed = serializers.BooleanField()
     referrer = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    lang = serializers.ChoiceField(choices=User.Lang.choices, required=False)
 
 
 class LoginSerializer(serializers.Serializer[Any]):

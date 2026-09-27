@@ -49,7 +49,7 @@ Applies to: `m.` in Phase 1. Every route here must also exist in `apps/desktop` 
 │   │   ├── /wallet/withdraw                 withdrawal request (amount → review → SMS code)
 │   │   ├── /wallet/withdrawals              withdrawal requests list
 │   │   ├── /wallet/withdrawals/[id]         request detail, status, cancel while pending
-│   │   └── /wallet/bank-accounts            registered Sheba accounts; add account
+│   │   └── /wallet/bank-accounts            the registered Sheba account (one per user); add or change
 │   ├── /me/matches              match history → /match/[id] (summary) → /replay/[id]
 │   ├── /me/predictions
 │   ├── /me/referral
@@ -67,7 +67,7 @@ Applies to: `m.` in Phase 1. Every route here must also exist in `apps/desktop` 
 └── System (no nav)
     ├── /offline                 connection lost; local bot (see open questions)
     ├── /unsupported             no WebGL2
-    ├── /account/status          suspended or banned
+    ├── /account/status          suspended (banned users can't sign in; see auth.md AU-14)
     └── not found (Next.js 404)
 ```
 
@@ -84,7 +84,7 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/signup` | Phone, 18+, terms | Guest only | None | `auth.md` |
 | `/signup/verify` | SMS code | Guest only | None | `auth.md` |
 | `/signup/account` | Password, username, referral code | Guest only | None | `auth.md` |
-| `/signup/avatar` | Avatar picker | Signed in | None | `onboarding.md` |
+| `/signup/avatar` | Avatar picker | Signed in | None | `auth.md` |
 | `/password/reset` | Phone | Guest only | None | `auth.md` |
 | `/password/reset/verify` | SMS code | Guest only | None | `auth.md` |
 | `/password/reset/new` | New password | Guest only | None | `auth.md` |
@@ -105,7 +105,7 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/wallet/withdraw` | Withdraw: bank account → amount → review → SMS code → submitted | Signed in | None (task flow) | `withdrawal.md` |
 | `/wallet/withdrawals` | Withdrawal requests list | Signed in | Tab 5 child | `withdrawal.md` |
 | `/wallet/withdrawals/[id]` | Request detail; cancel while pending | Signed in | Tab 5 child | `withdrawal.md` |
-| `/wallet/bank-accounts` | Registered Sheba accounts; add | Signed in | Tab 5 child | `withdrawal.md` |
+| `/wallet/bank-accounts` | The registered Sheba account (one per user, §7.12); add or change (change blocked while a withdrawal is pending) | Signed in | Tab 5 child | `withdrawal.md` |
 | `/me` | Account hub | Signed in | Tab 5 | `profile.md` |
 | `/me/edit` | Edit avatar and username | Signed in | Tab 5 child | `profile.md` |
 | `/me/matches` | Match history | Signed in | Tab 5 child | `history.md` |
@@ -113,12 +113,12 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/me/referral` | Referral link and earnings | Signed in | Tab 5 child | `referral.md` |
 | `/me/sessions` | Signed-in devices | Signed in | Tab 5 child | `profile.md` |
 | `/profile/[username]` | Public profile | Signed in | Child of the origin tab | `profile.md` |
-| `/settings` | Settings | Signed in | Tab 5 child | `settings.md` |
+| `/settings` | Settings | Signed in | Tab 5 child | `profile.md` (base), `settings.md` (step 17 items) |
 | `/help`, `/help/[topic]` | Help | Public | Tab 5 child (signed in) | `help-legal.md` |
 | `/terms`, `/privacy` | Legal | Public | None or Tab 5 child | `help-legal.md` |
 | `/offline` | Connection lost | Public | None | `system.md` |
 | `/unsupported` | Device not supported | Public | None | `system.md` |
-| `/account/status` | Suspended or banned | Signed in | None | `system.md` |
+| `/account/status` | Account suspended: what still works, what doesn't, support | Signed in | None | `auth.md` (AU-13) |
 
 **Reserved route. Do not build until the product owner decides (see Open questions):**
 - `/play/invite/[code]`
@@ -263,7 +263,8 @@ Everything else lives in sheets.
 | Condition at app open | Destination |
 | --- | --- |
 | Not signed in | `/` (welcome) or the requested public route |
-| Signed in, account suspended or banned | `/account/status` (all other signed-in routes redirect here, except the read-only list in patterns.md §16) |
+| Signed in, account suspended | `/account/status` once per sign-in, then the requested route with a non-dismissible suspension banner. Allowed and blocked actions per §12.1 (patterns.md §16); blocked controls are disabled with a reason, not redirected. |
+| Account banned | No session: login shows the banned panel (auth.md AU-14); an existing session ends on its next request |
 | Signed in, a match in progress where the user is a player | `/match/[id]` directly, with the reconnect state visible |
 | Signed in, signup finished but no avatar chosen | `/play` (the avatar step is skippable; a default avatar is assigned) |
 | Signed in | Requested route, or `/play` |
@@ -276,4 +277,3 @@ Everything else lives in sheets.
 
 1. **Private invite tables.** §7.5 mentions "private invite" matches, but no endpoint or flow exists. Should `/play/invite/[code]` be designed?
 2. **Spectating on the same URL as playing.** `/match/[id]` resolves the role on the server (player vs spectator). Please confirm that the backend can return the viewer's role on `GET matches/{id}`.
-3. **Bank account endpoints.** §10.2 has withdrawal endpoints but none for bank accounts. `/wallet/bank-accounts` needs list, add, and remove, plus how many accounts are allowed. This is for the main agent.

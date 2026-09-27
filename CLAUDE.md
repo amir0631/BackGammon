@@ -517,7 +517,7 @@ Rules:
 - User session cookies are scoped to `.xxxx.ir` and shared by `app.` and `m.`. Admin panel on `admin.xxxx.ir` uses its own host-only cookies with different names; user tokens are never accepted by admin endpoints and vice versa.
 - Admin panel: TOTP 2FA, IP allowlist, roles `support`, `finance`, `superadmin`.
 - Security headers on every subdomain: HSTS (includeSubDomains), CSP without third-party origins, `X-Frame-Options: DENY`.
-- Account status. `suspended`: can sign in, view live matches and their own predictions and history, and request withdrawals; cannot join queues or tables, start matches, place predictions, enter tournaments, buy, or transfer. `banned`: cannot sign in; pending withdrawals are held for admin decision.
+- Account status. `suspended`: can sign in, view live matches and their own predictions and history, and request withdrawals; cannot join queues or tables, start matches, place predictions, enter tournaments, transfer, or spend coins in any way (including shop items and username changes). A match already in progress when the suspension starts is played to the end, and open predictions settle normally. `banned`: cannot sign in; pending withdrawals are held for admin decision.
 - Password reset signs the user in on the current device and revokes every other session.
 - Username filter for profanity in fa and en. Username 3–20 chars; change costs coins, max once per 30 days.
 

@@ -16,6 +16,7 @@ import type {
   RegisterRequest,
   SessionInfo,
   SmsStatus,
+  UsernameAvailability,
 } from "@bg/protocol";
 
 export const API_PREFIX = "/api/v1";
@@ -155,6 +156,8 @@ export const api = {
     resetPassword: (verification_token: string, new_password: string) =>
       apiRequest<Me>("/auth/password/reset", { method: "POST", body: { verification_token, new_password } }),
     logout: () => apiRequest<void>("/auth/logout", { method: "POST" }),
+    usernameAvailable: (username: string, o?: Opts) =>
+      apiRequest<UsernameAvailability>(`/auth/username-available?username=${encodeURIComponent(username)}`, o),
   },
 
   me: {
@@ -178,15 +181,20 @@ export const api = {
     logout: () => apiRequest<void>("/admin/auth/logout", { method: "POST" }),
     me: (o?: Opts) => apiRequest<AdminMe>("/admin/me", o),
     settings: (o?: Opts) => apiRequest<Paginated<AdminSetting>>("/admin/settings", o),
-    updateSetting: (key: string, value: unknown, reason = "") =>
+    /** `expected` is the value the admin saw; the server answers 409 SETTING_CONFLICT if it changed. */
+    updateSetting: (key: string, value: unknown, reason: string, expected?: unknown) =>
       apiRequest<AdminSetting>(`/admin/settings/${encodeURIComponent(key)}`, {
         method: "PATCH",
-        body: { value, reason },
+        body: expected === undefined ? { value, reason } : { value, reason, expected },
       }),
-    resetSetting: (key: string) =>
-      apiRequest<AdminSetting>(`/admin/settings/${encodeURIComponent(key)}`, { method: "DELETE" }),
+    resetSetting: (key: string, reason: string, expected?: unknown) =>
+      apiRequest<AdminSetting>(`/admin/settings/${encodeURIComponent(key)}`, {
+        method: "DELETE",
+        body: expected === undefined ? { reason } : { reason, expected },
+      }),
     smsStatus: (refresh = false, o?: Opts) =>
       apiRequest<SmsStatus>(`/admin/sms/status${refresh ? "?refresh=1" : ""}`, o),
-    audit: (o?: Opts) => apiRequest<Paginated<AdminAuditEntry>>("/admin/audit", o),
+    audit: (filter: { target_type?: string; target_id?: string } = {}, o?: Opts) =>
+      apiRequest<Paginated<AdminAuditEntry>>(`/admin/audit?${new URLSearchParams(filter).toString()}`, o),
   },
 };

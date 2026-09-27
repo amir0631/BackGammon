@@ -80,8 +80,11 @@ def rotate(refresh_token: str, request: HttpRequest) -> tuple[Session, str]:
         .filter(id=sid, revoked_at__isnull=True, expires_at__gt=timezone.now())
         .first()
     )
-    if session is None or not session.user.is_active:
+    if session is None:
         raise errors.SessionInvalid()
+    if not session.user.is_active:
+        revoke(session)
+        raise errors.Banned()
     if not secret or not hmac.compare_digest(session.refresh_hash, _hash(secret)):
         revoke(session)  # reuse of a rotated token: treat as theft
         raise errors.SessionInvalid()

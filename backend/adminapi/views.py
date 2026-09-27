@@ -58,10 +58,9 @@ class LoginView(AdminView):
         s = LoginSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         username = s.validated_data["username"].strip().lower()
-        lock_key = f"admin:login:lock:{username}"
-        lock_seconds = registry.get("auth.login_lock_seconds")
-        if cache.get(lock_key):
-            raise AdminLocked(details={"retry_after": lock_seconds})
+        key = f"admin-login:{username}"
+        if remaining := ratelimit.locked_for(key):
+            raise AdminLocked(details={"retry_after": remaining})
 
         admin = AdminUser.objects.filter(username=username, is_active=True).first()
         ok = (
@@ -70,15 +69,14 @@ class LoginView(AdminView):
             and totp.verify(totp.decrypt(admin.totp_secret_encrypted), s.validated_data["totp"])
         )
         if not ok or admin is None:
-            allowed, _ = ratelimit.hit(
-                f"admin:login:fail:{username}", registry.get("auth.login_max_failures") - 1, lock_seconds
+            lock = ratelimit.record_failure(
+                key, registry.get("admin.login_max_failures"), registry.get("admin.login_lock_seconds")
             )
-            if not allowed:
-                cache.set(lock_key, 1, timeout=lock_seconds)
-                raise AdminLocked(details={"retry_after": lock_seconds})
+            if lock:
+                raise AdminLocked(details={"retry_after": lock})
             raise AdminInvalidCredentials()
 
-        cache.delete(f"rl:admin:login:fail:{username}")
+        ratelimit.clear_failures(key)
         admin.last_login_at = timezone.now()
         admin.save(update_fields=["last_login_at"])
         response = Response(admin_payload(admin))
@@ -124,6 +122,7 @@ def setting_payload(key: str) -> dict[str, Any]:
         "max": defn.max,
         "choices": list(defn.choices) if defn.choices else None,
         "description": defn.description,
+        "unit": registry.unit(key),
     }
 
 
@@ -132,9 +131,27 @@ class SettingsView(AdminView):
         return Response({"results": [setting_payload(k) for k in registry.REGISTRY], "next": None})
 
 
+class SettingConflict(AppError):
+    status_code = 409
+    code = "SETTING_CONFLICT"
+    message_key = "errors.admin.settingConflict"
+
+
 class SettingUpdateSerializer(serializers.Serializer[Any]):
     value = serializers.JSONField()
-    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    reason = serializers.CharField(min_length=3, max_length=500)
+    # The value the admin saw before editing; a mismatch means someone else changed it meanwhile.
+    expected = serializers.JSONField(required=False)
+
+
+class SettingResetSerializer(serializers.Serializer[Any]):
+    reason = serializers.CharField(min_length=3, max_length=500)
+    expected = serializers.JSONField(required=False)
+
+
+def _check_expected(key: str, data: dict[str, Any]) -> None:
+    if "expected" in data and data["expected"] != registry.get(key):
+        raise SettingConflict(details={"current": registry.get(key)})
 
 
 class SettingDetailView(AdminView):
@@ -144,15 +161,19 @@ class SettingDetailView(AdminView):
         s = SettingUpdateSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         with transaction.atomic():
+            _check_expected(key, s.validated_data)
             before, after = registry.set_value(key, s.validated_data["value"])
             audit.record(request, "setting.update", "setting", key, before, after, s.validated_data["reason"])
         return Response(setting_payload(key))
 
     def delete(self, request: Request, key: str) -> Response:
         """Reset to the registry default."""
+        s = SettingResetSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
         with transaction.atomic():
+            _check_expected(key, s.validated_data)
             before, after = registry.reset(key)
-            audit.record(request, "setting.reset", "setting", key, before, after)
+            audit.record(request, "setting.reset", "setting", key, before, after, s.validated_data["reason"])
         return Response(setting_payload(key))
 
 
@@ -192,7 +213,12 @@ class AuditView(AdminView):
     admin_roles = (AdminUser.Role.SUPERADMIN,)
 
     def get(self, request: Request) -> Response:
-        rows = AdminAudit.objects.select_related("admin").order_by("-created_at")[:200]
+        qs = AdminAudit.objects.select_related("admin").order_by("-created_at")
+        if target_type := request.query_params.get("target_type"):
+            qs = qs.filter(target_type=target_type)
+        if target_id := request.query_params.get("target_id"):
+            qs = qs.filter(target_id=target_id)
+        rows = qs[:200]
         return Response(
             {
                 "results": [

@@ -37,10 +37,14 @@ def _rate_limit(phone: str, ip: str | None) -> None:
 
 
 def request_otp(phone: str, purpose: str, ip: str | None) -> None:
-    _rate_limit(phone, ip)
     exists = User.objects.filter(phone=phone).exists()
     if purpose == Otp.Purpose.REGISTER and exists:
         raise errors.PhoneTaken()
+    cooldown = registry.get("otp.resend_cooldown_seconds")
+    allowed, retry_after = ratelimit.hit(f"otp:resend:{phone}:{purpose}", 1, cooldown)
+    if not allowed:
+        raise errors.OtpRateLimited(details={"retry_after": retry_after, "reason": "cooldown"})
+    _rate_limit(phone, ip)
     if purpose in (Otp.Purpose.PASSWORD_RESET, Otp.Purpose.WITHDRAWAL) and not exists:
         return  # same response as success: do not reveal which numbers have accounts
 
@@ -90,8 +94,10 @@ def consume_verification(token: str, purpose: str) -> str:
     """Single-use: returns the verified phone. Call inside the caller's transaction."""
     try:
         data = signing.loads(token, salt=VERIFICATION_SALT, max_age=VERIFICATION_MAX_AGE_SECONDS)
+    except signing.SignatureExpired:
+        raise errors.VerificationInvalid(details={"reason": "expired"}) from None
     except signing.BadSignature:
-        raise errors.VerificationInvalid() from None
+        raise errors.VerificationInvalid(details={"reason": "invalid"}) from None
     if data.get("purpose") != purpose:
         raise errors.VerificationInvalid()
     updated = Otp.objects.filter(
@@ -102,5 +108,5 @@ def consume_verification(token: str, purpose: str) -> str:
         consumed_at__isnull=True,
     ).update(consumed_at=timezone.now())
     if updated != 1:
-        raise errors.VerificationInvalid()
+        raise errors.VerificationInvalid(details={"reason": "used"})
     return str(data["phone"])

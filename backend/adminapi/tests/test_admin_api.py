@@ -84,6 +84,13 @@ class TestAdminAuth:
             for _ in range(5)
         ]
         assert codes[-1] == "ADMIN_LOCKED"
+        res = APIClient(HTTP_HOST=HOST).post(
+            "/api/v1/admin/auth/login",
+            {"username": "boss", "password": PASSWORD, "totp": current_code()},
+            format="json",
+        )
+        assert res.json()["code"] == "ADMIN_LOCKED"
+        assert 0 < res.json()["details"]["retry_after"] <= 900
 
     def test_only_on_admin_host(self):
         make_admin()
@@ -139,13 +146,48 @@ class TestAdminSettings:
             8,
             "promo",
         )
-        res = c.delete("/api/v1/admin/settings/table.rake_pct")
+        res = c.delete("/api/v1/admin/settings/table.rake_pct", {"reason": "end of promo"}, format="json")
         assert res.json()["value"] == 10 and AdminAudit.objects.count() == 2
+
+    def test_reason_is_required(self):
+        make_admin()
+        c = admin_client()
+        res = c.patch("/api/v1/admin/settings/table.rake_pct", {"value": 8}, format="json")
+        assert res.json()["code"] == "VALIDATION" and "reason" in res.json()["details"]["fields"]
+        assert c.delete("/api/v1/admin/settings/table.rake_pct").json()["code"] == "VALIDATION"
+
+    def test_concurrent_edit_is_refused(self):
+        make_admin()
+        c = admin_client()
+        c.patch("/api/v1/admin/settings/table.rake_pct", {"value": 8, "reason": "first"}, format="json")
+        res = c.patch(
+            "/api/v1/admin/settings/table.rake_pct",
+            {"value": 9, "reason": "second", "expected": 10},
+            format="json",
+        )
+        assert res.status_code == 409
+        assert res.json() == {
+            "code": "SETTING_CONFLICT",
+            "message_key": "errors.admin.settingConflict",
+            "details": {"current": 8},
+        }
+        assert registry.get("table.rake_pct") == 8
+
+    def test_units_and_audit_filter(self):
+        make_admin()
+        c = admin_client()
+        units = {r["key"]: r["unit"] for r in c.get("/api/v1/admin/settings").json()["results"]}
+        assert units["game.turn_seconds"] == "seconds" and units["table.rake_pct"] == "percent"
+        assert units["shop.custom_max_toman"] == "toman" and units["table.tiers"] == "coins"
+        c.patch("/api/v1/admin/settings/elo.k", {"value": 25, "reason": "tuning"}, format="json")
+        c.patch("/api/v1/admin/settings/xp.per_win", {"value": 20, "reason": "tuning"}, format="json")
+        rows = c.get("/api/v1/admin/audit", {"target_id": "elo.k"}).json()["results"]
+        assert [r["target_id"] for r in rows] == ["elo.k"]
 
     def test_invalid_value_is_rejected_without_audit(self):
         make_admin()
         res = admin_client().patch(
-            "/api/v1/admin/settings/sms.from_number", {"value": "3000505"}, format="json"
+            "/api/v1/admin/settings/sms.from_number", {"value": "3000505", "reason": "typo"}, format="json"
         )
         assert res.json()["code"] == "SETTING_INVALID"
         assert not AdminAudit.objects.exists()

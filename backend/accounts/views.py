@@ -3,7 +3,6 @@
 from typing import Any
 
 from django.conf import settings
-from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -17,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts import errors, otp, ratelimit, serializers, sessions
+from accounts.authentication import OptionalCookieJWTAuthentication
 from accounts.avatars import AVATARS
 from accounts.cookies import clear_auth_cookies, set_auth_cookies
 from accounts.models import Otp, Session, User
@@ -55,6 +55,7 @@ def _cookie_lang(request: Request) -> str:
 
 
 class PublicView(APIView):
+    authentication_classes = (OptionalCookieJWTAuthentication,)
     permission_classes = (AllowAny,)
 
 
@@ -70,7 +71,13 @@ class OtpRequestView(PublicView):
     def post(self, request: Request) -> Response:
         data = _validated(serializers.OtpRequestSerializer, request.data)
         otp.request_otp(data["phone"], data["purpose"], sessions.client_ip(request._request))
-        return Response({"ttl_seconds": registry.get("otp.ttl_seconds")}, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {
+                "expires_in": registry.get("otp.ttl_seconds"),
+                "resend_after": registry.get("otp.resend_cooldown_seconds"),
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class OtpVerifyView(PublicView):
@@ -108,7 +115,7 @@ class RegisterView(PublicView):
                     username=username,
                     referrer=referrer,
                     age_confirmed_at=timezone.now(),
-                    lang=_cookie_lang(request),
+                    lang=data.get("lang") or _cookie_lang(request),
                 )
                 user_registered.send(sender=User, user=user)
         except IntegrityError:
@@ -120,25 +127,21 @@ class LoginView(PublicView):
     def post(self, request: Request) -> Response:
         data = _validated(serializers.LoginSerializer, request.data)
         phone = data["phone"]
-        lock_key = f"login:lock:{phone}"
-        if cache.get(lock_key):
-            raise errors.Locked(details={"retry_after": registry.get("auth.login_lock_seconds")})
+        key = f"login:{phone}"
+        if remaining := ratelimit.locked_for(key):
+            raise errors.Locked(details={"retry_after": remaining})
         user = User.objects.filter(phone=phone).first()
         if user is None or not user.check_password(data["password"]):
-            allowed, _ = ratelimit.hit(
-                f"login:fail:{phone}",
-                registry.get("auth.login_max_failures") - 1,
-                registry.get("auth.login_lock_seconds"),
+            lock = ratelimit.record_failure(
+                key, registry.get("auth.login_max_failures"), registry.get("auth.login_lock_seconds")
             )
-            if not allowed:
-                lock = registry.get("auth.login_lock_seconds")
-                cache.set(lock_key, 1, timeout=lock)
-                cache.delete(f"rl:login:fail:{phone}")
+            if lock:
                 raise errors.Locked(details={"retry_after": lock})
             raise errors.InvalidCredentials()
+        # Only after the password matched, so a ban never reveals that a number is registered.
         if not user.is_active:
             raise errors.Banned()
-        cache.delete(f"rl:login:fail:{phone}")
+        ratelimit.clear_failures(key)
         return _signed_in(user, request)
 
 
@@ -149,9 +152,8 @@ class RefreshView(PublicView):
             raise errors.SessionInvalid()
         try:
             session, refresh = sessions.rotate(raw, request._request)
-        except errors.SessionInvalid:
-            body = error_body(errors.SessionInvalid.code, errors.SessionInvalid.message_key)
-            response = Response(body, status=status.HTTP_401_UNAUTHORIZED)
+        except (errors.SessionInvalid, errors.Banned) as exc:
+            response = Response(error_body(exc.code, exc.message_key), status=exc.status_code)
             clear_auth_cookies(response)
             return response
         response = Response(serializers.me_payload(session.user))
@@ -236,6 +238,19 @@ class UserProfileView(PublicView):
         if user is None:
             raise NotFound()
         return Response(serializers.public_user_payload(user))
+
+
+class UsernameAvailableView(PublicView):
+    """Live check while typing. The final word is still the register call (a race can take it)."""
+
+    def get(self, request: Request) -> Response:
+        username = (request.query_params.get("username") or "").strip()
+        try:
+            validate_username(username)
+        except errors.UsernameInvalid as exc:
+            return Response({"available": False, "reason": exc.details.get("reason", "format")})
+        taken = User.objects.annotate(u=Lower("username")).filter(u=username.lower()).exists()
+        return Response({"available": not taken, "reason": "taken" if taken else None})
 
 
 class AvatarsView(PublicView):

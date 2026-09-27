@@ -451,6 +451,30 @@ _DEFS: list[SettingDef] = [
         86_400,
     ),
     SettingDef(
+        "otp.resend_cooldown_seconds",
+        "int",
+        60,
+        _d("فاصله ارسال مجدد کد (ثانیه)", "OTP resend cooldown (s)"),
+        10,
+        900,
+    ),
+    SettingDef(
+        "admin.login_max_failures",
+        "int",
+        5,
+        _d("حداکثر ورود ناموفق ادمین پیش از قفل", "Admin failed logins before lock"),
+        1,
+        50,
+    ),
+    SettingDef(
+        "admin.login_lock_seconds",
+        "int",
+        900,
+        _d("مدت قفل ورود ادمین (ثانیه)", "Admin login lock duration (s)"),
+        60,
+        86_400,
+    ),
+    SettingDef(
         "auth.login_max_failures",
         "int",
         5,
@@ -472,6 +496,36 @@ REGISTRY: dict[str, SettingDef] = {d.key: d for d in _DEFS}
 assert len(REGISTRY) == len(_DEFS), "duplicate setting key"
 for _defn in _DEFS:
     validate(_defn, _defn.default)
+
+
+_UNITS: dict[str, str] = {
+    "table.tiers": "coins",
+    "game.allowed_lengths": "points",
+    "tournament.default_prize_split": "percent",
+    "admin.topup_max_amount": "coins",
+    "bonus.signup_coins": "coins",
+    "username.change_cost": "coins",
+    "xp.per_match": "xp",
+    "xp.per_win": "xp",
+}
+_SUFFIX_UNITS = [
+    ("_seconds", "seconds"),
+    ("_days", "days"),
+    ("_pct", "percent"),
+    ("_toman", "toman"),
+    ("_rial", "rial"),
+    ("_coins", "coins"),
+    ("_stake_per_user", "coins"),
+    ("_pool_total", "coins"),
+    ("_table_entry", "coins"),
+]
+
+
+def unit(key: str) -> str | None:
+    """Display unit for the admin panel: seconds, days, percent, coins, toman, rial, points, xp."""
+    if key in _UNITS:
+        return _UNITS[key]
+    return next((u for suffix, u in _SUFFIX_UNITS if key.endswith(suffix)), None)
 
 
 def definition(key: str) -> SettingDef:

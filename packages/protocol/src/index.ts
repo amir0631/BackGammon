@@ -101,7 +101,10 @@ export interface SessionInfo {
 }
 
 export interface OtpRequestResponse {
-  ttl_seconds: number;
+  /** Seconds the code stays valid. */
+  expires_in: number;
+  /** Seconds before another code can be requested. */
+  resend_after: number;
 }
 
 export interface OtpVerifyResponse {
@@ -114,6 +117,12 @@ export interface RegisterRequest {
   password: string;
   age_confirmed: boolean;
   referrer?: string;
+  lang?: Lang;
+}
+
+export interface UsernameAvailability {
+  available: boolean;
+  reason: "taken" | "format" | "reserved" | "profanity" | null;
 }
 
 export interface MeUpdate {
@@ -144,6 +153,7 @@ export interface AdminSetting {
   max: number | null;
   choices: string[] | null;
   description: Record<Lang, string>;
+  unit: "seconds" | "days" | "percent" | "coins" | "toman" | "rial" | "points" | "xp" | null;
 }
 
 export interface SmsStatus {

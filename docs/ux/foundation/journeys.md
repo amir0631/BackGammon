@@ -74,7 +74,7 @@ Status: draft for approval (CLAUDE.md §17 step 0). Revised with product owner d
 - Three consecutive timeouts approaching: persistent warning after the 2nd (P§6.4).
 - The opponent disconnects: Reza sees their countdown and can keep playing his turn. On expiry, a "You won — opponent forfeited" result.
 - The app is killed during the match: on the next open, it goes straight back to the match if the grace period is still running (ia.md §4). See the push question in patterns.md.
-- Account suspended since the last visit: `/account/status`.
+- Account suspended since the last visit: sign-in still works; `/account/status` shows once (end date, what still works), then a suspension banner stays. Play actions are disabled with the reason (§12.1, auth.md AU-13). Banned: the login shows the banned panel (AU-14).
 
 ---
 
@@ -207,14 +207,14 @@ What the support top-up panel says, in order:
 | --- | --- | --- | --- |
 | 1 | Entry | `/wallet` → "Send coins"; or "Send coins" on the friend's `/profile/[username]` (prefills `to`) | `/wallet/transfer`, step 1 of 3. Nav hidden, close (×). |
 | 2 | Step 1: Recipient | Types the username | Exact-match lookup → recipient card (avatar, username, level) with "This is the right person" to continue. Errors: not found, own username (P§12). |
-| 3 | Step 2: Amount | Enters ۲۰۰ (field starts empty) | Helper: min ۱۰, remaining today ۵٬۰۰۰, balance ۶۴۰. Live line: fee ۰, recipient receives ۲۰۰. |
+| 3 | Step 2: Amount | Enters ۲۰۰ (field starts empty) | Helper: min ۱۰, left in the last 24 hours ۵٬۰۰۰ of ۵٬۰۰۰ (rolling window, §7.13), balance ۶۴۰. Live line: fee ۰, recipient receives ۲۰۰. |
 | 4 | Step 3: Review and password | Reviews, enters password, taps "Send ۲۰۰ coins" | Cost block (P§2.1): amount, toman equivalent, fee, recipient receives, balance ۶۴۰ → ۴۴۰. "Transfers can't be undone." Safety note. Password field (P§2.6). |
 | 5 | Receipt | — | "Sent ۲۰۰ coins to @friend", time (Jalali), transaction id (copyable). "Done" → `/wallet`. Ledger row «ارسال به @friend». |
 | 6 | Recipient | Next time the friend opens the app | Snackbar "@ali_tbz sent you ۲۰۰ coins"; ledger row "Received from @ali_tbz". No phone number anywhere. |
 
 **Edge cases**
 - **Above balance:** inline field error, with no shop link (P§9.1).
-- **Below minimum, or above today's remaining limit:** inline field error stating the limit and when it resets (open question 9).
+- **Below minimum, or above what's left in the rolling 24 hours:** inline field error stating the limit and when more becomes available (the time the oldest counted transfer leaves the 24-hour window, from the server; P§2.5).
 - **Wrong password:** inline error, field cleared. A lockout shows a countdown (P§2.6).
 - **Refused because the accounts are linked (antifraud):** neutral action error; nothing charged (P§2.5).
 - **Recipient banned or deleted between lookup and send:** action error; nothing charged.
@@ -230,11 +230,11 @@ What the support top-up panel says, in order:
 | # | Route / surface | User does | App shows / does |
 | --- | --- | --- | --- |
 | 1 | Entry | `/wallet` → "Withdraw" | `/wallet/withdraw`. Eligibility is checked first (P§2.5 ineligible states). One-time hint: manual processing plus SMS (P§14). |
-| 2 | Step 1: Bank account | No account yet → "Add bank account" | Sheba form (P§12): `IR` plus 24 digits, bank name derived, account holder name, "must be in your own name". Saved account card, masked. Returning users pick a saved account (none pre-selected if more than one). |
-| 3 | Step 2: Amount | Enters ۱۰۰۰ (field starts empty) | Helper: min ۱۰۰, remaining today ۱۰٬۰۰۰, withdrawable now ۱٬۳۴۰. Live line: "Paid to your bank: ۱٬۰۰۰٬۰۰۰ تومان" (fee ۰). "All withdrawable" chip, not active by default. |
-| 4 | Step 3: Review | Reviews, taps "Request withdrawal of ۱٬۰۰۰ coins" | Cost block: amount (coins), fee, paid to your bank (toman, fixed at today's rate), bank card (masked), balance ۱٬۳۴۰ → ۳۴۰. Timing note. Safety note. |
+| 2 | Step 1: Bank account | No account yet → "Add bank account" | Sheba form (P§12): `IR` plus 24 digits, validated for length, mod-97 checksum, and known bank code; the bank name is shown once valid. No ownership check, no holder-name field (§7.12). Saved as his only account, shown as a masked card. Returning users see that card with "Change" and continue; there is nothing to pick. |
+| 3 | Step 2: Amount | Enters ۱۰۰۰ (field starts empty) | Helper: min ۱۰۰, left in the last 24 hours ۱۰٬۰۰۰ of ۱۰٬۰۰۰ (rolling window, §7.12), withdrawable now ۱٬۳۴۰. Live line: "Paid to your bank: ۱٬۰۰۰٬۰۰۰ تومان" (fee ۰). "All withdrawable" chip, not active by default. |
+| 4 | Step 3: Review | Reviews, taps "Request withdrawal of ۱٬۰۰۰ coins" | Cost block: amount (coins), fee, paid to your bank (toman, fixed at today's rate), bank card (masked), balance ۱٬۳۴۰ → ۳۴۰. Timing note: "Paid within one business day, expected by {date}" (date from the server, P§2.5). Safety note. |
 | 5 | Step 4: SMS code | Enters the 5-digit code sent to his own phone | Masked phone, validity countdown, resend. "Nothing is held until you enter the code." |
-| 6 | Submitted | — | `/wallet/withdrawals/[id]`: status **Pending**, timeline (P§6.2), "Cancel request". `/wallet` shows available ۳۴۰ and on hold ۱٬۰۰۰. |
+| 6 | Submitted | — | `/wallet/withdrawals/[id]`: status **Pending**, "Expected by {date}" (one business day, §7.12), timeline (P§6.2), "Cancel request". `/wallet` shows available ۳۴۰ and on hold ۱٬۰۰۰. |
 | 7 | Paid (finance approves) | Receives SMS | Status **Paid** with the bank reference (copyable) and paid date. Account tab dot until seen. Ledger rows: `withdrawal_hold`, `withdrawal_payout`. |
 
 **Alternative outcomes**
@@ -244,11 +244,15 @@ What the support top-up panel says, in order:
 **Edge cases**
 - **Only signup-bonus coins, with no purchase or top-up yet:** "Withdrawable now: ۰ of ۱۰۰", with the reason and a help link. The amount step is not shown.
 - **Open antifraud flag:** neutral "not available right now, contact support" (P§2.5).
-- **Below minimum, or above the daily limit or withdrawable amount:** inline field errors.
+- **Below minimum, or above what's left in the rolling 24 hours, or above the withdrawable amount:** inline field errors (the 24-hour one says when more becomes available).
+- **Not paid by the expected date:** the detail keeps status Pending and adds the neutral "taking longer than usual, contact support" line (P§2.5).
+- **Invalid Sheba:** separate inline errors for length, checksum, and unknown bank code (P§12).
+- **Suspended account:** withdrawals are still allowed (§12.1); the suspension banner stays visible.
+- **Banned account:** can't sign in; a pending request is held for admin decision (§12.1, auth.md AU-14).
 - **Wrong or expired SMS code:** inline error; resend. Nothing held.
 - **Price changes between review and code entry:** the server returns an error, and the review refreshes with the new toman amount before the user confirms again (P§2.2).
 - **Cancel races with payment** (finance already paid): show the Paid state, with the note "This withdrawal was already paid."
-- **Bank account removed while a request is pending:** removal is blocked, with an explanation (P§3).
+- **Changing the bank account while a request is pending:** blocked, with an explanation and a link to the pending request (P§3). Changing it at other times replaces the old account after a confirmation.
 
 ---
 
@@ -262,4 +266,3 @@ What the support top-up panel says, in order:
 6. **Referral activation.** Commission activates after the referee's first coin purchase (§7.4). While the gateway doesn't exist, does an admin top-up count as a purchase (as it does for withdrawal eligibility in §7.12)?
 7. **Withdrawal SMS.** §7.12 sends an SMS when paid. Should rejections also send an SMS? Should the SMS include a link to `/wallet/withdrawals/[id]`?
 8. **Balance update push.** A `wallet.updated` WebSocket event (not in §10.3) would let the balance chip update right after a top-up, a received transfer, or a withdrawal decision. Is it acceptable, or should the client poll on focus?
-9. **Daily limit reset.** When do the transfer and withdrawal daily limits reset (midnight Tehran time, or a rolling 24 h)? The UI states it.
