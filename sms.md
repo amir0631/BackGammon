@@ -5,10 +5,10 @@ Source: the official docs at https://ippanelcom.github.io/Edge-Document/docs/ (r
 
 ## 1. What we use it for
 
-| Use | Sending type | Pattern key (env) |
+| Use | Sending type | Pattern setting |
 | --- | --- | --- |
-| OTP: signup, login verification, password reset, withdrawal confirmation (§7.12) | `pattern` | `IPPANEL_PATTERN_OTP` |
-| Withdrawal paid notice (§7.12) | `pattern` | `IPPANEL_PATTERN_WITHDRAWAL_PAID` |
+| OTP: signup, password reset, withdrawal confirmation (§7.12) | `pattern` | `sms.pattern_otp` |
+| Withdrawal paid notice (§7.12) | `pattern` | `sms.pattern_withdrawal_paid` |
 
 Rules:
 
@@ -20,14 +20,24 @@ Rules:
 
 The API key never goes into the repo, the vault, or logs (CLAUDE.md §22.1). `sms_api.txt` in the project root holds it locally and is git-ignored. On every environment it is set as an env var:
 
+Environment (secrets and deployment only):
+
 | Env var | Value |
 | --- | --- |
 | `SMS_PROVIDER` | `console` (dev) or `ippanel` |
 | `IPPANEL_BASE_URL` | `https://edge.ippanel.com/v1` |
 | `IPPANEL_API_KEY` | API key from IPPanel: User Panel → Developers → Access Keys |
-| `IPPANEL_FROM_NUMBER` | Sender line in E.164, default `+983000505` (the shared pattern line) |
-| `IPPANEL_PATTERN_OTP` | Pattern code of the OTP pattern (§5) |
-| `IPPANEL_PATTERN_WITHDRAWAL_PAID` | Pattern code of the withdrawal notice (§5) |
+
+Settings registry (editable in the admin panel → Settings → `sms`, audited, no redeploy):
+
+| Setting | Default |
+| --- | --- |
+| `sms.from_number` | `+983000505` (the shared pattern line) |
+| `sms.pattern_otp` | `77j9q04y28txoy6` |
+| `sms.pattern_withdrawal_paid` | `t1lf706mnokv21n` |
+| `sms.low_credit_alert_rial` | `1000000` |
+
+The admin panel's SMS card (`GET /api/v1/admin/sms/status`) shows the live credit and each pattern's approval status.
 
 Authentication: send the key **as-is** in the `Authorization` header. There is no `Bearer` prefix.
 
@@ -112,8 +122,8 @@ Create body:
 ```
 
 - Variables are written `%name%` in the message. Types: `string` or `integer`. The delimiter is `%`.
-- A new pattern starts as `pattern_status: "pending"`. IPPanel reviews it manually. Only `active` patterns can be sent. Check the status with "Get one" before putting the code in env.
-- The response returns the `pattern_code` to use in `IPPANEL_PATTERN_*`.
+- A new pattern starts as `pattern_status: "pending"`. IPPanel reviews it manually. Only `active` patterns can be sent. The admin SMS card shows the status.
+- The response returns the `pattern_code`; put it in the matching `sms.pattern_*` setting.
 
 ## 4. Errors and retries
 
@@ -130,18 +140,18 @@ Create body:
 
 ## 5. Patterns for this project
 
-Both need to be created in the panel and approved by IPPanel before production. Status as of 2026-09-27: **not created yet**.
+Created in the panel on 2026-09-27; both were `pending` IPPanel approval at creation.
 
-| Env var | Title | Message | Variables |
-| --- | --- | --- | --- |
-| `IPPANEL_PATTERN_OTP` | Takhte Nard - OTP | `کد تأیید تخته نرد: %code%` + newline + `این کد را به کسی ندهید.` | `code` (integer) |
-| `IPPANEL_PATTERN_WITHDRAWAL_PAID` | Takhte Nard - Withdrawal paid | `مبلغ %amount% تومان از کیف پول تخته نرد به حساب بانکی شما واریز شد.` + newline + `کد پیگیری: %ref%` | `amount` (string, pre-formatted), `ref` (string) |
+| Setting | Code | Title | Message | Variables |
+| --- | --- | --- | --- | --- |
+| `sms.pattern_otp` | `77j9q04y28txoy6` | Takhte Nard - OTP | `کد تأیید تخته نرد: %code%` + newline + `این کد را به کسی ندهید.` | `code` (integer) |
+| `sms.pattern_withdrawal_paid` | `t1lf706mnokv21n` | Takhte Nard - Withdrawal paid | `مبلغ %amount% تومان از کیف پول تخته نرد به حساب بانکی شما واریز شد.` + newline + `کد پیگیری: %ref%` | `amount` (string, pre-formatted), `ref` (string) |
 
 - OTP codes are 5 digits from `secrets.randbelow(90000) + 10000`, so they never start with `0` (an integer variable would drop a leading zero).
-- When the production domain is known, add a new OTP pattern whose last line is `@m.<domain> #%code%`. That enables automatic code fill-in on Android (WebOTP). Then switch `IPPANEL_PATTERN_OTP` to it.
-- Pattern text is fixed after approval. Changing the brand name or wording means creating a new pattern and switching the env var.
+- When the production domain is known, add a new OTP pattern whose last line is `@m.<domain> #%code%`. That enables automatic code fill-in on Android (WebOTP). Then switch `sms.pattern_otp` to it in the admin panel.
+- Pattern text is fixed after approval. Changing the brand name or wording means creating a new pattern and switching the setting.
 
-## 6. Implementation (§17 step 2)
+## 6. Implementation (§17 step 2, done)
 
 ```
 backend/accounts/sms/

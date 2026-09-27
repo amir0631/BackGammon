@@ -220,9 +220,10 @@ The payment gateway is added later (§18). Until then, and permanently as a supp
 
 ### 7.12 Withdrawal (cash-out)
 
-- The user registers a bank account (Sheba/IBAN) in their own name, then requests a withdrawal of at least `withdraw.min_coins` and at most `withdraw.daily_max_coins` per day, confirmed with an SMS OTP.
+- Each user registers exactly one bank account (Sheba/IBAN). The Sheba the user declares is accepted as theirs (no ownership inquiry), but it must be a valid Iranian IBAN: `IR` + 24 digits passing the ISO 13616 mod-97 checksum, with a known bank code. Changing it replaces the old one and is blocked while a withdrawal is pending.
+- The user requests a withdrawal of at least `withdraw.min_coins` and at most `withdraw.daily_max_coins` within any rolling 24 hours, confirmed with an SMS OTP.
 - On request: `withdrawal_hold` `user → escrow:withdrawal:{id}`. Status `pending`.
-- A `finance` admin makes the bank transfer manually, enters the bank reference, and approves: `withdrawal_payout` `escrow:withdrawal:{id} → platform:payouts` (a fee, if `withdraw.fee_pct` > 0, goes to `platform:rake`). Status `paid`; the user gets an SMS.
+- Payout target: within one business day of the request (Iranian working days; shown to the user as the expected time). A `finance` admin makes the bank transfer manually, enters the bank reference, and approves: `withdrawal_payout` `escrow:withdrawal:{id} → platform:payouts` (a fee, if `withdraw.fee_pct` > 0, goes to `platform:rake`). Status `paid`; the user gets an SMS.
 - Reject (with reason) or user cancel while pending: `withdrawal_refund` back to the user. Status `rejected` / `cancelled`.
 - `withdrawal_request` stores coins, the rial amount at the request-time `coin.price_toman`, bank account, status, admin, bank reference, and timestamps.
 - Signup bonus coins are not withdrawable until the user has completed at least one purchase or top-up. Accounts with an open antifraud flag cannot withdraw.
@@ -230,7 +231,7 @@ The payment gateway is added later (§18). Until then, and permanently as a supp
 ### 7.13 Transfer between users
 
 - `POST wallet/transfer` with recipient `username`, `amount`, password confirmation, and `Idempotency-Key`.
-- Limits: `transfer.min_coins`, `transfer.daily_max_coins`; optional fee `transfer.fee_pct` to `platform:rake`.
+- Limits: `transfer.min_coins`, `transfer.daily_max_coins` within any rolling 24 hours; optional fee `transfer.fee_pct` to `platform:rake`.
 - One `transfer` transaction `user:{sender} → user:{recipient}`. Transfers between accounts that antifraud links (§12.2) are refused and flagged.
 - The recipient sees the sender's username, never their phone number.
 
@@ -516,6 +517,8 @@ Rules:
 - User session cookies are scoped to `.xxxx.ir` and shared by `app.` and `m.`. Admin panel on `admin.xxxx.ir` uses its own host-only cookies with different names; user tokens are never accepted by admin endpoints and vice versa.
 - Admin panel: TOTP 2FA, IP allowlist, roles `support`, `finance`, `superadmin`.
 - Security headers on every subdomain: HSTS (includeSubDomains), CSP without third-party origins, `X-Frame-Options: DENY`.
+- Account status. `suspended`: can sign in, view live matches and their own predictions and history, and request withdrawals; cannot join queues or tables, start matches, place predictions, enter tournaments, buy, or transfer. `banned`: cannot sign in; pending withdrawals are held for admin decision.
+- Password reset signs the user in on the current device and revokes every other session.
 - Username filter for profanity in fa and en. Username 3–20 chars; change costs coins, max once per 30 days.
 
 ### 12.2 Anti-fraud rules

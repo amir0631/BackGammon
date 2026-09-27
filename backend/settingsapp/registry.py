@@ -5,6 +5,7 @@ invalidated on write, so admin changes take effect without a redeploy. Writes re
 new value so the admin API can record them in `admin_audit` (CLAUDE.md §2 rule 12).
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -91,6 +92,14 @@ def _points(v: Any) -> bool:
         and set(v) == {"single", "gammon", "backgammon"}
         and all(_is_int(x) and 1 <= x <= 10 for x in v.values())
     )
+
+
+def _e164_sender(v: str) -> bool:
+    return re.fullmatch(r"\+\d{6,18}", v) is not None
+
+
+def _pattern_code(v: str) -> bool:
+    return re.fullmatch(r"[A-Za-z0-9]{6,40}", v) is not None
 
 
 _DEFS: list[SettingDef] = [
@@ -390,6 +399,73 @@ _DEFS: list[SettingDef] = [
         0,
         None,
     ),
+    # SMS through IPPanel Edge (sms.md). The API key is a secret and stays in the environment.
+    SettingDef(
+        "sms.from_number",
+        "str",
+        "+983000505",
+        _d("شماره فرستنده پیامک", "SMS sender number"),
+        check=_e164_sender,
+    ),
+    SettingDef(
+        "sms.pattern_otp",
+        "str",
+        "77j9q04y28txoy6",
+        _d("کد الگوی پیامک کد تأیید", "OTP SMS pattern code"),
+        check=_pattern_code,
+    ),
+    SettingDef(
+        "sms.pattern_withdrawal_paid",
+        "str",
+        "t1lf706mnokv21n",
+        _d("کد الگوی پیامک واریز برداشت", "Withdrawal-paid SMS pattern code"),
+        check=_pattern_code,
+    ),
+    SettingDef(
+        "sms.low_credit_alert_rial",
+        "int",
+        1_000_000,
+        _d("هشدار کمبود اعتبار پیامک (ریال)", "Low SMS credit alert (rial)"),
+        0,
+        None,
+    ),
+    # OTP and login protection (CLAUDE.md §12.1)
+    SettingDef("otp.ttl_seconds", "int", 120, _d("اعتبار کد تأیید (ثانیه)", "OTP validity (s)"), 30, 900),
+    SettingDef(
+        "otp.max_attempts", "int", 5, _d("حداکثر تلاش اشتباه کد تأیید", "Max wrong OTP attempts"), 1, 20
+    ),
+    SettingDef(
+        "otp.rate_limit_count",
+        "int",
+        3,
+        _d("تعداد مجاز درخواست کد در بازه", "OTP requests allowed per window"),
+        1,
+        50,
+    ),
+    SettingDef(
+        "otp.rate_limit_window_seconds",
+        "int",
+        600,
+        _d("بازه محدودیت درخواست کد (ثانیه)", "OTP rate-limit window (s)"),
+        60,
+        86_400,
+    ),
+    SettingDef(
+        "auth.login_max_failures",
+        "int",
+        5,
+        _d("حداکثر ورود ناموفق پیش از قفل", "Failed logins before lock"),
+        1,
+        50,
+    ),
+    SettingDef(
+        "auth.login_lock_seconds",
+        "int",
+        900,
+        _d("مدت قفل ورود (ثانیه)", "Login lock duration (s)"),
+        60,
+        86_400,
+    ),
 ]
 
 REGISTRY: dict[str, SettingDef] = {d.key: d for d in _DEFS}
@@ -423,6 +499,9 @@ def set_value(key: str, value: Any) -> tuple[Any, Any]:
     with transaction.atomic():
         before = get(key)
         Setting.objects.update_or_create(key=key, defaults={"value": value})
+        # Drop the cached value now (so this transaction reads its own write) and again after
+        # commit (in case a concurrent reader re-cached the old value in between).
+        cache.delete(CACHE_PREFIX + key)
         transaction.on_commit(lambda: cache.delete(CACHE_PREFIX + key))
     return before, value
 
@@ -433,5 +512,8 @@ def reset(key: str) -> tuple[Any, Any]:
     with transaction.atomic():
         before = get(key)
         Setting.objects.filter(key=key).delete()
+        # Drop the cached value now (so this transaction reads its own write) and again after
+        # commit (in case a concurrent reader re-cached the old value in between).
+        cache.delete(CACHE_PREFIX + key)
         transaction.on_commit(lambda: cache.delete(CACHE_PREFIX + key))
     return before, defn.default

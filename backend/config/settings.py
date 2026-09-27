@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "channels",
     "accounts",
     "settingsapp",
+    "adminapi",
 ]
 
 MIDDLEWARE = [
@@ -92,7 +93,7 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["accounts.authentication.CookieJWTAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "EXCEPTION_HANDLER": "config.errors.exception_handler",
     "UNAUTHENTICATED_USER": None,
@@ -106,6 +107,24 @@ CSRF_COOKIE_DOMAIN = COOKIE_DOMAIN
 CSRF_COOKIE_SECURE = SECURE_COOKIES
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = SECURE_COOKIES
+
+# Player auth (CLAUDE.md §3): access JWT 15 min, refresh 30 days, HttpOnly cookies.
+JWT_SIGNING_KEY = env("JWT_SIGNING_KEY", SECRET_KEY)
+ACCESS_TOKEN_TTL_SECONDS = 15 * 60
+REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 3600
+ACCESS_COOKIE = "bg_access"
+REFRESH_COOKIE = "bg_refresh"
+# Admin panel (CLAUDE.md §12.1): separate host-only cookie, TOTP, optional IP allowlist.
+ADMIN_SECRET_KEY = env("ADMIN_SECRET_KEY", SECRET_KEY)
+ADMIN_COOKIE = "bga_session"
+ADMIN_SESSION_TTL_SECONDS = 8 * 3600
+ADMIN_ENFORCE_HOST = env_bool("ADMIN_ENFORCE_HOST", default=True)
+ADMIN_IP_ALLOWLIST = [n.strip() for n in env("ADMIN_IP_ALLOWLIST", "").split(",") if n.strip()]
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
@@ -123,6 +142,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 SEED_ENCRYPTION_KEY = env("SEED_ENCRYPTION_KEY", "")
 SMS_PROVIDER = env("SMS_PROVIDER", "console")
+IPPANEL_BASE_URL = env("IPPANEL_BASE_URL", "https://edge.ippanel.com/v1")
+IPPANEL_API_KEY = env("IPPANEL_API_KEY", "")
 PAYMENT_GATEWAY = env("PAYMENT_GATEWAY", "sandbox")
 
 LOGGING = {
