@@ -9,5 +9,6 @@ urlpatterns = [
     path("settings", views.SettingsView.as_view()),
     path("settings/<str:key>", views.SettingDetailView.as_view()),
     path("sms/status", views.SmsStatusView.as_view()),
+    path("sms/patterns/<str:code>", views.SmsPatternView.as_view()),
     path("audit", views.AuditView.as_view()),
 ]

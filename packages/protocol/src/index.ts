@@ -138,6 +138,7 @@ export type AdminRole = "support" | "finance" | "superadmin";
 export interface AdminMe {
   username: string;
   role: AdminRole;
+  environment: "development" | "staging" | "production";
 }
 
 export type SettingKind = "int" | "bool" | "str" | "int_list" | "number_list" | "json";
@@ -154,12 +155,16 @@ export interface AdminSetting {
   choices: string[] | null;
   description: Record<Lang, string>;
   unit: "seconds" | "days" | "percent" | "coins" | "toman" | "rial" | "points" | "xp" | null;
+  /** Last audited change, if any. */
+  updated_at: string | null;
+  updated_by: string | null;
 }
 
 export interface SmsStatus {
   provider: string;
   configured: boolean;
   credit_rial: number | null;
+  gift_rial: number | null;
   low_credit: boolean | null;
   patterns: Record<string, { code: string; status: string }>;
   error: string | null;

@@ -95,9 +95,10 @@ class IPPanelSmsProvider:
         logger.info("SMS sent to %s pattern=%s id=%s", mask_phone(phone), pattern_code, ids[:1])
         return str(ids[0]) if ids else None
 
-    def credit_rial(self) -> int:
+    def credit_rial(self) -> tuple[int, int]:
+        """(credit, gift credit), both in rial."""
         data = self._call("GET", "/api/payment/credit/mine").get("data") or {}
-        return int(data.get("credit") or 0)
+        return int(data.get("credit") or 0), int(data.get("gift") or 0)
 
     def pattern_status(self, pattern_code: str) -> str:
         data = self._call("GET", f"/api/patterns/{pattern_code}").get("data") or {}

@@ -42,7 +42,7 @@ class AdminView(APIView):
 
 
 def admin_payload(admin: AdminUser) -> dict[str, Any]:
-    return {"username": admin.username, "role": admin.role}
+    return {"username": admin.username, "role": admin.role, "environment": settings.APP_ENV}
 
 
 class LoginSerializer(serializers.Serializer[Any]):
@@ -108,9 +108,24 @@ class MeView(AdminView):
         return Response(admin_payload(request.user))
 
 
-def setting_payload(key: str) -> dict[str, Any]:
+def _last_changes(keys: list[str]) -> dict[str, dict[str, Any]]:
+    """Latest audit entry per setting key, for "last changed by … on …"."""
+    rows = (
+        AdminAudit.objects.filter(target_type="setting", target_id__in=keys)
+        .select_related("admin")
+        .order_by("target_id", "-created_at")
+        .distinct("target_id")
+    )
+    return {
+        r.target_id: {"updated_at": r.created_at.isoformat(), "updated_by": r.admin.username} for r in rows
+    }
+
+
+def setting_payload(key: str, last: dict[str, Any] | None = None) -> dict[str, Any]:
     defn = registry.definition(key)
     value = registry.get(key)
+    if last is None:
+        last = _last_changes([key]).get(key, {})
     return {
         "key": key,
         "group": key.split(".", 1)[0],
@@ -123,12 +138,16 @@ def setting_payload(key: str) -> dict[str, Any]:
         "choices": list(defn.choices) if defn.choices else None,
         "description": defn.description,
         "unit": registry.unit(key),
+        "updated_at": last.get("updated_at"),
+        "updated_by": last.get("updated_by"),
     }
 
 
 class SettingsView(AdminView):
     def get(self, request: Request) -> Response:
-        return Response({"results": [setting_payload(k) for k in registry.REGISTRY], "next": None})
+        keys = list(registry.REGISTRY)
+        last = _last_changes(keys)
+        return Response({"results": [setting_payload(k, last.get(k, {})) for k in keys], "next": None})
 
 
 class SettingConflict(AppError):
@@ -160,10 +179,17 @@ class SettingDetailView(AdminView):
     def patch(self, request: Request, key: str) -> Response:
         s = SettingUpdateSerializer(data=request.data)
         s.is_valid(raise_exception=True)
+        value = s.validated_data["value"]
         with transaction.atomic():
             _check_expected(key, s.validated_data)
-            before, after = registry.set_value(key, s.validated_data["value"])
-            audit.record(request, "setting.update", "setting", key, before, after, s.validated_data["reason"])
+            if value == registry.definition(key).default:
+                # Saving the default drops the override, so the key follows future default changes.
+                before, after = registry.reset(key)
+                action = "setting.reset"
+            else:
+                before, after = registry.set_value(key, value)
+                action = "setting.update"
+            audit.record(request, action, "setting", key, before, after, s.validated_data["reason"])
         return Response(setting_payload(key))
 
     def delete(self, request: Request, key: str) -> Response:
@@ -189,6 +215,7 @@ class SmsStatusView(AdminView):
             "provider": settings.SMS_PROVIDER,
             "configured": bool(settings.IPPANEL_API_KEY),
             "credit_rial": None,
+            "gift_rial": None,
             "low_credit": None,
             "patterns": {},
             "error": None,
@@ -197,7 +224,7 @@ class SmsStatusView(AdminView):
         if result["configured"]:
             try:
                 provider = sms.ippanel()
-                result["credit_rial"] = provider.credit_rial()
+                result["credit_rial"], result["gift_rial"] = provider.credit_rial()
                 result["low_credit"] = result["credit_rial"] < registry.get("sms.low_credit_alert_rial")
                 for key in ("sms.pattern_otp", "sms.pattern_withdrawal_paid"):
                     code = registry.get(key)
@@ -207,6 +234,21 @@ class SmsStatusView(AdminView):
                 result["error"] = exc.reason
         cache.set(SMS_STATUS_CACHE_KEY, result, timeout=60)
         return Response(result)
+
+
+class SmsPatternView(AdminView):
+    """IPPanel status of any pattern code, to warn before switching `sms.pattern_*` to it."""
+
+    admin_roles = (AdminUser.Role.SUPERADMIN,)
+
+    def get(self, request: Request, code: str) -> Response:
+        if not settings.IPPANEL_API_KEY:
+            return Response({"code": code, "status": "unknown"})
+        try:
+            status_value = sms.ippanel().pattern_status(code)
+        except sms.SmsError:
+            status_value = "unknown"
+        return Response({"code": code, "status": status_value})
 
 
 class AuditView(AdminView):

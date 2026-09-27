@@ -194,6 +194,8 @@ export const api = {
       }),
     smsStatus: (refresh = false, o?: Opts) =>
       apiRequest<SmsStatus>(`/admin/sms/status${refresh ? "?refresh=1" : ""}`, o),
+    smsPattern: (code: string, o?: Opts) =>
+      apiRequest<{ code: string; status: string }>(`/admin/sms/patterns/${encodeURIComponent(code)}`, o),
     audit: (filter: { target_type?: string; target_id?: string } = {}, o?: Opts) =>
       apiRequest<Paginated<AdminAuditEntry>>(`/admin/audit?${new URLSearchParams(filter).toString()}`, o),
   },

@@ -564,6 +564,8 @@ All reports: date range filter (Jalali and Gregorian) and CSV export.
 
 Implement a typed registry in `settingsapp` (key, type, default, min, max, description in fa and en). Business code reads settings only through the registry. Changes are audited and take effect without redeploy (cache in Redis, invalidate on write).
 
+A change never alters something already under way: a match, prediction pool, or tournament snapshots the values it depends on (rake, entry, timers, prize split, limits) when it starts, and new values apply to new ones only. Queued players are matched with the values current at pairing time. `live.max_spectators_per_match` = 0 disables spectating.
+
 Required keys with defaults:
 
 | Key | Default |

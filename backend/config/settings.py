@@ -25,6 +25,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY", "insecure-dev-key" if DEBUG else None)
 BASE_DOMAIN = env("BASE_DOMAIN", "localhost")
 URL_SCHEME = env("URL_SCHEME", "http")
 APP_NAME = env("APP_NAME", "Takhte Nard")
+APP_ENV = env("APP_ENV", "development")  # development | staging | production, shown in the admin header
 DESKTOP_ENABLED = env_bool("DESKTOP_ENABLED")
 SURFACE_HOSTS = [f"m.{BASE_DOMAIN}", f"app.{BASE_DOMAIN}", BASE_DOMAIN]
 ADMIN_HOST = f"admin.{BASE_DOMAIN}"

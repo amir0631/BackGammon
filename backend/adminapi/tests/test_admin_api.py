@@ -59,7 +59,7 @@ class TestAdminAuth:
             {"username": "Boss", "password": PASSWORD, "totp": current_code()},
             format="json",
         )
-        assert res.json() == {"username": "boss", "role": "superadmin"}
+        assert res.json() == {"username": "boss", "role": "superadmin", "environment": "development"}
         cookie = res.cookies[settings.ADMIN_COOKIE]
         assert cookie["httponly"] and cookie["samesite"] == "Strict" and not cookie["domain"]
         assert c.get("/api/v1/admin/me").status_code == 200
@@ -173,6 +173,26 @@ class TestAdminSettings:
         }
         assert registry.get("table.rake_pct") == 8
 
+    def test_saving_the_default_resets_and_reports_last_change(self):
+        make_admin()
+        c = admin_client()
+        c.patch("/api/v1/admin/settings/elo.k", {"value": 25, "reason": "tuning"}, format="json")
+        res = c.patch("/api/v1/admin/settings/elo.k", {"value": 20, "reason": "back"}, format="json").json()
+        assert res["is_default"] and res["updated_by"] == "boss" and res["updated_at"]
+        assert AdminAudit.objects.latest("created_at").action == "setting.reset"
+        from settingsapp.models import Setting
+
+        assert not Setting.objects.filter(key="elo.k").exists()
+
+    def test_pattern_status_lookup(self, settings):
+        settings.IPPANEL_API_KEY = "KEY"
+        make_admin()
+        fake = mock.Mock()
+        fake.pattern_status.return_value = "active"
+        with mock.patch("adminapi.views.sms.ippanel", return_value=fake):
+            body = admin_client().get("/api/v1/admin/sms/patterns/abc123xyz").json()
+        assert body == {"code": "abc123xyz", "status": "active"}
+
     def test_units_and_audit_filter(self):
         make_admin()
         c = admin_client()
@@ -209,12 +229,12 @@ class TestAdminSettings:
         settings.IPPANEL_API_KEY = "KEY"
         make_admin()
         fake = mock.Mock()
-        fake.credit_rial.return_value = 500_000
+        fake.credit_rial.return_value = (500_000, 20_000)
         fake.pattern_status.side_effect = lambda code: (
             "active" if code == registry.get("sms.pattern_otp") else "pending"
         )
         with mock.patch("adminapi.views.sms.ippanel", return_value=fake):
             body = admin_client().get("/api/v1/admin/sms/status?refresh=1").json()
-        assert body["credit_rial"] == 500_000 and body["low_credit"] is True
+        assert body["credit_rial"] == 500_000 and body["gift_rial"] == 20_000 and body["low_credit"] is True
         assert body["patterns"]["sms.pattern_otp"]["status"] == "active"
         assert body["patterns"]["sms.pattern_withdrawal_paid"]["status"] == "pending"
