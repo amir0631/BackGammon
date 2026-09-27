@@ -1,0 +1,48 @@
+# Takhte Nard — online 3D backgammon
+
+Product and engineering rules: [CLAUDE.md](CLAUDE.md). UX foundation: [docs/ux/foundation](docs/ux/foundation).
+
+## Layout
+
+| Path | What |
+| --- | --- |
+| `apps/mobile` | `m.` surface (Next.js 15, PWA) |
+| `apps/admin` | `admin.` panel (Next.js 15) |
+| `backend` | Django 5 API, Channels WebSocket, Celery |
+| `packages/*` | Shared TS: protocol, api-client, game-core, game3d, i18n, design-tokens, device-routing |
+| `infra` | Docker Compose, Nginx |
+
+## Run the full stack locally
+
+Requires Docker Desktop. Browsers resolve `*.localhost` to your machine, so no hosts-file edits are needed.
+
+```sh
+cp .env.example .env        # then set DJANGO_SECRET_KEY, POSTGRES_PASSWORD, SEED_ENCRYPTION_KEY
+docker compose -f infra/docker-compose.yml --env-file .env up -d --build
+```
+
+- Mobile app: http://m.localhost
+- Admin panel: http://admin.localhost
+- API health: http://m.localhost/api/v1/health
+- http://app.localhost and http://localhost redirect to `m.` (Phase 1, `DESKTOP_ENABLED=false`)
+
+Set `HTTP_PORT` in `.env` if port 80 is taken.
+
+## Develop
+
+```sh
+pnpm install
+pnpm dev          # Next.js dev servers (mobile :3000, admin :3001)
+pnpm lint && pnpm typecheck && pnpm test
+```
+
+Backend tests run in the backend image against the Compose Postgres:
+
+```sh
+docker compose -f infra/docker-compose.yml --env-file .env run --rm \
+  --build -e DJANGO_DEBUG=true backend sh -c "pip install -q -r requirements-dev.txt && pytest"
+```
+
+## Deployment
+
+Local first; the server is configured from `Arvan.txt` once provided (CLAUDE.md §22.2). Never commit `.env` or `Arvan.txt`.

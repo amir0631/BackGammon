@@ -1,0 +1,13 @@
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+.git
+.env
+.env.*
+Arvan.txt
+backend
+bot
+infra
+docs

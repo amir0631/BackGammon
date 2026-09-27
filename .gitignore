@@ -1,0 +1,46 @@
+# secrets — never commit (CLAUDE.md §22.1)
+.env
+.env.*
+!.env.example
+Arvan.txt
+*.pem
+*.key
+*.crt
+secrets/
+
+# node
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+playwright-report/
+test-results/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+backend/staticfiles/
+backend/media/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# graphify
+graphify-out/

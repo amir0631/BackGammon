@@ -1,0 +1,35 @@
+{
+  "app": {
+    "name": "Takhte Nard",
+    "tagline": "Online 3D backgammon"
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back"
+  },
+  "home": {
+    "comingSoon": "Coming soon",
+    "serverStatus": "Server status",
+    "serverOk": "Connected",
+    "serverDown": "Unavailable"
+  },
+  "admin": {
+    "title": "Admin panel"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Could not connect.",
+    "notFound": "Not found.",
+    "validation": "The data you entered is not valid.",
+    "unauthenticated": "Please log in.",
+    "forbidden": "You do not have access.",
+    "throttled": "Too many requests. Try again shortly.",
+    "settings": {
+      "invalid": "The setting value is not valid.",
+      "unknown": "Unknown setting."
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@bg/admin",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bg/api-client": "workspace:*",
+    "@bg/design-tokens": "workspace:*",
+    "@bg/i18n": "workspace:*",
+    "@bg/protocol": "workspace:*",
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^6.5.0",
+    "@mui/material-nextjs": "^6.5.0",
+    "@mui/stylis-plugin-rtl": "^7.3.10",
+    "next": "^15.5.26",
+    "next-intl": "^4.14.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "stylis": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/stylis": "^4.2.7",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.26",
+    "typescript": "~5.9.3"
+  }
+}

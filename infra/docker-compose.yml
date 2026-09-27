@@ -1,0 +1,110 @@
+# Full stack, used both locally and on the server (CLAUDE.md §22.2).
+# Run from the repo root:  docker compose -f infra/docker-compose.yml --env-file .env up -d --build
+
+name: backgammon
+
+x-backend: &backend
+  build:
+    context: ../backend
+    args:
+      REQUIREMENTS: ${BACKEND_REQUIREMENTS:-requirements.txt}
+  image: backgammon-backend
+  env_file: ../.env
+  environment:
+    POSTGRES_HOST: postgres
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    restart: "no"
+
+  backend:
+    <<: *backend
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  celery-worker:
+    <<: *backend
+    command: ["celery", "-A", "config", "worker", "-l", "info"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  celery-beat:
+    <<: *backend
+    command: ["celery", "-A", "config", "beat", "-l", "info", "-s", "/tmp/celerybeat-schedule"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  mobile:
+    build:
+      context: ..
+      dockerfile: infra/docker/next.Dockerfile
+      args: { APP: mobile }
+    environment:
+      PORT: "3000"
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      URL_SCHEME: ${URL_SCHEME}
+      DESKTOP_ENABLED: ${DESKTOP_ENABLED}
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ..
+      dockerfile: infra/docker/next.Dockerfile
+      args: { APP: admin }
+    environment:
+      PORT: "3001"
+      BASE_DOMAIN: ${BASE_DOMAIN}
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    environment:
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      URL_SCHEME: ${URL_SCHEME}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    depends_on:
+      - backend
+      - mobile
+      - admin
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
