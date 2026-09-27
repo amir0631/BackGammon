@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { direction, formatDate, formatNumber, isLocale } from "./index";
 import fa from "../messages/fa.json";
-import ar from "../messages/ar.json";
 import en from "../messages/en.json";
 
 function keys(obj: object, prefix = ""): string[] {
@@ -11,15 +10,13 @@ function keys(obj: object, prefix = ""): string[] {
 }
 
 describe("i18n", () => {
-  it("marks fa and ar as RTL", () => {
+  it("marks fa as RTL and en as LTR", () => {
     expect(direction("fa")).toBe("rtl");
-    expect(direction("ar")).toBe("rtl");
     expect(direction("en")).toBe("ltr");
   });
 
   it("formats digits per locale", () => {
     expect(formatNumber("fa", 120)).toBe("۱۲۰");
-    expect(formatNumber("ar", 120)).toBe("١٢٠");
     expect(formatNumber("en", 120)).toBe("120");
   });
 
@@ -34,9 +31,8 @@ describe("i18n", () => {
     expect(isLocale("de")).toBe(false);
   });
 
-  it("has the same keys in every catalog", () => {
+  it("has the same keys in fa and en", () => {
     const faKeys = keys(fa).sort();
-    expect(keys(ar).sort()).toEqual(faKeys);
     expect(keys(en).sort()).toEqual(faKeys);
   });
 });

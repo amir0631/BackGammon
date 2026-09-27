@@ -40,9 +40,9 @@ Web backgammon, paid in rial through a Shaparak payment gateway. Two separate us
 ## 2. rules
 
 1. **Server-authoritative game.** The client sends move intents only. The server generates dice, validates every move, applies state, and broadcasts. Never trust client-computed state, dice, timers, or results.
-2. **coin economy.** coin withdrawal, cash-out, coin transfer, gifting, trading, prediction settlement. Tournament prizes are coins, items.
+2. **Coin economy.** Coins are bought (gateway or admin top-up), spent in-game, transferred between users (§7.13), and withdrawn to a bank account (§7.12). Prediction payouts and tournament prizes are coins or items. No gifting or trading outside these flows.
 3. **Coins are never edited directly.** Every balance change is a double-entry ledger transaction whose entries sum to zero. `wallet.balance` is a cache derived from the ledger and must always reconcile.
-4. **Coins are integers** (`BIGINT`). No floats anywhere in money or coin math. Rial amounts live only in the `payment` table.
+4. **Coins are integers** (`BIGINT`). No floats anywhere in money or coin math. Rial amounts live only in the `payment` and `withdrawal_request` tables; coin ↔ rial conversion uses the `coin.price_toman` setting (§7.11).
 5. **Idempotency.** Every settlement, payment verification, and reward grant uses a unique idempotency key. Replaying the same event must not create a second transaction.
 6. **Provably fair dice** using the commit-reveal scheme in §6. No `random` module, no `Math.random`, no client-side dice. **Dice physics is visual only**: the server value is fixed before the throw animation starts, and the 3D dice must always land on it (§11.1).
 7. **Everything configurable lives in the `setting` table** (§14). No hardcoded rake percentages, timers, tiers, prices, or thresholds in business logic.
@@ -111,7 +111,7 @@ Web backgammon, paid in rial through a Shaparak payment gateway. Two separate us
 │   ├── api-client/          # typed REST + WebSocket client, reconnect, seq handling
 │   ├── game-core/           # client-side state store, legal-move highlighting, replay player
 │   ├── game3d/              # R3F scene, models, materials, dice pre-simulation, raycast input; layout-agnostic (camera and framing passed in by each app)
-│   ├── i18n/                # message catalogs (fa, ar, en), number and date formatting
+│   ├── i18n/                # message catalogs (fa, en), number and date formatting
 │   ├── design-tokens/       # colors, type scale, spacing, radii shared by both UIs
 │   └── device-routing/      # device detection, redirect rules, view preference cookie
 └── infra/                   # docker-compose, nginx, grafana, backups
@@ -182,17 +182,17 @@ Board rules are standard backgammon for all variants: 24 points, 15 checkers eac
 | `escrow:pool:{id}` | Prediction stakes locked for a pool |
 | `escrow:tournament:{id}` | Tournament entry fees |
 | `platform:rake` | Rake revenue |
-| `platform:rewards` | Source of daily bonus, level rewards, achievement rewards |
+| `platform:rewards` | Source of signup bonus, level rewards, achievement rewards |
 | `platform:sales` | Source of purchased coins |
 | `platform:sinks` | Coins spent in shop, username changes |
+| `escrow:withdrawal:{id}` | Coins held while a withdrawal request is pending |
+| `platform:payouts` | Coins paid out to bank accounts (withdrawn from circulation) |
 
 Every transaction: `ledger_entry` rows sharing one `tx_id`, sum of `amount` = 0. Wrap in a DB transaction; lock affected `wallet` rows with `SELECT … FOR UPDATE` in a consistent order (ascending user id) to avoid deadlocks.
 
 ### 7.2 Transaction types
 
-`purchase`, `match_entry`, `match_payout`, `match_refund`, `rake`, `referral_commission`, `prediction_stake`, `prediction_payout`, `prediction_refund`, `tournament_entry`, `tournament_prize`, `tournament_refund`, `daily_bonus`, `level_reward`, `achievement_reward`, `shop_purchase`, `username_change`, `admin_adjustment`.
-
-Add withdrawal and transfer type.
+`purchase`, `match_entry`, `match_payout`, `match_refund`, `rake`, `referral_commission`, `prediction_stake`, `prediction_payout`, `prediction_refund`, `tournament_entry`, `tournament_prize`, `tournament_refund`, `signup_bonus`, `level_reward`, `achievement_reward`, `shop_purchase`, `username_change`, `admin_adjustment`, `withdrawal_hold`, `withdrawal_payout`, `withdrawal_refund`, `transfer`.
 
 `admin_topup`: admin-initiated wallet charge (see §7.9).
 
@@ -201,9 +201,38 @@ Add withdrawal and transfer type.
 The payment gateway is added later (§18). Until then, and permanently as a support tool, the admin panel can charge any user's wallet with an arbitrary coin amount:
 
 - Endpoint `POST /api/v1/admin/users/{id}/wallet/topup` with `amount` (positive integer coins), mandatory `reason`, and `Idempotency-Key` header.
-- Roles: `finance` and `superadmin` only. Optional per-action cap via setting `admin.topup_max_amount` (0 = no cap).
+- Roles: `finance` and `superadmin` only. Per-action cap `admin.topup_max_amount` (default 10,000 coins = 10,000,000 toman). The form offers the coin packages as presets plus a custom amount.
 - Ledger: one `admin_topup` transaction, `platform:sales → user:{id}`, entries summing to zero, idempotent.
 - Written to `admin_audit` with before/after balance, amount, reason, and admin id. Shown in the user's ledger and in financial reports as a separate line from gateway purchases.
+
+### 7.10 Signup bonus
+
+- Every new account receives `bonus.signup_coins` (default 100 coins = 100,000 toman) once its phone is verified at registration.
+- One `signup_bonus` transaction `platform:rewards → user:{id}`, idempotency key `signup_bonus:{user_id}`. Granted at most once per phone number, ever (a phone that registers again gets nothing).
+- Antifraud `multi_account` matches (§12.2) on the new account hold the bonus for review instead of paying it.
+- There is no daily bonus.
+
+### 7.11 Coin price and purchase amounts
+
+- `coin.price_toman` (default 1,000): one coin costs 1,000 toman (10,000 rial). The UI shows toman; `payment` stores rial.
+- Buying coins offers the preset coin packages plus a custom amount between `shop.custom_min_toman` and `shop.custom_max_toman` (default 10,000 to 10,000,000 toman), converted to whole coins (floor).
+- Until the gateway is live, the coins page explains that top-ups are done by support (§7.9).
+
+### 7.12 Withdrawal (cash-out)
+
+- The user registers a bank account (Sheba/IBAN) in their own name, then requests a withdrawal of at least `withdraw.min_coins` and at most `withdraw.daily_max_coins` per day, confirmed with an SMS OTP.
+- On request: `withdrawal_hold` `user → escrow:withdrawal:{id}`. Status `pending`.
+- A `finance` admin makes the bank transfer manually, enters the bank reference, and approves: `withdrawal_payout` `escrow:withdrawal:{id} → platform:payouts` (a fee, if `withdraw.fee_pct` > 0, goes to `platform:rake`). Status `paid`; the user gets an SMS.
+- Reject (with reason) or user cancel while pending: `withdrawal_refund` back to the user. Status `rejected` / `cancelled`.
+- `withdrawal_request` stores coins, the rial amount at the request-time `coin.price_toman`, bank account, status, admin, bank reference, and timestamps.
+- Signup bonus coins are not withdrawable until the user has completed at least one purchase or top-up. Accounts with an open antifraud flag cannot withdraw.
+
+### 7.13 Transfer between users
+
+- `POST wallet/transfer` with recipient `username`, `amount`, password confirmation, and `Idempotency-Key`.
+- Limits: `transfer.min_coins`, `transfer.daily_max_coins`; optional fee `transfer.fee_pct` to `platform:rake`.
+- One `transfer` transaction `user:{sender} → user:{recipient}`. Transfers between accounts that antifraud links (§12.2) are refused and flagged.
+- The recipient sees the sender's username, never their phone number.
 
 ### 7.3 Table (match) settlement
 
@@ -299,7 +328,7 @@ commission = floor(referee_entry * referral.pct / 100)    # default 1
 | --- | --- |
 | Auth | `POST auth/otp`, `POST auth/register`, `POST auth/login`, `POST auth/refresh`, `POST auth/logout`, `POST auth/password/reset` |
 | Profile | `GET/PATCH me`, `GET users/{username}`, `GET me/sessions`, `DELETE me/sessions` |
-| Wallet | `GET wallet`, `GET wallet/ledger` |
+| Wallet | `GET wallet`, `GET wallet/ledger`, `POST wallet/transfer`, `POST wallet/withdrawals`, `GET wallet/withdrawals`, `DELETE wallet/withdrawals/{id}` (cancel while pending) |
 | Shop | `GET shop/packages`, `POST shop/checkout`, `GET payments/callback`, `GET shop/items`, `POST shop/items/{id}/buy`, `POST me/items/{id}/equip` |
 | Matches | `GET tiers`, `GET matches/{id}`, `GET matches/{id}/replay` (players of that match and admins only), `GET me/matches` |
 | Live | `GET matches/live?tier=&variant=&tournament=&sort=spectators|pool|elo` |
@@ -417,10 +446,11 @@ Dice throw (pre-simulate, then play back)
 
 ### 11.3 i18n and RTL
 
-- Locales `fa` (default), `ar`, `en`. `fa` and `ar` are RTL; `en` is LTR. Set `<html dir>` and MUI theme direction per locale.
-- Digits by locale: fa `۰۱۲`, ar `٠١٢`, en `012`. Use `Intl.NumberFormat` with the locale.
-- Fonts, self-hosted: Vazirmatn (fa), Noto Kufi Arabic (ar), Inter (en).
-- Dates: Jalali calendar for `fa`, Gregorian for `ar`/`en`.
+- Locales `fa` (default) and `en` only. `fa` is RTL; `en` is LTR. Set `<html dir>` and MUI theme direction per locale.
+- Digits by locale: fa `۰۱۲`, en `012`. Use `Intl.NumberFormat` with the locale.
+- Fonts, self-hosted: Vazirmatn (fa), Inter (en).
+- Dates: Jalali calendar for `fa`, Gregorian for `en`.
+- Money shown to users is in toman (fa: تومان); the database stores rial.
 - Preset phrases are keys; the receiver renders them in their own locale.
 
 ### 11.4 Performance budget
@@ -486,7 +516,7 @@ Rules:
 - User session cookies are scoped to `.xxxx.ir` and shared by `app.` and `m.`. Admin panel on `admin.xxxx.ir` uses its own host-only cookies with different names; user tokens are never accepted by admin endpoints and vice versa.
 - Admin panel: TOTP 2FA, IP allowlist, roles `support`, `finance`, `superadmin`.
 - Security headers on every subdomain: HSTS (includeSubDomains), CSP without third-party origins, `X-Frame-Options: DENY`.
-- Username filter for profanity in fa, ar, en. Username 3–20 chars; change costs coins, max once per 30 days.
+- Username filter for profanity in fa and en. Username 3–20 chars; change costs coins, max once per 30 days.
 
 ### 12.2 Anti-fraud rules
 
@@ -510,16 +540,17 @@ Every section below is required in v1.
 | --- | --- |
 | Dashboard | Online users, live matches, today's sales and rake, open fraud flags |
 | Users | Search by phone or username, full profile, ledger, match history, suspend/ban, manual balance adjustment with reason, wallet top-up with an arbitrary amount (§7.9) |
-| Game settings | Variants and allowed lengths, timers, reconnect grace, table tiers, rake %, referral %, daily bonus, ELO and XP parameters |
+| Game settings | Variants and allowed lengths, timers, reconnect grace, table tiers, rake %, referral %, signup bonus, coin price, custom purchase limits, transfer and withdrawal limits, ELO and XP parameters |
 | Predictions | Enable/disable globally, min table entry, stake and pool caps, rake %, held pools |
 | Tournaments | Create, schedule, prize split, cancel with refund, live bracket |
 | Shop | Coin packages, themes, avatars, emoji and phrase packs, prices and unlock levels |
-| Content | All tri-lingual texts, preset phrases, announcements and banners |
+| Content | All bilingual (fa, en) texts, preset phrases, announcements and banners |
 | Financial reports | Rial sales by day and package, coins issued and consumed, table and prediction rake, referral payouts, total user balances, daily gateway reconciliation |
 | Game analytics | Matches by variant and tier, average duration, resign and disconnect rates, queue wait time, dice distribution test |
 | User analytics | Signups, DAU/MAU, D1/D7/D30 retention, purchase conversion, ARPPU |
 | Anti-fraud | Flag queue with evidence, replay, account link graph, decision with reason |
 | Live and replays | List of live matches with join-as-spectator (hidden from players), search any past match by id, player, or date, admin replay viewer (§20.3), spectator stats |
+| Withdrawals | Pending withdrawal queue, approve with bank reference or reject with reason, history, CSV export |
 | Access | Roles, admin users, full audit log |
 
 All reports: date range filter (Jalali and Gregorian) and CSV export.
@@ -528,7 +559,7 @@ All reports: date range filter (Jalali and Gregorian) and CSV export.
 
 ## 14. Settings registry
 
-Implement a typed registry in `settingsapp` (key, type, default, min, max, description in 3 languages). Business code reads settings only through the registry. Changes are audited and take effect without redeploy (cache in Redis, invalidate on write).
+Implement a typed registry in `settingsapp` (key, type, default, min, max, description in fa and en). Business code reads settings only through the registry. Changes are audited and take effect without redeploy (cache in Redis, invalidate on write).
 
 Required keys with defaults:
 
@@ -553,7 +584,11 @@ Required keys with defaults:
 | `predict.min_count_for_board` | 20 |
 | `tournament.rake_pct` | 10 |
 | `tournament.default_prize_split` | [50, 25, 12.5, 12.5] |
-| `bonus.daily_coins` | 20 |
+| `bonus.signup_coins` | 100 |
+| `coin.price_toman` | 1000 (1 coin = 1,000 toman) |
+| `shop.custom_min_toman` / `shop.custom_max_toman` | 10,000 / 10,000,000 |
+| `transfer.min_coins` / `transfer.daily_max_coins` / `transfer.fee_pct` | 10 / 5,000 / 0 |
+| `withdraw.min_coins` / `withdraw.daily_max_coins` / `withdraw.fee_pct` | 100 / 10,000 / 0 |
 | `xp.per_match` / `xp.per_win` | 10 / 15 |
 | `elo.k_new` / `elo.k` / `elo.new_threshold` | 40 / 20 / 30 |
 | `matchmaking.elo_window` / `matchmaking.widen_step` / `matchmaking.widen_seconds` | 150 / 50 / 10 |
@@ -563,7 +598,7 @@ Required keys with defaults:
 | `live.spectator_delay_seconds` | 0 |
 | `live.spectator_reactions_enabled` | true |
 | `replay.retention_days` | 0 (keep forever) |
-| `admin.topup_max_amount` | 0 (no cap) |
+| `admin.topup_max_amount` | 10000 |
 
 ---
 
@@ -571,7 +606,7 @@ Required keys with defaults:
 
 Implement these tables (Django models). Add indexes on every foreign key and on `(user_id, created_at)` for history queries.
 
-`user`, `session`, `otp`, `wallet`, `ledger_entry`, `payment`, `coin_package`, `table_tier`, `match`, `game`, `move`, `match_event`, `replay_view`, `tournament`, `tournament_entry`, `prediction_pool`, `prediction`, `referral_earning`, `item`, `user_item`, `phrase`, `elo_history`, `xp_history`, `achievement`, `user_achievement`, `device_fingerprint`, `fraud_flag`, `admin_user`, `admin_audit`, `setting`.
+`user`, `session`, `otp`, `wallet`, `ledger_entry`, `payment`, `withdrawal_request`, `bank_account`, `coin_package`, `table_tier`, `match`, `game`, `move`, `match_event`, `replay_view`, `tournament`, `tournament_entry`, `prediction_pool`, `prediction`, `referral_earning`, `item`, `user_item`, `phrase`, `elo_history`, `xp_history`, `achievement`, `user_achievement`, `device_fingerprint`, `fraud_flag`, `admin_user`, `admin_audit`, `setting`.
 
 Key field notes:
 
@@ -582,7 +617,7 @@ Key field notes:
 - `move`: `game_id`, `seq`, `player`, `dice`, `moves_json`, `cube_action`, `position_after`, `ts`.
 - `match_event`: `match_id`, `seq`, `type`, `actor` (`player_a`, `player_b`, `system`), `payload` (JSONB), `server_ts`. Append-only (DB trigger), unique `(match_id, seq)`. Holds every protocol event of §10.3 except spectator-only events.
 - `replay_view`: `match_id`, `viewer_id`, `viewer_role` (`player`, `admin`), `viewed_at`. Every replay access is logged.
-- Translatable admin content uses `name_i18n` JSON: `{"fa": "", "ar": "", "en": ""}`.
+- Translatable admin content uses `name_i18n` JSON: `{"fa": "", "en": ""}`.
 
 ---
 
@@ -621,7 +656,7 @@ Build in this order; each step must meet §16 for its scope before the next star
 0. UX foundation (UX specialist): personas, user journeys, information architecture, screen inventory, navigation model, and flows for every feature in §1. UI foundation (UI specialist): design tokens, typography in three scripts, component library on MUI, motion principles, 3D art direction. Both approved before step 6.
 1. Monorepo scaffold (`apps/mobile`, `apps/admin`, shared packages), Docker Compose, Nginx for `m.`, `admin.`, and a redirect-only block for `app.` and root (`DESKTOP_ENABLED=false`), shared login cookie, CI, settings registry, i18n skeleton with RTL.
 2. Accounts: OTP, register, login, sessions, profile, avatars.
-3. Wallet ledger and invariants, plus the admin wallet top-up endpoint (§7.9) so wallets can be charged before the gateway exists.
+3. Wallet ledger and invariants, signup bonus (§7.10), admin wallet top-up (§7.9), transfers (§7.13), withdrawal requests and admin approval (§7.12).
 4. Game engine (pure Python) with full test suite.
 5. Real-time layer: WebSocket protocol, match state in Redis, timers, reconnect.
 6. 3D scene in `packages/game3d` (base models, raycast input, pre-simulated physics dice, lite mode) and the `m.` game screen, responsive across all §11.7 breakpoints. Performance pass on the reference phone.
@@ -660,7 +695,7 @@ Implement with the default and keep the value configurable. Do not ask about the
 | Referral base and duration | 1% of referee's entry, paid from rake, unlimited duration |
 | Coin package prices | Seed 4 placeholder packages, admin-editable |
 | Payment gateway | Added later. For now implement only the abstract `PaymentGateway` interface and a sandbox adapter; the real Shaparak PSP adapter comes when the provider is chosen. Users are charged through admin top-up (§7.9) until then |
-| SMS provider | Abstract `SmsProvider` interface; implement one Iranian provider adapter + a console adapter for dev |
+| SMS provider | Abstract `SmsProvider` interface; IPPanel Edge adapter (pattern sends, see `sms.md`) + a console adapter for dev |
 | Brand name | Use `APP_NAME` env var and i18n key `app.name` |
 | Terms of service and privacy text | Placeholder pages with i18n keys; include an 18+ age confirmation checkbox at signup |
 
@@ -768,4 +803,4 @@ The main agent never skips step 1 or 3 for a user-facing change.
 - Every wait (matchmaking, opponent's turn, payment verification, reconnect) shows progress and a way out.
 - Coins are always visible where they are spent, with the cost shown before confirming.
 - No dark patterns: no fake urgency, no hidden costs, no pre-checked purchases, no manipulative streaks or loss-chasing prompts. Purchase, entry, and prediction confirmations are explicit.
-- Persian is the primary language; designs start in fa (RTL) and are then checked in ar and en.
+- Persian is the primary language; designs start in fa (RTL) and are then checked in en.

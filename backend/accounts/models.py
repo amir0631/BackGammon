@@ -26,7 +26,6 @@ class User(AbstractBaseUser):
 
     class Lang(models.TextChoices):
         FA = "fa"
-        AR = "ar"
         EN = "en"
 
     phone = models.CharField(max_length=20, unique=True)

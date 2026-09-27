@@ -113,7 +113,7 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 LANGUAGE_CODE = "fa"
-LANGUAGES = [("fa", "Persian"), ("ar", "Arabic"), ("en", "English")]
+LANGUAGES = [("fa", "Persian"), ("en", "English")]
 USE_I18N = True
 USE_TZ = True
 TIME_ZONE = "UTC"

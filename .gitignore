@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 Arvan.txt
+sms_api.txt
 *.pem
 *.key
 *.crt

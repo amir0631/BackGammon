@@ -24,7 +24,16 @@ REQUIRED_KEYS = {
     "predict.min_count_for_board": 20,
     "tournament.rake_pct": 10,
     "tournament.default_prize_split": [50, 25, 12.5, 12.5],
-    "bonus.daily_coins": 20,
+    "bonus.signup_coins": 100,
+    "coin.price_toman": 1000,
+    "shop.custom_min_toman": 10_000,
+    "shop.custom_max_toman": 10_000_000,
+    "transfer.min_coins": 10,
+    "transfer.daily_max_coins": 5000,
+    "transfer.fee_pct": 0,
+    "withdraw.min_coins": 100,
+    "withdraw.daily_max_coins": 10_000,
+    "withdraw.fee_pct": 0,
     "xp.per_match": 10,
     "xp.per_win": 15,
     "elo.k_new": 40,
@@ -40,7 +49,7 @@ REQUIRED_KEYS = {
     "live.spectator_delay_seconds": 0,
     "live.spectator_reactions_enabled": True,
     "replay.retention_days": 0,
-    "admin.topup_max_amount": 0,
+    "admin.topup_max_amount": 10_000,
 }
 
 
@@ -49,9 +58,9 @@ def test_registry_has_every_required_key_with_its_default():
         assert registry.definition(key).default == default, key
 
 
-def test_every_setting_has_three_language_descriptions():
+def test_every_setting_has_fa_and_en_descriptions():
     for defn in registry.REGISTRY.values():
-        assert set(defn.description) == {"fa", "ar", "en"}, defn.key
+        assert set(defn.description) == {"fa", "en"}, defn.key
         assert all(defn.description.values()), defn.key
 
 
@@ -71,9 +80,9 @@ def test_set_value_persists_invalidates_cache_and_returns_before_after():
 
 @pytest.mark.django_db(transaction=True)
 def test_reset_restores_default():
-    registry.set_value("bonus.daily_coins", 50)
-    assert registry.reset("bonus.daily_coins") == (50, 20)
-    assert registry.get("bonus.daily_coins") == 20
+    registry.set_value("bonus.signup_coins", 50)
+    assert registry.reset("bonus.signup_coins") == (50, 100)
+    assert registry.get("bonus.signup_coins") == 100
 
 
 @pytest.mark.django_db
