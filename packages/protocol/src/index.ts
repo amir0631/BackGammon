@@ -54,3 +54,116 @@ export interface HealthResponse {
   status: "ok" | "degraded";
   checks: Record<string, boolean>;
 }
+
+// ---- Accounts (CLAUDE.md §10.2 Auth, Profile) ----
+
+export type Lang = "fa" | "en";
+export type OtpPurpose = "register" | "password_reset";
+export type UserStatus = "active" | "suspended" | "banned";
+
+export interface UserPrefs {
+  graphics_lite: boolean;
+  animations_reduced: boolean;
+  sound: boolean;
+  vibration: boolean;
+}
+
+/** The signed-in user's own profile. Only the owner ever receives `phone`. */
+export interface Me {
+  id: number;
+  username: string | null;
+  phone: string;
+  lang: Lang;
+  avatar: string;
+  prefs: UserPrefs;
+  status: UserStatus;
+  elo: number;
+  xp: number;
+  level: number;
+  created_at: string;
+}
+
+export interface PublicUser {
+  username: string;
+  avatar: string;
+  elo: number;
+  level: number;
+  created_at: string;
+}
+
+export interface SessionInfo {
+  id: string;
+  user_agent: string;
+  ip: string | null;
+  created_at: string;
+  last_used_at: string;
+  current: boolean;
+}
+
+export interface OtpRequestResponse {
+  ttl_seconds: number;
+}
+
+export interface OtpVerifyResponse {
+  verification_token: string;
+}
+
+export interface RegisterRequest {
+  verification_token: string;
+  username: string;
+  password: string;
+  age_confirmed: boolean;
+  referrer?: string;
+}
+
+export interface MeUpdate {
+  lang?: Lang;
+  avatar?: string;
+  prefs?: Partial<UserPrefs>;
+}
+
+// ---- Admin (CLAUDE.md §13) ----
+
+export type AdminRole = "support" | "finance" | "superadmin";
+
+export interface AdminMe {
+  username: string;
+  role: AdminRole;
+}
+
+export type SettingKind = "int" | "bool" | "str" | "int_list" | "number_list" | "json";
+
+export interface AdminSetting {
+  key: string;
+  group: string;
+  kind: SettingKind;
+  value: unknown;
+  default: unknown;
+  is_default: boolean;
+  min: number | null;
+  max: number | null;
+  choices: string[] | null;
+  description: Record<Lang, string>;
+}
+
+export interface SmsStatus {
+  provider: string;
+  configured: boolean;
+  credit_rial: number | null;
+  low_credit: boolean | null;
+  patterns: Record<string, { code: string; status: string }>;
+  error: string | null;
+  checked_at: string;
+}
+
+export interface AdminAuditEntry {
+  id: number;
+  admin: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  before: unknown;
+  after: unknown;
+  reason: string;
+  created_at: string;
+}

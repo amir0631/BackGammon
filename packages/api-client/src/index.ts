@@ -1,6 +1,22 @@
 // Typed REST client (CLAUDE.md §10.1). Frontends call same-origin `/api/v1` paths; Nginx
 // proxies them to the backend, so no CORS. Auth lives in HttpOnly cookies.
-import type { ApiError, HealthResponse } from "@bg/protocol";
+import type {
+  AdminAuditEntry,
+  AdminMe,
+  AdminSetting,
+  ApiError,
+  HealthResponse,
+  Me,
+  MeUpdate,
+  OtpPurpose,
+  OtpRequestResponse,
+  OtpVerifyResponse,
+  Paginated,
+  PublicUser,
+  RegisterRequest,
+  SessionInfo,
+  SmsStatus,
+} from "@bg/protocol";
 
 export const API_PREFIX = "/api/v1";
 
@@ -29,13 +45,56 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Absolute origin for server-side calls; browsers use same-origin paths. */
   baseUrl?: string;
+  /** Internal: set on the retry after a token refresh, so it never loops. */
+  retried?: boolean;
 }
+
+let csrfReady: Promise<void> | null = null;
+
+/** Writes need the `csrftoken` cookie; fetch it once per page load when missing. */
+function ensureCsrf(baseUrl = ""): Promise<void> {
+  if (csrfToken()) return Promise.resolve();
+  csrfReady ??= fetch(`${baseUrl}${API_PREFIX}/auth/csrf`, { credentials: "include" })
+    .then(() => undefined)
+    .catch(() => {
+      csrfReady = null;
+    });
+  return csrfReady;
+}
+
+let refreshing: Promise<boolean> | null = null;
+
+/** One shared refresh for all requests that hit an expired access token at the same time. */
+function refreshSession(baseUrl = ""): Promise<boolean> {
+  refreshing ??= (async () => {
+    try {
+      await ensureCsrf(baseUrl);
+      const token = csrfToken();
+      const res = await fetch(`${baseUrl}${API_PREFIX}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: token ? { "X-CSRFToken": token } : {},
+      });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      setTimeout(() => {
+        refreshing = null;
+      }, 0);
+    }
+  })();
+  return refreshing;
+}
+
+const NO_REFRESH_PATHS = ["/auth/refresh", "/auth/login", "/auth/logout"];
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (method !== "GET") {
+    if (typeof document !== "undefined") await ensureCsrf(options.baseUrl);
     const token = csrfToken();
     if (token) headers["X-CSRFToken"] = token;
   }
@@ -60,6 +119,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const body = isApiError(data)
       ? data
       : { code: "HTTP_ERROR", message_key: "errors.generic", details: { status: response.status } };
+    // Expired access token: refresh once, then replay the request (player API only).
+    if (
+      response.status === 401 &&
+      body.code === "AUTH_SESSION_INVALID" &&
+      !options.retried &&
+      !path.startsWith("/admin/") &&
+      !NO_REFRESH_PATHS.includes(path) &&
+      (await refreshSession(options.baseUrl))
+    ) {
+      return apiRequest<T>(path, { ...options, retried: true });
+    }
     throw new ApiRequestError(response.status, body);
   }
   return data as T;
@@ -69,6 +139,54 @@ function isApiError(value: unknown): value is ApiError {
   return typeof value === "object" && value !== null && "code" in value && "message_key" in value;
 }
 
+type Opts = Pick<RequestOptions, "signal" | "baseUrl">;
+
 export const api = {
-  health: (options?: RequestOptions) => apiRequest<HealthResponse>("/health", options),
+  health: (o?: Opts) => apiRequest<HealthResponse>("/health", o),
+
+  auth: {
+    requestOtp: (phone: string, purpose: OtpPurpose) =>
+      apiRequest<OtpRequestResponse>("/auth/otp", { method: "POST", body: { phone, purpose } }),
+    verifyOtp: (phone: string, purpose: OtpPurpose, code: string) =>
+      apiRequest<OtpVerifyResponse>("/auth/otp/verify", { method: "POST", body: { phone, purpose, code } }),
+    register: (body: RegisterRequest) => apiRequest<Me>("/auth/register", { method: "POST", body }),
+    login: (phone: string, password: string) =>
+      apiRequest<Me>("/auth/login", { method: "POST", body: { phone, password } }),
+    resetPassword: (verification_token: string, new_password: string) =>
+      apiRequest<Me>("/auth/password/reset", { method: "POST", body: { verification_token, new_password } }),
+    logout: () => apiRequest<void>("/auth/logout", { method: "POST" }),
+  },
+
+  me: {
+    get: (o?: Opts) => apiRequest<Me>("/me", o),
+    update: (body: MeUpdate) => apiRequest<Me>("/me", { method: "PATCH", body }),
+    sessions: (o?: Opts) => apiRequest<Paginated<SessionInfo>>("/me/sessions", o),
+    signOutOthers: () => apiRequest<{ revoked: number }>("/me/sessions", { method: "DELETE" }),
+  },
+
+  users: {
+    get: (username: string, o?: Opts) => apiRequest<PublicUser>(`/users/${encodeURIComponent(username)}`, o),
+  },
+
+  content: {
+    avatars: (o?: Opts) => apiRequest<Paginated<{ key: string }>>("/avatars", o),
+  },
+
+  admin: {
+    login: (username: string, password: string, totp: string) =>
+      apiRequest<AdminMe>("/admin/auth/login", { method: "POST", body: { username, password, totp } }),
+    logout: () => apiRequest<void>("/admin/auth/logout", { method: "POST" }),
+    me: (o?: Opts) => apiRequest<AdminMe>("/admin/me", o),
+    settings: (o?: Opts) => apiRequest<Paginated<AdminSetting>>("/admin/settings", o),
+    updateSetting: (key: string, value: unknown, reason = "") =>
+      apiRequest<AdminSetting>(`/admin/settings/${encodeURIComponent(key)}`, {
+        method: "PATCH",
+        body: { value, reason },
+      }),
+    resetSetting: (key: string) =>
+      apiRequest<AdminSetting>(`/admin/settings/${encodeURIComponent(key)}`, { method: "DELETE" }),
+    smsStatus: (refresh = false, o?: Opts) =>
+      apiRequest<SmsStatus>(`/admin/sms/status${refresh ? "?refresh=1" : ""}`, o),
+    audit: (o?: Opts) => apiRequest<Paginated<AdminAuditEntry>>("/admin/audit", o),
+  },
 };
