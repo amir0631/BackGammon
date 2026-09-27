@@ -12,9 +12,13 @@ map $http_host $port_suffix {
     default                 "";
 }
 
-upstream backend { server backend:8000; }
-upstream mobile  { server mobile:3000; }
-upstream admin   { server admin:3001; }
+# Re-resolve container names through Docker DNS, so recreated containers (new IPs after a
+# deploy) are picked up without restarting nginx. Needs nginx >= 1.27.3.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+upstream backend { zone backend 64k; server backend:8000 resolve; }
+upstream mobile  { zone mobile 64k;  server mobile:3000 resolve; }
+upstream admin   { zone admin 64k;   server admin:3001 resolve; }
 
 server_tokens off;
 client_max_body_size 2m;
