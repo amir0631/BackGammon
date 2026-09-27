@@ -1,6 +1,6 @@
 # Personas
 
-Status: draft for approval (CLAUDE.md §17 step 0)
+Status: draft for approval (CLAUDE.md §17 step 0). Revised with product owner decisions (languages fa and en only; signup bonus; no daily bonus; transfer and withdrawal in Phase 1).
 Scope: Phase 1, mobile surface `m.` (serves all devices, §11.0, §11.7)
 
 These are working personas built from the product brief and the market context. They are not based on field research yet. Check them against real usage data before Phase 2 (§17 step 19).
@@ -33,8 +33,8 @@ These are working personas built from the product brief and the market context. 
 **Design implications**
 - Show the reconnect grace countdown clearly and warn before a forfeit (patterns.md §6).
 - Put roll, confirm, and undo in the bottom 40% of the screen, with targets of 44 px or more.
-- The Play tab must support "same settings as last time" as an explicit choice that still opens the cost confirmation.
-- Show the entry, the 10% platform fee, and the payout before every coin table.
+- "Play again with the same settings" is an explicit choice that still opens the cost confirmation.
+- Show the entry, the 10% platform fee, and the payout before every coin table, with the toman equivalent (patterns.md §2).
 - Explain fair dice (the seed and "verify dice" in replays) in plain words in Help.
 
 ---
@@ -62,13 +62,13 @@ These are working personas built from the product brief and the market context. 
 - Confusing money mechanics she can't predict ("how much will I get back?").
 
 **Design implications**
-- Label bots clearly. Bot play is always free (unless `bot.entry_enabled`) and has no rating.
+- Label bots clearly. Bot play is free (unless `bot.entry_enabled`) and has no rating.
 - Predictions show one plain sentence explaining the pool, both side totals, her stake, and an estimated payout labeled as an estimate.
 - No pre-selected coin packages, stake amounts, or tiers.
-- Profiles show only public data. The phone number never appears anywhere outside her own account settings.
+- Profiles, transfers, and receipts show usernames only. Her phone number never appears to anyone else (§2 rule 11, §7.13).
 - iOS PWA constraints:
   - Push notifications work only in the installed app.
-  - Gateway redirects in standalone mode need testing (see journeys.md J3 and the open questions).
+  - Gateway redirects in standalone mode need testing (see journeys.md J3b).
 
 ---
 
@@ -97,40 +97,50 @@ These are working personas built from the product brief and the market context. 
 **Design implications**
 - At the `md` and `lg` breakpoints, show extra panels (move history, pip count, spectators) instead of stretched content (§11.7).
 - Keyboard shortcuts (Space, Enter, Ctrl+Z, D) must work on `m.` too.
-- Tournament detail shows the start time in Jalali with a relative time ("in 2 h 10 min"). It also asks for push notification permission at the moment of registration, not on first launch.
+- Tournament detail shows the start time in Jalali with a relative time ("in 2 h 10 min"). It asks for push notification permission at the moment of registration, not on first launch.
 - The replay viewer has step, speed, jump-to-game, and "verify dice" (§20.2).
 
 ---
 
-## P4 — Karim, the Arabic-speaking budget player
+## P4 — Ali, the budget player who cashes out
 
 | | |
 | --- | --- |
-| Age / place | 22, Ahvaz (Khuzestan) |
+| Age / place | 24, Tabriz |
 | Work | Student, part-time shop assistant |
 | Device | Low-end Android (3 GB RAM, older GPU, WebGL2 barely supported), 320–360 px wide |
-| Network | Limited mobile data package; slow 4G / 3G fallback |
-| Language | ar UI, Arabic-Indic digits; reads Persian too |
-| Session | Short sessions, many bot games, occasional low-tier tables |
-| Backgammon | Good player, plays with friends |
+| Network | Limited mobile data package; slow 4G with 3G fallback |
+| Language | fa UI (Azerbaijani Turkish at home; reads Persian fluently) |
+| Session | Short sessions; bot games and low-tier tables |
+| Backgammon | Strong player; plays with a group of friends |
 
 **Goals**
-- Play smoothly on a weak phone.
-- Earn coins through wins and the daily bonus rather than buying.
+- Turn his 100-coin signup bonus into more coins by winning.
+- Send coins to friends so they can play together.
+- Withdraw his winnings to his bank account.
 - Invite friends with his referral link.
 
 **Frustrations and fears**
 - A large first download.
 - Lag.
 - Text cut off in narrow layouts.
-- Apps that show Persian strings in the Arabic UI.
+- Not knowing when his withdrawal will arrive, or whether it's stuck.
+- Sending coins to the wrong username.
+- Scammers pretending to be support.
 
 **Design implications**
 - Suggest lite mode (never switch it on automatically) when the frame rate is low (§11.6).
 - Show 3D loading progress with a size hint and a cancel option.
 - The `xs` layout (320 px) must be fully specified. Nothing clips at 200% text size.
-- The ar locale gets complete strings, Arabic-Indic digits, and Gregorian dates.
-- The referral screen explains when commission starts (after the referee's first purchase, §7.4) in one sentence.
+- **Withdrawal:**
+  - Show what can be withdrawn now and why part of the balance can't be (signup bonus rule, §7.12).
+  - Every status (pending, paid, rejected, cancelled) is visible in the app, and he can cancel while pending.
+  - He gets an SMS when the payout is made.
+- **Transfer:**
+  - Show the recipient's avatar and username before confirming.
+  - State that transfers can't be undone.
+  - Warn that support never asks for coins or passwords.
+- **Referral:** the screen explains in one sentence when commission starts (after the friend's first purchase, §7.4).
 
 ---
 
@@ -138,7 +148,7 @@ These are working personas built from the product brief and the market context. 
 
 | Audience | What changes for them |
 | --- | --- |
-| English speakers (diaspora, foreigners in Iran) | LTR mirror of every screen; Latin digits; Gregorian dates. Payments still require an Iranian bank card (Shaparak). |
+| English speakers (diaspora, foreigners in Iran) | LTR mirror of every screen; Latin digits; Gregorian dates. Prices are still in toman, and buying and withdrawing need an Iranian bank card and Sheba. |
 | Tablet users | `md` layout: side rail plus one side panel. |
 | Desktop browser users in Phase 1 | `lg` layout: centered 1280 px shell with two side panels in a match; hover and keyboard support. |
 
@@ -146,7 +156,7 @@ These are working personas built from the product brief and the market context. 
 
 ## Persona-to-feature priority
 
-| Feature | P1 Reza | P2 Maryam | P3 Hamid | P4 Karim |
+| Feature | P1 Reza | P2 Maryam | P3 Hamid | P4 Ali |
 | --- | --- | --- | --- | --- |
 | Quick coin table | High | Low | Med | Med |
 | Bot play | Low | High | Low | High |
@@ -155,5 +165,7 @@ These are working personas built from the product brief and the market context. 
 | Replay and verify dice | Med | Low | High | Low |
 | Shop themes | Low | High | Med | Low |
 | Buy coins | Med | Med | Med | Low |
+| Transfer coins | Low | Low | Low | High |
+| Withdraw coins | Med | Low | Med | High |
 | Referral | Low | Med | Low | High |
 | Lite mode | Med | Low | Low | High |

@@ -215,7 +215,7 @@ The payment gateway is added later (§18). Until then, and permanently as a supp
 ### 7.11 Coin price and purchase amounts
 
 - `coin.price_toman` (default 1,000): one coin costs 1,000 toman (10,000 rial). The UI shows toman; `payment` stores rial.
-- Buying coins offers the preset coin packages plus a custom amount between `shop.custom_min_toman` and `shop.custom_max_toman` (default 10,000 to 10,000,000 toman), converted to whole coins (floor).
+- Buying coins offers the preset coin packages plus a custom amount between `shop.custom_min_toman` and `shop.custom_max_toman` (default 10,000 to 10,000,000 toman). The amount must be a whole multiple of `coin.price_toman`; the server rejects any other amount, so the user never pays for a fraction of a coin.
 - Until the gateway is live, the coins page explains that top-ups are done by support (§7.9).
 
 ### 7.12 Withdrawal (cash-out)
@@ -328,7 +328,7 @@ commission = floor(referee_entry * referral.pct / 100)    # default 1
 | --- | --- |
 | Auth | `POST auth/otp`, `POST auth/register`, `POST auth/login`, `POST auth/refresh`, `POST auth/logout`, `POST auth/password/reset` |
 | Profile | `GET/PATCH me`, `GET users/{username}`, `GET me/sessions`, `DELETE me/sessions` |
-| Wallet | `GET wallet`, `GET wallet/ledger`, `POST wallet/transfer`, `POST wallet/withdrawals`, `GET wallet/withdrawals`, `DELETE wallet/withdrawals/{id}` (cancel while pending) |
+| Wallet | `GET wallet`, `GET wallet/ledger`, `POST wallet/transfer`, `POST wallet/withdrawals`, `GET wallet/withdrawals`, `DELETE wallet/withdrawals/{id}` (cancel while pending), `GET/POST me/bank-accounts`, `DELETE me/bank-accounts/{id}`; `GET wallet` returns `balance`, `locked`, and `withdrawable` |
 | Shop | `GET shop/packages`, `POST shop/checkout`, `GET payments/callback`, `GET shop/items`, `POST shop/items/{id}/buy`, `POST me/items/{id}/equip` |
 | Matches | `GET tiers`, `GET matches/{id}`, `GET matches/{id}/replay` (players of that match and admins only), `GET me/matches` |
 | Live | `GET matches/live?tier=&variant=&tournament=&sort=spectators|pool|elo` |
