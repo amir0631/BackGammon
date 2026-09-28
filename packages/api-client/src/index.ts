@@ -17,7 +17,20 @@ import type {
   SessionInfo,
   SmsStatus,
   UsernameAvailability,
+  AdminUserDetail,
+  AdminUserRow,
+  AdminWithdrawal,
+  BankAccountInfo,
+  LedgerRow,
+  TransferResult,
+  WalletSummary,
+  Withdrawal,
 } from "@bg/protocol";
+
+/** A fresh Idempotency-Key for one user action; reuse it when retrying that same action. */
+export function newIdempotencyKey(): string {
+  return globalThis.crypto.randomUUID();
+}
 
 export const API_PREFIX = "/api/v1";
 
@@ -171,6 +184,27 @@ export const api = {
     get: (username: string, o?: Opts) => apiRequest<PublicUser>(`/users/${encodeURIComponent(username)}`, o),
   },
 
+  wallet: {
+    get: (o?: Opts) => apiRequest<WalletSummary>("/wallet", o),
+    ledger: (cursor?: string, o?: Opts) =>
+      apiRequest<Paginated<LedgerRow>>(`/wallet/ledger${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, o),
+    transfer: (username: string, amount: number, password: string, idempotencyKey: string) =>
+      apiRequest<TransferResult>("/wallet/transfer", {
+        method: "POST",
+        body: { username, amount, password },
+        idempotencyKey,
+      }),
+    bankAccounts: (o?: Opts) => apiRequest<Paginated<BankAccountInfo>>("/me/bank-accounts", o),
+    setBankAccount: (iban: string) => apiRequest<BankAccountInfo>("/me/bank-accounts", { method: "POST", body: { iban } }),
+    deleteBankAccount: (id: number) => apiRequest<void>(`/me/bank-accounts/${id}`, { method: "DELETE" }),
+    requestWithdrawalCode: () => apiRequest<OtpRequestResponse>("/wallet/withdrawals/otp", { method: "POST" }),
+    withdraw: (amount: number, code: string, idempotencyKey: string) =>
+      apiRequest<Withdrawal>("/wallet/withdrawals", { method: "POST", body: { amount, code }, idempotencyKey }),
+    withdrawals: (o?: Opts) => apiRequest<Paginated<Withdrawal>>("/wallet/withdrawals", o),
+    withdrawal: (id: number, o?: Opts) => apiRequest<Withdrawal>(`/wallet/withdrawals/${id}`, o),
+    cancelWithdrawal: (id: number) => apiRequest<Withdrawal>(`/wallet/withdrawals/${id}`, { method: "DELETE" }),
+  },
+
   content: {
     avatars: (o?: Opts) => apiRequest<Paginated<{ key: string }>>("/avatars", o),
   },
@@ -194,6 +228,20 @@ export const api = {
       }),
     smsStatus: (refresh = false, o?: Opts) =>
       apiRequest<SmsStatus>(`/admin/sms/status${refresh ? "?refresh=1" : ""}`, o),
+    users: (q: string, o?: Opts) => apiRequest<Paginated<AdminUserRow>>(`/admin/users?q=${encodeURIComponent(q)}`, o),
+    user: (id: number, o?: Opts) => apiRequest<AdminUserDetail>(`/admin/users/${id}`, o),
+    topup: (id: number, amount: number, reason: string, idempotencyKey: string) =>
+      apiRequest<{ balance_before: number; balance_after: number; created: boolean }>(`/admin/users/${id}/wallet/topup`, {
+        method: "POST",
+        body: { amount, reason },
+        idempotencyKey,
+      }),
+    withdrawals: (status?: string, o?: Opts) =>
+      apiRequest<Paginated<AdminWithdrawal>>(`/admin/withdrawals${status ? `?status=${status}` : ""}`, o),
+    approveWithdrawal: (id: number, bank_reference: string) =>
+      apiRequest<Withdrawal>(`/admin/withdrawals/${id}/approve`, { method: "POST", body: { bank_reference } }),
+    rejectWithdrawal: (id: number, reason: string) =>
+      apiRequest<Withdrawal>(`/admin/withdrawals/${id}/reject`, { method: "POST", body: { reason } }),
     smsPattern: (code: string, o?: Opts) =>
       apiRequest<{ code: string; status: string }>(`/admin/sms/patterns/${encodeURIComponent(code)}`, o),
     audit: (filter: { target_type?: string; target_id?: string } = {}, o?: Opts) =>

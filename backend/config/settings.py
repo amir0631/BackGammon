@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "accounts",
     "settingsapp",
     "adminapi",
+    "wallet",
 ]
 
 MIDDLEWARE = [
@@ -88,6 +89,9 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = None
 CELERY_TASK_ACKS_LATE = True
 CELERY_TIMEZONE = "UTC"
+CELERY_BEAT_SCHEDULE = {
+    "ledger-invariants-hourly": {"task": "wallet.tasks.check_ledger_invariants", "schedule": 3600.0},
+}
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
 

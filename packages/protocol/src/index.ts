@@ -182,3 +182,101 @@ export interface AdminAuditEntry {
   reason: string;
   created_at: string;
 }
+
+// ---- Wallet (CLAUDE.md §7.9–§7.13, §10.2 Wallet) ----
+
+export interface RollingWindow {
+  daily_max: number;
+  used_24h: number;
+  remaining: number;
+  /** When more of the rolling-24h allowance frees up; null when nothing is used. */
+  next_available_at: string | null;
+  min: number;
+  fee_pct: number;
+}
+
+export interface WalletSummary {
+  balance: number;
+  /** Coins in pending withdrawals (already out of `balance`). */
+  locked: number;
+  /** Signup-bonus coins that are not withdrawable yet. */
+  bonus_locked: number;
+  withdrawable: number;
+  transfer: RollingWindow;
+  withdraw: RollingWindow;
+  coin_price_toman: number;
+}
+
+export type LedgerType =
+  | "purchase" | "match_entry" | "match_payout" | "match_refund" | "rake" | "referral_commission"
+  | "prediction_stake" | "prediction_payout" | "prediction_refund" | "tournament_entry" | "tournament_prize"
+  | "tournament_refund" | "signup_bonus" | "level_reward" | "achievement_reward" | "shop_purchase"
+  | "username_change" | "admin_adjustment" | "admin_topup" | "withdrawal_hold" | "withdrawal_payout"
+  | "withdrawal_refund" | "transfer";
+
+export interface LedgerRow {
+  id: number;
+  type: LedgerType;
+  /** Signed coins for this user. */
+  amount: number;
+  created_at: string;
+  /** Username of the other party of a transfer; never a phone number. */
+  counterparty: string | null;
+  ref_type: string | null;
+  ref_id: string | null;
+}
+
+export interface TransferResult {
+  tx_id: string;
+  balance: number;
+  fee: number;
+  received: number;
+}
+
+export interface BankAccountInfo {
+  id: number | null;
+  /** Masked, e.g. IR82******************9002. */
+  iban: string;
+  bank_code: string;
+  bank: Record<Lang, string>;
+}
+
+export type WithdrawalStatus = "pending" | "paid" | "rejected" | "cancelled";
+
+export interface Withdrawal {
+  id: number;
+  amount: number;
+  fee: number;
+  payout_toman: number;
+  status: WithdrawalStatus;
+  /** Next Iranian working day after the request (YYYY-MM-DD). */
+  expected_by: string;
+  bank: BankAccountInfo;
+  bank_reference: string | null;
+  reject_reason: string | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface AdminUserRow {
+  id: number;
+  username: string | null;
+  phone: string;
+  status: UserStatus;
+  created_at: string;
+  balance: number;
+}
+
+export interface AdminUserDetail extends AdminUserRow {
+  elo: number;
+  level: number;
+  lang: Lang;
+  wallet: WalletSummary;
+  ledger: { id: number; type: LedgerType; amount: number; created_at: string }[];
+}
+
+export interface AdminWithdrawal extends Withdrawal {
+  /** Full Sheba, needed to make the bank transfer. */
+  iban: string;
+  user: { id: number; username: string | null; phone: string };
+}
