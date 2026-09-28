@@ -126,6 +126,22 @@ class TestTransfer:
         assert res["details"]["next_available_at"]
         assert c.get("/api/v1/wallet").json()["transfer"]["remaining"] == 20
 
+    def test_retry_returns_the_original_result_after_limits_or_recipient_change(self):
+        a, b = make_user(), make_user("Rec_6")
+        fund(a, 10_000)
+        c = client_for(a)
+        body = {"username": "Rec_6", "amount": 3000, "password": "S3cure-pass!"}
+        first = self.post(c, body, "retry")
+        assert first.status_code == 200
+        # 3000 of the 5000 rolling limit is used, so a fresh 3000 would be refused; a retry is not.
+        again = self.post(c, body, "retry")
+        assert (again.status_code, again.json()) == (200, first.json())
+        User.objects.filter(id=b.id).update(status=User.Status.BANNED)
+        again = self.post(c, body, "retry")
+        assert (again.status_code, again.json()) == (200, first.json())
+        assert Wallet.objects.get(user=b).balance == 3000
+        assert LedgerEntry.objects.filter(type="transfer").values("tx_id").distinct().count() == 1
+
     def test_suspended_cannot_transfer(self):
         a = make_user(status="suspended")
         make_user("Rec_5")

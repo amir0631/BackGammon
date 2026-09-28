@@ -144,7 +144,24 @@ def summary(user: User) -> dict[str, Any]:
 # ---- Transfer (§7.13) ----
 
 
+def _posted_transfer(sender_id: int, key: str) -> dict[str, Any] | None:
+    """The result of a transfer already posted under `key`, or None."""
+    rows = list(LedgerEntry.objects.filter(idempotency_key=key).values_list("tx_id", "account", "amount"))
+    if not rows:
+        return None
+    sender = user_account(sender_id)
+    fee = sum(amount for _, account, amount in rows if account == PLATFORM_RAKE)
+    received = sum(amount for _, account, amount in rows if account.startswith("user:") and account != sender)
+    balance = Wallet.objects.get(user_id=sender_id).balance
+    return {"tx_id": str(rows[0][0]), "balance": balance, "fee": fee, "received": received}
+
+
 def transfer(sender: User, username: str, amount: Any, password: str, idempotency_key: str) -> dict[str, Any]:
+    key = f"transfer:{sender.id}:{idempotency_key}"
+    # A retry returns the original result (§2 rule 5), even if the limit, the recipient, or the
+    # sender's status changed since. It moves nothing, so it needs no password check.
+    if (done := _posted_transfer(sender.id, key)) is not None:
+        return done
     _require_active(sender)
     amount = _positive_int(amount)
     # Wrong passwords here count toward their own lock, separate from login.
@@ -180,6 +197,9 @@ def transfer(sender: User, username: str, amount: Any, password: str, idempotenc
         # Lock both wallets before the rolling-limit check, so two concurrent transfers cannot both
         # pass it, and in the ledger's order, so A→B and B→A at once cannot deadlock.
         ledger.lock_wallets([sender.id, recipient.id])
+        # A concurrent retry may have posted while this request waited for the locks.
+        if (done := _posted_transfer(sender.id, key)) is not None:
+            return done
         window = transfer_window(sender)
         if amount > window.remaining:
             raise errors.TransferLimit(
@@ -196,7 +216,7 @@ def transfer(sender: User, username: str, amount: Any, password: str, idempotenc
         posted = ledger.post(
             TxType.TRANSFER,
             entries,
-            idempotency_key=f"transfer:{sender.id}:{idempotency_key}",
+            idempotency_key=key,
             ref_type="user",
             ref_id=recipient.id,
         )

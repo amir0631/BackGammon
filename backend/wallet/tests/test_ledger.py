@@ -185,3 +185,32 @@ def test_opposite_transfers_through_the_service_do_not_deadlock():
     assert errors == []
     assert sorted(Wallet.objects.filter(user__in=[a, b]).values_list("balance", flat=True)) == [1000, 1000]
     assert invariants.check() == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_retries_of_one_transfer_all_get_the_original_result():
+    a, b = make_user(), make_user()
+    fund(a, 10_000)
+    results: list[str] = []
+    errors: list[str] = []
+    start = threading.Barrier(8)
+
+    def worker() -> None:
+        try:
+            start.wait()
+            # 3000 of the 5000 rolling limit: only the first may post; the rest must not see a limit.
+            results.append(services.transfer(a, str(b.username), 3000, "S3cure-pass!", "same")["tx_id"])
+        except Exception as exc:
+            errors.append(repr(exc))
+        finally:
+            connections.close_all()
+
+    threads = [threading.Thread(target=worker) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+    assert errors == []
+    assert len(results) == 8 and len(set(results)) == 1
+    assert Wallet.objects.get(user=b).balance == 3000
+    assert invariants.check() == []
