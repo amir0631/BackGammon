@@ -495,6 +495,26 @@ def settle_match(match_id: object, winner_id: int, entry: int, rake_pct: int) ->
     return {"entry": entry, "pot": pot, "rake": rake, "payout": payout}
 
 
+def settle_bot_match(match_id: object, user_id: int, entry: int, prize: int, won: bool) -> dict[str, int]:
+    """§9 bot entry: a win returns the entry plus the fixed prize from platform:rewards; a loss leaves
+    the entry to platform:rewards, which funds these prizes."""
+    if entry <= 0:
+        return {"entry": 0, "prize": 0, "payout": 0}
+    escrow = ledger.escrow("match", match_id)
+    if won:
+        entries = [(escrow, -entry), (PLATFORM_REWARDS, -prize), (user_account(user_id), entry + prize)]
+    else:
+        entries = [(escrow, -entry), (PLATFORM_REWARDS, entry)]
+    ledger.post(
+        TxType.MATCH_PAYOUT,
+        entries,
+        idempotency_key=f"match_settle:{match_id}",
+        ref_type="match",
+        ref_id=match_id,
+    )
+    return {"entry": entry, "prize": prize if won else 0, "payout": entry + prize if won else 0}
+
+
 # ---- Admin adjustment (§13 Users: manual balance adjustment with reason) ----
 
 

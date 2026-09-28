@@ -376,6 +376,17 @@ _DEFS: list[SettingDef] = [
         _d("ورودی بازی با ربات", "Bot match entry enabled"),
     ),
     SettingDef(
+        "bot.entry_coins", "int", 10, _d("ورودی بازی با ربات (سکه)", "Bot match entry (coins)"), 1, 1000
+    ),
+    SettingDef(
+        "bot.prize_coins",
+        "int",
+        15,
+        _d("جایزهٔ برد مقابل ربات (سکه)", "Prize for beating the bot (coins)"),
+        1,
+        2000,
+    ),
+    SettingDef(
         "live.max_spectators_per_match",
         "int",
         500,

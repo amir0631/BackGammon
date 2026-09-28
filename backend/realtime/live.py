@@ -177,9 +177,9 @@ def load(match_id: str) -> Live:
 
 
 def _actor(side: int | None) -> str:
-    return {0: MatchEvent.Actor.PLAYER_A, 1: MatchEvent.Actor.PLAYER_B}.get(
-        side or -1, MatchEvent.Actor.SYSTEM
-    )
+    if side is None:
+        return MatchEvent.Actor.SYSTEM
+    return {0: MatchEvent.Actor.PLAYER_A, 1: MatchEvent.Actor.PLAYER_B}.get(side, MatchEvent.Actor.SYSTEM)
 
 
 def _commit(live: Live) -> None:
@@ -840,8 +840,37 @@ def snapshot(live: Live, you: int | None) -> dict[str, Any]:
         "winner": e.winner,
         "end_reason": e.end_reason,
         "spectators": live.spectators,
+        "rules": rules_payload(live),
+        "grace": [None if g is None else int(g * 1000) for g in live.grace],
     }
     return protocol.MatchStateOut.model_validate(body).model_dump(mode="json")
+
+
+def _payout(live: Live, pot: int, rake_pct: int) -> int:
+    if not live.entry or live.tournament_id is not None:
+        return 0
+    if any(p["is_bot"] for p in live.players):
+        return live.entry + int(live.settings.get("bot_prize", 0))  # §9: entry back plus the prize
+    return pot - pot * rake_pct // 100
+
+
+def rules_payload(live: Live) -> dict[str, Any]:
+    rules = live.settings
+    if live.variant == "traditional":
+        points = dict(rules["traditional_points"])
+    else:
+        points = {"single": 1, "gammon": 2, "backgammon": 3}
+    rake_pct = int(rules.get("table_rake_pct", 0))
+    pot = live.entry * 2
+    return {
+        "turn_seconds": int(rules["turn_seconds"]),
+        "timebank_seconds": int(rules["timebank_seconds"]),
+        "max_consecutive_timeouts": int(rules["max_consecutive_timeouts"]),
+        "reconnect_grace_seconds": int(rules["reconnect_grace_seconds"]),
+        "points": points,
+        "rake_pct": rake_pct,
+        "payout": _payout(live, pot, rake_pct),
+    }
 
 
 def state_envelope(match_id: str, user_id: int | None, spectator: bool = False) -> dict[str, Any]:

@@ -142,6 +142,18 @@ class GameResultOut(_Model):
     reason: Literal["bear_off", "drop", "resign"]
 
 
+class MatchRulesOut(_Model):
+    """The values this match snapshotted when it started (§14); later setting changes never apply."""
+
+    turn_seconds: int
+    timebank_seconds: int
+    max_consecutive_timeouts: int
+    reconnect_grace_seconds: int
+    points: dict[str, int]  # single / gammon / backgammon, before the cube
+    rake_pct: int
+    payout: int  # what the match winner receives (0 when there is no entry fee)
+
+
 class MatchStateOut(_Model):
     match_id: str
     status: Literal["active", "finished", "aborted", "voided"]
@@ -168,6 +180,8 @@ class MatchStateOut(_Model):
     winner: int | None
     end_reason: str | None
     spectators: int
+    rules: MatchRulesOut
+    grace: list[int | None]  # per side: epoch ms when an absent player forfeits (or the match aborts)
 
 
 class TurnRolledOut(_Model):

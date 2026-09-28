@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest import mock
 
 import pytest
 from django.utils import timezone
@@ -342,3 +343,49 @@ class TestAdminQueue:
 
     def test_engine_assist_needs_enough_moves(self):
         assert rules.check_engine_assist(make_user().id) is None
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("sms_on")
+class TestSignupBonusHold:
+    def _signup(self, phone, username, device):
+        from accounts.tests.test_auth_api import register
+
+        c = APIClient(HTTP_X_DEVICE_ID=device, HTTP_USER_AGENT="UA-signup")
+        with mock.patch("accounts.otp.secrets.randbelow", return_value=48213 - 10_000):
+            res = register(c, username=username, phone=phone)
+        assert res.status_code == 201, res.json()
+        return User.objects.get(phone=phone)
+
+    def test_bonus_held_on_shared_device_and_paid_when_dismissed(self):
+        first = self._signup("+989121110001", "First_1", "dev-shared")
+        assert bal(first) == registry.get("bonus.signup_coins")
+        second = self._signup("+989121110002", "Second_1", "dev-shared")
+        assert bal(second) == 0
+        f = FraudFlag.objects.get(rule="multi_account")
+        assert f.user_id == second.id and f.other_id == first.id
+        assert f.evidence["hold"] == "signup_bonus" and "device" in f.evidence["reason"]
+        # The same pair seen again later adds no second flag.
+        rules.record_device(first, "dev-shared", None, "")
+        assert FraudFlag.objects.filter(rule="multi_account").count() == 1
+        make_admin()
+        res = admin_client().post(
+            f"/api/v1/admin/fraud/flags/{f.id}/decide",
+            {"decision": "dismiss", "reason": "siblings"},
+            format="json",
+        )
+        assert res.status_code == 200
+        assert bal(second) == registry.get("bonus.signup_coins")
+        assert invariants.check() == []
+
+    def test_confirmed_keeps_the_bonus_withheld(self):
+        self._signup("+989121110003", "Third_1", "dev-x")
+        second = self._signup("+989121110004", "Fourth_1", "dev-x")
+        f = FraudFlag.objects.get(rule="multi_account")
+        make_admin()
+        admin_client().post(
+            f"/api/v1/admin/fraud/flags/{f.id}/decide",
+            {"decision": "confirm", "reason": "farm"},
+            format="json",
+        )
+        assert bal(second) == 0

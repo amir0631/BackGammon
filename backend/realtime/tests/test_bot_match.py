@@ -4,7 +4,10 @@ from rest_framework.test import APIClient
 from game.engine.match import Phase
 from game.models import Match
 from realtime import live
-from wallet.tests.helpers import make_user
+from settingsapp import registry
+from wallet import invariants
+from wallet.models import Wallet
+from wallet.tests.helpers import fund, make_user
 
 
 def advance(clock, seconds):
@@ -14,8 +17,12 @@ def advance(clock, seconds):
 
 
 @pytest.mark.django_db
-def test_bot_match_plays_to_the_end(clock, published, django_capture_on_commit_callbacks):
+@pytest.mark.parametrize("paid", [False, True])
+def test_bot_match_plays_to_the_end(clock, published, django_capture_on_commit_callbacks, paid):
     user = make_user("Human_1")
+    if paid:
+        registry.set_value("bot.entry_enabled", True)
+        fund(user, 100)
     c = APIClient()
     c.force_authenticate(user=user)
     with django_capture_on_commit_callbacks(execute=True):
@@ -30,11 +37,15 @@ def test_bot_match_plays_to_the_end(clock, published, django_capture_on_commit_c
         ).json()["code"]
         == "MATCH_IN_PROGRESS"
     )
-    assert c.get("/api/v1/me/matches/active").json() == {"match_id": mid}
+    assert res.json()["entry"] == (10 if paid else 0)
+    active = c.get("/api/v1/me/matches/active").json()
+    assert active["match_id"] == mid and active["is_bot"] is True
     live.connect(mid, user.id, "chan")
 
     state = live.state_envelope(mid, user.id)["payload"]
     assert state["players"][1]["is_bot"] and state["players"][1]["username"] == "bot_medium"
+    assert state["rules"]["payout"] == (25 if paid else 0)  # entry back plus the 15-coin prize
+    assert state["grace"][1] is None and state["grace"][0] is None  # joined; the bot never needs one
 
     for _ in range(5000):
         s = live.load(mid)
@@ -57,6 +68,18 @@ def test_bot_match_plays_to_the_end(clock, published, django_capture_on_commit_c
     row = Match.objects.get(pk=mid)
     assert row.status == Match.Status.FINISHED and row.is_bot and row.bot_level == "medium"
     assert c.get("/api/v1/me/matches/active").json() == {"match_id": None}
+    ended = next(e for e in published if e["type"] == "match.ended")["payload"]
+    balance = Wallet.objects.get(user=user).balance
+    if not paid:
+        assert ended["settlement"] is None and balance == 0
+    elif ended["winner"] == 0:
+        assert ended["settlement"] == {"entry": 10, "prize": 15, "payout": 25} and balance == 115
+    else:
+        assert ended["settlement"]["payout"] == 0 and balance == 90
+    assert invariants.check() == []
+    history = c.get("/api/v1/me/matches").json()["results"][0]
+    assert history["coins"] == (None if not paid else balance - 100)
+    assert history["elo_delta"] is None and history["games"][0]["game_no"] == 1
 
 
 @pytest.mark.django_db

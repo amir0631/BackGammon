@@ -124,6 +124,10 @@ class FlagDecideView(AdminView):
             ).first()
             if pool is not None:
                 release_hold(pool.pk, approve=dismiss)
+        elif f.rule == FraudFlag.Rule.MULTI_ACCOUNT and f.evidence.get("hold") == "signup_bonus" and dismiss:
+            from wallet.services import grant_signup_bonus
+
+            grant_signup_bonus(f.user)  # keyed by phone: paid at most once, ever (§7.10)
         elif f.rule == FraudFlag.Rule.REFERRAL_FARM and (earning := f.evidence.get("earning")):
             from referrals.services import release_held
 

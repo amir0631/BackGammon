@@ -67,7 +67,7 @@ Success means:
 | WA-01 actions: Get coins · Send coins · Withdraw | WA-04 sheet · TR-01 · WD-02 (or WD-01 when not eligible) |
 | WA-01 links: Withdrawal requests · Bank account | WD-06 `/wallet/withdrawals` · WD-08 `/wallet/bank-accounts` |
 | Account hub (bank account row) | WD-08 |
-| "Get coins" in the insufficient-coins sheet (lobby.md PL-05, later steps) | WA-04 in step 3; `/shop/coins` once `coins-purchase.md` ships (step 9) |
+| "Get coins" in the insufficient-coins sheet (play.md PL-05, later steps) | WA-04 in step 3; `/shop/coins` once `coins-purchase.md` ships (step 9) |
 | Withdrawal SMS or Account-tab dot (withdrawal status changed) | WD-07 `/wallet/withdrawals/[id]` |
 | Guest opening any route here | `/login?next=<path>` |
 

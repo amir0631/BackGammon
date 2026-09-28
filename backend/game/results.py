@@ -46,7 +46,13 @@ def finish(live: "Live") -> dict[str, Any]:
     match.save()
 
     if match.is_bot:
-        return {"aborted": False, "elo": None, "xp": None, "settlement": None}  # never rated (§8)
+        settlement = None
+        if match.entry:
+            assert match.player_a_id is not None
+            settlement = wallet.settle_bot_match(
+                match.id, match.player_a_id, match.entry, int(match.rules["bot_prize"]), e.winner == 0
+            )
+        return {"aborted": False, "elo": None, "xp": None, "settlement": settlement}  # never rated (§8)
 
     assert match.player_b_id is not None
     a, b = User.objects.get(pk=match.player_a_id), User.objects.get(pk=match.player_b_id)

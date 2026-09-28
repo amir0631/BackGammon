@@ -123,7 +123,13 @@ class RegisterView(PublicView):
                     else None,
                     lang=data.get("lang") or _cookie_lang(request),
                 )
-                user_registered.send(sender=User, user=user)
+                user_registered.send(
+                    sender=User,
+                    user=user,
+                    ip=sessions.client_ip(request._request),
+                    user_agent=request.headers.get("User-Agent", ""),
+                    device=request.headers.get("X-Device-Id", ""),
+                )
         except IntegrityError:
             raise errors.UsernameTaken() from None
         return _signed_in(user, request, status.HTTP_201_CREATED)

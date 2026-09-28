@@ -71,4 +71,40 @@ describe("GameSocket", () => {
     expect(statuses.at(-1)).toBe("closed");
     vi.useRealTimers();
   });
+
+  it("re-joins the queue after a drop until paired or left", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    FakeSocket.all = [];
+    const s = new GameSocket({
+      getToken: async () => "tok",
+      onMessage: () => undefined,
+      url: "ws://x/ws",
+      createSocket: () => new FakeSocket() as never,
+    });
+    const reconnect = async () => {
+      FakeSocket.all.at(-1)!.close(1006);
+      vi.runAllTimers();
+      const next = FakeSocket.all.at(-1)!;
+      next.open();
+      await flush();
+      next.receive({ type: "auth.ok", match_id: null, seq: 0, payload: { username: "a" } });
+      return next;
+    };
+    s.connect();
+    const first = FakeSocket.all[0]!;
+    first.open();
+    await flush();
+    first.receive({ type: "auth.ok", match_id: null, seq: 0, payload: { username: "a" } });
+    s.send("queue.join", { tier_id: 100, variant: "standard_cube", length: 3 });
+    const join = first.sent[1];
+    expect((await reconnect()).sent.slice(1)).toEqual([join]);
+    const again = FakeSocket.all.at(-1)!;
+    again.receive({ type: "match.found", match_id: "m9", seq: 0, payload: {} });
+    expect((await reconnect()).sent.slice(1)).toEqual([]);
+    s.send("queue.join", { tier_id: 100, variant: "standard_cube", length: 3 });
+    s.send("queue.leave", {});
+    expect((await reconnect()).sent.slice(1)).toEqual([]);
+    s.close();
+    vi.useRealTimers();
+  });
 });

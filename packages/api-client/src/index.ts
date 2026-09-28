@@ -58,6 +58,8 @@ import type {
   Tier,
   LiveMatchRow,
   MatchSummary,
+  MyMatchSummary,
+  ActiveMatch,
   Replay,
   AdminWithdrawalFilter,
   AdminLedgerRow,
@@ -333,16 +335,17 @@ export const api = {
     tiers: (o?: Opts) => apiRequest<Paginated<Tier>>("/tiers", o),
     live: (filter: { tier?: number; variant?: string; sort?: "spectators" | "pool" | "elo" } = {}, o?: Opts) =>
       apiRequest<Paginated<LiveMatchRow>>(`/matches/live${query(filter)}`, o),
-    mine: (cursor?: string, o?: Opts) => apiRequest<Paginated<MatchSummary>>(`/me/matches${query({ cursor })}`, o),
-    get: (id: string, o?: Opts) => apiRequest<MatchSummary>(`/matches/${encodeURIComponent(id)}`, o),
+    mine: (cursor?: string, o?: Opts) => apiRequest<Paginated<MyMatchSummary>>(`/me/matches${query({ cursor })}`, o),
+    /** The personal fields (elo_delta, xp, coins, games) are present only for the match's players. */
+    get: (id: string, o?: Opts) => apiRequest<MatchSummary & Partial<MyMatchSummary>>(`/matches/${encodeURIComponent(id)}`, o),
     /** Players of the match only (403 for anyone else). */
     replay: (id: string, o?: Opts) => apiRequest<Replay>(`/matches/${encodeURIComponent(id)}/replay`, o),
     startBot: (level: "easy" | "medium" | "hard", variant: string, length: number) =>
-      apiRequest<{ match_id: string; seed_commit: string }>("/matches/bot", {
+      apiRequest<{ match_id: string; seed_commit: string; entry: number }>("/matches/bot", {
         method: "POST",
         body: { level, variant, length },
       }),
-    active: (o?: Opts) => apiRequest<{ match_id: string | null }>("/me/matches/active", o),
+    active: (o?: Opts) => apiRequest<ActiveMatch>("/me/matches/active", o),
   },
 
   me: {

@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from django.db import transaction
 from django.db.models import Q
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
@@ -51,9 +52,23 @@ class BotMatchView(APIView):
             raise errors.LengthNotAllowed(details={"allowed": registry.get("game.allowed_lengths")})
         if (running := active_match(user)) is not None:
             raise errors.MatchInProgress(details={"match_id": str(running.id)})
-        match = create_match(user, None, d["variant"], d["length"], bot_level=d["level"])
+        entry = registry.get("bot.entry_coins") if registry.get("bot.entry_enabled") else 0
+        with transaction.atomic():
+            if entry:
+                # §9: a small fixed entry and a fixed prize; nothing if the match never starts.
+                from wallet.services import escrow_match_entries
+
+                prize = registry.get("bot.prize_coins")
+                match = create_match(
+                    user, None, d["variant"], d["length"], entry=entry, bot_level=d["level"],
+                    extra_rules={"bot_prize": prize},
+                )  # fmt: skip
+                escrow_match_entries(match.id, [user.id], entry)
+            else:
+                match = create_match(user, None, d["variant"], d["length"], bot_level=d["level"])
         return Response(
-            {"match_id": str(match.id), "seed_commit": match.seed_commit}, status=status.HTTP_201_CREATED
+            {"match_id": str(match.id), "seed_commit": match.seed_commit, "entry": entry},
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -63,8 +78,23 @@ class ActiveMatchView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request: Request) -> Response:
-        match = active_match(_user(request))
-        return Response({"match_id": str(match.id) if match else None})
+        user = _user(request)
+        match = active_match(user)
+        if match is None:
+            return Response({"match_id": None})
+        from realtime import live
+
+        body: dict[str, Any] = {"match_id": str(match.id), "is_bot": match.is_bot, "your_turn": None}
+        try:
+            state = live.load(str(match.id))
+        except live.MatchNotFound:
+            return Response(body)
+        you = state.side_of(user.id)
+        opponent = state.players[1 - you] if you is not None else None
+        body["opponent"] = opponent["username"] if opponent else None
+        body["score"] = list(state.engine.score)
+        body["your_turn"] = you is not None and state.engine.turn == you
+        return Response(body)
 
 
 # ---- History, details, replay (§10.2 Matches, §20) ----
@@ -118,6 +148,57 @@ def match_summary(match: Match, you: int | None = None) -> dict[str, Any]:
     }
 
 
+def personal_results(user_id: int, matches: list[Match]) -> dict[str, dict[str, Any]]:
+    """Per match, what it meant for this player: ELO change, XP, and net coins (entry, payout, refund),
+    plus each game's result, for the history list and the result screen after it was closed."""
+    from django.db.models import Sum
+
+    from game.models import Game
+    from ranking.models import EloHistory, XpHistory
+    from wallet.ledger import user_account
+    from wallet.models import LedgerEntry
+
+    ids = [m.id for m in matches]
+    elo = dict(EloHistory.objects.filter(user_id=user_id, match_id__in=ids).values_list("match_id", "delta"))
+    xp = dict(
+        XpHistory.objects.filter(user_id=user_id, match_id__in=ids)
+        .values("match_id")
+        .annotate(s=Sum("amount"))
+        .values_list("match_id", "s")
+    )
+    coins = dict(
+        LedgerEntry.objects.filter(
+            account=user_account(user_id), ref_type="match", ref_id__in=[str(i) for i in ids]
+        )
+        .values("ref_id")
+        .annotate(s=Sum("amount"))
+        .values_list("ref_id", "s")
+    )
+    games: dict[Any, list[dict[str, Any]]] = {}
+    for g in Game.objects.filter(match_id__in=ids).order_by("number"):
+        if g.winner_side is not None:
+            games.setdefault(g.match_id, []).append(
+                {
+                    "game_no": g.number,
+                    "winner": g.winner_side,
+                    "kind": g.kind,
+                    "cube": g.cube,
+                    "points": g.points,
+                    "reason": g.reason,
+                    "crawford": g.crawford,
+                }
+            )
+    return {
+        str(m.id): {
+            "elo_delta": elo.get(m.id),
+            "xp": xp.get(m.id),
+            "coins": coins.get(str(m.id)) if m.entry else None,
+            "games": games.get(m.id, []),
+        }
+        for m in matches
+    }
+
+
 class MyMatchesView(APIView):
     """The player's match history, newest first (cursor = created_at of the last row)."""
 
@@ -134,9 +215,10 @@ class MyMatchesView(APIView):
             qs = qs.filter(created_at__lt=cursor)
         rows = list(qs[: HISTORY_PAGE + 1])
         page, more = rows[:HISTORY_PAGE], len(rows) > HISTORY_PAGE
+        mine = personal_results(user.id, page)
         return Response(
             {
-                "results": [match_summary(m, m.side_of(user.id)) for m in page],
+                "results": [{**match_summary(m, m.side_of(user.id)), **mine[str(m.id)]} for m in page],
                 "next": page[-1].created_at.isoformat() if more else None,
             }
         )
@@ -162,10 +244,13 @@ class MatchDetailView(APIView):
 
     def get(self, request: Request, match_id: str) -> Response:
         match = _match_or_404(match_id)
-        return Response(match_summary(match, match.side_of(_user(request).id)))
+        user = _user(request)
+        you = match.side_of(user.id)
+        extra = personal_results(user.id, [match])[str(match.id)] if you is not None else {}
+        return Response({**match_summary(match, you), **extra})
 
 
-def replay_payload(match: Match) -> dict[str, Any]:
+def replay_payload(match: Match, you: int | None = None) -> dict[str, Any]:
     from game.models import MatchEvent
     from realtime import seeds
 
@@ -181,7 +266,7 @@ def replay_payload(match: Match) -> dict[str, Any]:
     ]
     finished = match.status != Match.Status.ACTIVE
     return {
-        **match_summary(match),
+        **match_summary(match, you),
         "seed": seeds.decrypt(match.seed_encrypted).hex() if finished else None,
         "events": events,
     }
@@ -203,7 +288,7 @@ class MatchReplayView(APIView):
         if match.side_of(user.id) is None:
             raise PermissionDenied()
         ReplayView.objects.create(match=match, viewer_id=user.id, viewer_role=ReplayView.Role.PLAYER)
-        return Response(replay_payload(match))
+        return Response(replay_payload(match, match.side_of(user.id)))
 
 
 def live_rows(params: Any) -> list[dict[str, Any]]:

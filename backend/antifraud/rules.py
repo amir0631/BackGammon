@@ -24,8 +24,9 @@ def flag(
     """One open flag per (rule, pair, match): repeated signals add to it rather than piling up."""
     uid = user if isinstance(user, int) else user.id
     oid = other if other is None or isinstance(other, int) else other.id
+    pair = Q(user_id=uid, other_id=oid) | Q(user_id=oid, other_id=uid) if oid is not None else Q(user_id=uid)
     existing = FraudFlag.objects.filter(
-        rule=rule, user_id=uid, other_id=oid, match=match, status=FraudFlag.Status.OPEN
+        pair, rule=rule, other_id__isnull=oid is None, match=match, status=FraudFlag.Status.OPEN
     ).first()
     if existing is not None:
         return existing
@@ -66,6 +67,37 @@ def record_device(user: User, fingerprint: str, ip: str | None, user_agent: str)
     for other in set(others):
         a, b = sorted((user.id, other))
         flag(Rule.MULTI_ACCOUNT, a, b, evidence={"reason": "device", "fingerprint": fingerprint[:12]})
+
+
+def signup_links(user: User, ip: str | None, user_agent: str, fingerprint: str) -> list[int]:
+    """At registration (§7.10, §12.2 multi_account): the accounts this new one shares a device, or an IP
+    and browser, with. Each link is flagged; the flag carries the held signup bonus."""
+    from accounts.models import Session
+    from antifraud.links import _since
+
+    fingerprint = fingerprint.strip()[:64]
+    reasons: dict[int, list[str]] = {}
+    if fingerprint:
+        DeviceFingerprint.objects.get_or_create(
+            user=user, fingerprint=fingerprint, defaults={"ip": ip, "user_agent": user_agent[:255]}
+        )
+        for other in DeviceFingerprint.objects.filter(fingerprint=fingerprint).exclude(user=user):
+            reasons.setdefault(other.user_id, []).append("device")
+    if ip:
+        for other_id in (
+            Session.objects.filter(ip=ip, user_agent=user_agent[:255], created_at__gte=_since())
+            .exclude(user=user)
+            .values_list("user_id", flat=True)
+            .distinct()
+        ):
+            reasons.setdefault(other_id, []).append("ip")
+    held = user.phone_verified_at is not None and registry.get("bonus.signup_coins") > 0
+    for other_id, why in reasons.items():
+        evidence: dict[str, Any] = {"reason": why, "at": "signup"}
+        if held:
+            evidence["hold"] = "signup_bonus"
+        flag(Rule.MULTI_ACCOUNT, user, other_id, evidence=evidence)
+    return sorted(reasons)
 
 
 # ---- after a match ----

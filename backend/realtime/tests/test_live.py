@@ -140,6 +140,21 @@ class TestFlow:
 
 @pytest.mark.django_db
 class TestDisconnect:
+    def test_state_carries_rules_and_grace_deadlines(
+        self, clock, published, django_capture_on_commit_callbacks
+    ):
+        a, b = make_user(), make_user()
+        with django_capture_on_commit_callbacks(execute=True):
+            match = create_match(a, b, "traditional", 3)
+        mid = str(match.id)
+        live.connect(mid, a.id, "chan-a")
+        body = live.state_envelope(mid, a.id)["payload"]
+        assert body["rules"]["points"] == {"single": 1, "gammon": 2, "backgammon": 2}
+        assert body["rules"]["reconnect_grace_seconds"] == 90 and body["rules"]["payout"] == 0
+        # a joined; b has until the deadline to come, or the match aborts.
+        assert body["grace"][0] is None
+        assert body["grace"][1] == int((clock.t + 90) * 1000)
+
     def test_grace_then_forfeit(self, game, clock, published):
         mid, _a, b = game
         live.disconnect(mid, b.id, "chan-b")
@@ -239,6 +254,8 @@ class TestCubeResignReact:
         mid, a, _b = game
         assert live.handle(mid, a.id, "react.send", {"emoji_key": "smile"}, 0) == []
         assert last(published, "react.recv")["payload"] == {"key": "smile", "kind": "emoji", "sender": 0}
+        # Player A's own events are recorded as player_a, not system.
+        assert MatchEvent.objects.filter(match_id=mid, type="react.recv").get().actor == "player_a"
         rate = live.handle(mid, a.id, "react.send", {"phrase_key": "hello"}, 0)
         assert rate[0]["payload"]["details"]["reason"] == "rate"
         clock.t += 3

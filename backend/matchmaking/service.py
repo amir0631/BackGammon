@@ -55,8 +55,19 @@ def tiers() -> list[dict[str, Any]]:
     """Table tiers from settings (§14 table.tiers): every tier offers every variant and allowed length."""
     variants = [v for v, _ in Match.Variant.choices]
     lengths = registry.get("game.allowed_lengths")
+    rake_pct = registry.get("table.rake_pct")
     return [
-        {"id": entry, "entry": entry, "variants": variants, "lengths": lengths, "waiting": _waiting(entry)}
+        {
+            "id": entry,
+            "entry": entry,
+            "variants": variants,
+            "lengths": lengths,
+            "waiting": _waiting(entry),
+            # §7.3, shown before joining (§21.2: the cost is visible before confirming).
+            "rake_pct": rake_pct,
+            "pot": entry * 2,
+            "payout": entry * 2 - entry * 2 * rake_pct // 100,
+        }
         for entry in registry.get("table.tiers")
     ]
 

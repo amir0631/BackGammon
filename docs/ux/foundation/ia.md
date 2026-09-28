@@ -88,11 +88,11 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/password/reset` | Phone | Guest only | None | `auth.md` |
 | `/password/reset/verify` | SMS code | Guest only | None | `auth.md` |
 | `/password/reset/new` | New password | Guest only | None | `auth.md` |
-| `/play` | Play lobby | Signed in | Tab 1 | `lobby.md` |
+| `/play` | Play lobby | Signed in | Tab 1 | `play.md` |
 | `/leaderboard` | Leaderboards (`?scope=all\|weekly\|monthly\|predict`) | Signed in | Tab 1 child | `leaderboard.md` |
 | `/live` | Live matches | Signed in | Tab 2 | `live.md` |
 | `/match/[id]` | Player view, spectator view, or finished summary (resolved by server role and match status) | Signed in | Immersive | `match.md`, `live.md` |
-| `/replay/[id]` | Replay viewer (players of the match only; others get the 403 state) | Signed in | Immersive | `replay.md` |
+| `/replay/[id]` | Replay viewer (players of the match only; others get the 403 state) | Signed in | Immersive | `history-replay.md` |
 | `/tournaments` | Tournament list | Signed in | Tab 3 | `tournaments.md` |
 | `/tournaments/[id]` | Detail; `?tab=overview\|bracket` | Signed in | Tab 3 child | `tournaments.md` |
 | `/shop` | Themes | Signed in | Tab 4 | `shop.md` |
@@ -108,7 +108,7 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/wallet/bank-accounts` | The registered Sheba account (one per user, §7.12); add or change (change blocked while a withdrawal is pending) | Signed in | Tab 5 child | `wallet.md` |
 | `/me` | Account hub | Signed in | Tab 5 | `profile.md` |
 | `/me/edit` | Edit avatar and username | Signed in | Tab 5 child | `profile.md` |
-| `/me/matches` | Match history | Signed in | Tab 5 child | `history.md` |
+| `/me/matches` | Match history | Signed in | Tab 5 child | `history-replay.md` |
 | `/me/predictions` | My predictions | Signed in | Tab 5 child | `predictions.md` |
 | `/me/referral` | Referral link and earnings | Signed in | Tab 5 child | `referral.md` |
 | `/me/sessions` | Signed-in devices | Signed in | Tab 5 child | `profile.md` |

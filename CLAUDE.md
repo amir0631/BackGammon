@@ -608,7 +608,7 @@ Required keys with defaults:
 | `elo.k_new` / `elo.k` / `elo.new_threshold` | 40 / 20 / 30 |
 | `matchmaking.elo_window` / `matchmaking.widen_step` / `matchmaking.widen_seconds` | 150 / 50 / 10 |
 | `username.change_cost` / `username.change_cooldown_days` | 200 / 30 |
-| `bot.entry_enabled` | false |
+| `bot.entry_enabled` / `bot.entry_coins` / `bot.prize_coins` | false / 10 / 15 |
 | `live.max_spectators_per_match` | 500 |
 | `live.spectator_delay_seconds` | 0 |
 | `live.spectator_reactions_enabled` | true |

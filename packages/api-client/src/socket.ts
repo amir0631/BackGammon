@@ -50,6 +50,8 @@ export class GameSocket {
   private queue: string[] = [];
   private match: { id: string; spectator: boolean } | null = null;
   private lastSeq = 0;
+  /** The queue this client waits in: the server drops it with the socket, so a reconnect re-joins. */
+  private queued: ClientEnvelope | null = null;
 
   constructor(private readonly opts: GameSocketOptions) {}
 
@@ -91,7 +93,10 @@ export class GameSocket {
   }
 
   send<K extends ClientMessageType>(type: K, payload: ClientMessages[K]): void {
-    this.sendRaw({ type, match_id: this.match?.id ?? null, seq: this.lastSeq, payload } as ClientEnvelope<K>);
+    const env = { type, match_id: this.match?.id ?? null, seq: this.lastSeq, payload } as ClientEnvelope<K>;
+    if (type === "queue.join") this.queued = env;
+    else if (type === "queue.leave") this.queued = null;
+    this.sendRaw(env);
   }
 
   private sendRaw(env: ClientEnvelope): void {
@@ -131,6 +136,8 @@ export class GameSocket {
         this.resync();
         return;
       }
+      if (env.type === "match.found") this.queued = null;
+      else if (env.type === "queue.status" && (env.payload as { state?: string }).state !== "waiting") this.queued = null;
       this.opts.onMessage(env);
     };
     ws.onclose = (ev) => {
@@ -156,10 +163,13 @@ export class GameSocket {
         : { type: "match.sync", match_id: this.match.id, seq: 0, payload: { last_seq: this.lastSeq } };
       this.ws?.send(JSON.stringify(env));
     }
-    for (const text of pending) {
-      const env = JSON.parse(text) as ClientEnvelope;
-      if (env.type === "match.sync" || env.type === "spectate.join") continue; // just re-sent above
-      this.ws?.send(text);
+    const pendingEnvs = pending.map((text) => JSON.parse(text) as ClientEnvelope);
+    if (this.queued && !pendingEnvs.some((e) => e.type === "queue.join" || e.type === "queue.leave")) {
+      this.ws?.send(JSON.stringify(this.queued));
     }
+    pendingEnvs.forEach((env, i) => {
+      if (env.type === "match.sync" || env.type === "spectate.join") return; // just re-sent above
+      this.ws?.send(pending[i]!);
+    });
   }
 }

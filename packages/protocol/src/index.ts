@@ -628,6 +628,36 @@ export interface MatchSummary {
   ended_at: string | null;
 }
 
+/** One finished game of a match. */
+export interface GameResultSummary {
+  game_no: number;
+  winner: number;
+  kind: "single" | "gammon" | "backgammon";
+  cube: number;
+  points: number;
+  reason: "bear_off" | "drop" | "resign";
+  crawford: boolean;
+}
+
+/** GET me/matches rows and GET matches/{id} for a player of that match: what it meant for them. */
+export interface MyMatchSummary extends MatchSummary {
+  /** Null for unrated (bot, aborted) matches. */
+  elo_delta: number | null;
+  xp: number | null;
+  /** Net coins (entry, payout, refund); null when there was no entry fee. */
+  coins: number | null;
+  games: GameResultSummary[];
+}
+
+export interface ActiveMatch {
+  match_id: string | null;
+  is_bot?: boolean;
+  opponent?: string | null;
+  score?: number[];
+  /** Null when the live state is gone (the match is being closed). */
+  your_turn?: boolean | null;
+}
+
 export interface ReplayEvent {
   seq: number;
   type: string;
@@ -648,6 +678,10 @@ export interface Tier {
   variants: string[];
   lengths: number[];
   waiting: number;
+  /** Shown before joining (§7.3): winner receives `payout` of the `pot`. */
+  rake_pct: number;
+  pot: number;
+  payout: number;
 }
 
 export interface LiveMatchRow {

@@ -97,6 +97,11 @@ class TestSettlement:
         assert ReplayView.objects.filter(viewer_role="admin").count() == 1
         history = client(a).get("/api/v1/me/matches").json()["results"]
         assert history[0]["id"] == mid and history[0]["you"] == 0
+        won = history[0]["winner"] == 0
+        assert history[0]["elo_delta"] == (20 if won else -20) and history[0]["xp"] == (25 if won else 10)
+        assert history[0]["coins"] == (80 if won else -100)
+        assert [g["game_no"] for g in history[0]["games"]] == [1]
+        assert body["you"] == 0
         assert client(stranger).get(f"/api/v1/matches/{mid}").json()["you"] is None
         assert client(stranger).get("/api/v1/matches/live").json()["results"] == []
         board = client(a).get("/api/v1/leaderboard", {"scope": "all"}).json()
@@ -116,6 +121,14 @@ def test_live_list_shows_human_matches_only(clock, published, django_capture_on_
     rows = client(c).get("/api/v1/matches/live").json()["results"]
     assert [r["match_id"] for r in rows] == [str(human.id)]
     assert client(c).get("/api/v1/tiers").json()["results"][0]["entry"] == 50
+
+
+def test_tiers_show_the_payout(db):
+    user = make_user()
+    tiers = client(user).get("/api/v1/tiers").json()["results"]
+    first = tiers[0]
+    assert first["pot"] == first["entry"] * 2 and first["rake_pct"] == 10
+    assert first["payout"] == first["pot"] - first["pot"] // 10
 
 
 def test_elo_formula_and_levels(db):

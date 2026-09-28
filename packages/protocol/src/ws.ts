@@ -77,6 +77,16 @@ export interface MatchResignIn {
   scope: "game" | "match";
 }
 
+export interface MatchRulesOut {
+  turn_seconds: number;
+  timebank_seconds: number;
+  max_consecutive_timeouts: number;
+  reconnect_grace_seconds: number;
+  points: Record<string, number>;
+  rake_pct: number;
+  payout: number;
+}
+
 export interface MatchStateOut {
   match_id: string;
   status: "active" | "finished" | "aborted" | "voided";
@@ -103,6 +113,8 @@ export interface MatchStateOut {
   winner: number | null;
   end_reason: string | null;
   spectators: number;
+  rules: MatchRulesOut;
+  grace: (number | null)[];
 }
 
 export interface MatchSyncIn {

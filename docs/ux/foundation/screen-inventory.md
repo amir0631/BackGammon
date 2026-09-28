@@ -20,12 +20,10 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 | `onboarding.md` | Signup-bonus notice, first-time hints framework (the avatar step moved to `auth.md`) | 3 |
 | `profile.md` | Account hub, edit profile, username change, sessions, public profile, and the step-2 base of `/settings` (language, lite graphics, reduced animations, sound, vibration) | 2 (username change purchase active from step 3) |
 | `wallet.md` | Balance, on-hold and welcome-coin amounts, transaction history (all §7.2 types), get-coins (support top-up) sheet, transfer task flow and receipt, received-coins notice, bank account (one per user: add, change, remove), withdrawal task flow (SMS code or password), requests list and detail, cancel. Consolidates the planned `transfer.md` and `withdrawal.md`. Pending payments are added with `coins-purchase.md` (step 9). | 3 |
-| `match.md` | Game screen (player), all in-match sheets, dialogs and overlays, result sheet, finished-match summary, loading, unsupported | 5–6 |
-| `lobby.md` | Play tab, table setup, join confirmation, bot setup, insufficient-coins sheet, resume banner | 7–8 |
-| `matchmaking.md` | Search overlay, match found | 8 |
+| `match.md` | Game screen (player), all in-match sheets, dialogs and overlays, result sheet, finished-match summary, loading, unsupported, waiting for the opponent to join (MA-19) | 5–6 |
+| `play.md` | Play tab, table setup, join confirmation, bot setup, insufficient-coins sheet, resume banner, search overlay, match found. Consolidates the planned `lobby.md` and `matchmaking.md`. | 7–8 |
 | `live.md` | Live list, filters, spectator view | 8 |
-| `replay.md` | Replay viewer, verify dice, 403 and purged states | 8 |
-| `history.md` | Match history list | 8 |
+| `history-replay.md` | Match history list, replay viewer, verify dice, unavailable states (403, not found, active, aborted, purged). Consolidates the planned `history.md` and `replay.md`. | 8 |
 | `leaderboard.md` | Leaderboards | 8 |
 | `coins-purchase.md` | Support top-up state, packages + custom amount, checkout confirmation, payment status | 9 (support state can ship with step 3) |
 | `shop.md` | Themes, packs, item preview, buy, equip | 10 |
@@ -38,7 +36,7 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 | `admin-settings.md` | Admin panel (`admin.`): login with TOTP, shell, Settings with every registry key, edit/reset with confirmation and audit, SMS status card | 1–2 |
 | `admin-users-wallet.md` | Admin panel (`admin.`): users search and detail, wallet top-up (§7.9), withdrawals queue with approve and reject (§7.12) | 3 |
 
-Recommended writing order: `auth` → `wallet` (includes transfer and withdrawal) → `admin-users-wallet` → `coins-purchase` → `match` → `lobby` → `matchmaking`, then the rest in step order. The wallet specs move up because step 3 now ships them.
+Recommended writing order: `auth` → `wallet` (includes transfer and withdrawal) → `admin-users-wallet` → `coins-purchase` → `match` → `play` → `live` → `history-replay`, then the rest in step order. The wallet specs move up because step 3 now ships them.
 
 ---
 
@@ -70,14 +68,14 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 
 | ID | Screen | Route / host | Type | Spec | Key states |
 | --- | --- | --- | --- | --- | --- |
-| PL-01 | Play lobby | `/play` | S | lobby | first-time, loading, offline, match-in-progress banner |
-| PL-02 | Table setup (variant, length, tier) | Sheet on PL-01 | Sh | lobby | tier unavailable, lengths per tier |
-| PL-03 | Join confirmation (entry, fee, payout, balance before/after) | Sheet on PL-01 | Sh | lobby | in-flight, price changed, insufficient → PL-05 |
-| PL-04 | Bot setup (level, variant, length) | Sheet on PL-01 | Sh | lobby | bot entry enabled (then shows the P§2 cost block) |
-| PL-05 | Insufficient coins | Sheet | Sh | lobby (shared component) | alternatives available / none; hidden shop link after a loss |
-| PL-06 | Matchmaking | Full overlay on PL-01 | O | matchmaking | searching, widening, cancelled, error, offline |
-| PL-07 | Match found / starting | Overlay → `/match/[id]` | O | matchmaking | opponent card, aborted before first roll (refund notice) |
-| PL-08 | Resume-match banner | Global, above nav | O | lobby | your turn / their turn |
+| PL-01 | Play lobby | `/play` | S | play | first-time, loading, offline, match-in-progress banner |
+| PL-02 | Table setup (variant, length, tier) | Sheet on PL-01 | Sh | play | tier unavailable, lengths per tier |
+| PL-03 | Join confirmation (entry, fee, payout, balance before/after) | Sheet on PL-01 | Sh | play | in-flight, price changed, insufficient → PL-05 |
+| PL-04 | Bot setup (level, variant, length) | Sheet on PL-01 | Sh | play | bot entry enabled (then shows the P§2 cost block) |
+| PL-05 | Insufficient coins | Sheet | Sh | play (shared component) | alternatives available / none; hidden shop link after a loss |
+| PL-06 | Matchmaking | Full overlay on PL-01 | O | play | searching, widening, cancelled, error, offline |
+| PL-07 | Match found / starting | Overlay → `/match/[id]` | O | play | opponent card, aborted before first roll (refund notice) |
+| PL-08 | Resume-match banner | Global, above nav | O | play | your turn / their turn |
 | PL-09 | Leaderboard | `/leaderboard` | S | leaderboard | scope tabs, own rank row pinned, empty predict scope |
 
 ### 2.3 Match (immersive)
@@ -102,6 +100,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | MA-16 | Lite-mode suggestion | Snackbar with action | O | match | — |
 | MA-17 | Unsupported device | `/unsupported` or in place | S | system | — |
 | MA-18 | Keyboard / screen-reader move entry | Panel | Sh | match | — |
+| MA-19 | Waiting for the opponent to join; cancel match | Card + sheet | O / Sh | match | elapsed, refund note, cancel before first roll |
 
 ### 2.4 Live and predictions (Tab 2)
 
@@ -176,9 +175,10 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | AC-03 | Username change confirmation | Sheet on AC-02 | Sh | profile | cost, cooldown active (next date in Jalali), insufficient |
 | AC-04 | Sessions / devices | `/me/sessions` | S | profile | log out others (dialog) |
 | AC-05 | Public profile | `/profile/[username]` | S | profile | self, other ("Send coins" action), bot (no page), not found |
-| HI-01 | Match history | `/me/matches` | S | history | empty, loading more |
-| RP-01 | Replay viewer | `/replay/[id]` | I | replay | loading, playing, paused, 403, purged, bot match |
-| RP-02 | Verify dice | Sheet / side panel on RP-01 | Sh | replay | running, verified, mismatch |
+| HI-01 | Match history | `/me/matches` | S | history-replay | empty, loading more |
+| RP-01 | Replay viewer | `/replay/[id]` | I | history-replay | loading, playing, paused, 403, purged, bot match |
+| RP-02 | Verify dice | Sheet / side panel on RP-01 | Sh | history-replay | running, verified, mismatch |
+| RP-03 | Replay unavailable | `/replay/[id]` (in place) | S | history-replay | private (403), not found, still active, aborted, purged, couldn't load |
 | RF-01 | Referral | `/me/referral` | S | referral | inactive until the referee's first purchase, earnings, empty |
 | ST-01 | Settings | `/settings` | S | profile (base), settings (step 17 items) | language (fa / en), lite graphics, reduced animations (OS override), sound, vibration (unsupported), account items; later notifications, install |
 | HL-01 | Help index and topics | `/help`, `/help/[topic]` | S | help-legal | topics: coins and prices, fees, signup bonus, transfers, withdrawals, predictions, tournaments, replays and fair dice, variants, lite mode, account |
