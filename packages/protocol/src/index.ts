@@ -531,3 +531,16 @@ export interface BracketSlotInfo {
   score: [number, number] | null;
   live: boolean;
 }
+
+/** GET config: public switches and prices, readable before sign-in. */
+export interface PublicConfig {
+  app_name: string;
+  sms_enabled: boolean;
+  payments_enabled: boolean;
+  predictions_enabled: boolean;
+  spectating_enabled: boolean;
+  coin_price_toman: number;
+  username_change: { cost: number; cooldown_days: number };
+  allowed_lengths: number[];
+  tiers: number[];
+}

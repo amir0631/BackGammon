@@ -20,6 +20,7 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   AdminWithdrawal,
+  PublicConfig,
   TournamentInfo,
   BracketSlotInfo,
   OpenPool,
@@ -97,10 +98,11 @@ function ensureCsrf(baseUrl = ""): Promise<void> {
   return csrfReady;
 }
 
-let refreshing: Promise<boolean> | null = null;
+/** Resolves to null when the session was refreshed, else the refresh's error (e.g. AUTH_BANNED). */
+let refreshing: Promise<ApiError | null> | null = null;
 
 /** One shared refresh for all requests that hit an expired access token at the same time. */
-function refreshSession(baseUrl = ""): Promise<boolean> {
+function refreshSession(baseUrl = ""): Promise<ApiError | null> {
   refreshing ??= (async () => {
     try {
       await ensureCsrf(baseUrl);
@@ -110,9 +112,11 @@ function refreshSession(baseUrl = ""): Promise<boolean> {
         credentials: "include",
         headers: token ? { "X-CSRFToken": token } : {},
       });
-      return res.ok;
+      if (res.ok) return null;
+      const data: unknown = await res.json().catch(() => null);
+      return isApiError(data) ? data : { code: "AUTH_SESSION_INVALID", message_key: "errors.auth.sessionInvalid", details: {} };
     } catch {
-      return false;
+      return NETWORK_ERROR;
     } finally {
       setTimeout(() => {
         refreshing = null;
@@ -160,10 +164,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       body.code === "AUTH_SESSION_INVALID" &&
       !options.retried &&
       !path.startsWith("/admin/") &&
-      !NO_REFRESH_PATHS.includes(path) &&
-      (await refreshSession(options.baseUrl))
+      !NO_REFRESH_PATHS.includes(path)
     ) {
-      return apiRequest<T>(path, { ...options, retried: true });
+      const refreshError = await refreshSession(options.baseUrl);
+      if (refreshError === null) return apiRequest<T>(path, { ...options, retried: true });
+      // A ban found while refreshing is what the app must show, not the stale-token error.
+      if (refreshError.code === "AUTH_BANNED") throw new ApiRequestError(403, refreshError);
     }
     throw new ApiRequestError(response.status, body);
   }
@@ -186,6 +192,7 @@ export function query(params: object): string {
 
 export const api = {
   health: (o?: Opts) => apiRequest<HealthResponse>("/health", o),
+  config: (o?: Opts) => apiRequest<PublicConfig>("/config", o),
 
   auth: {
     requestOtp: (phone: string, purpose: OtpPurpose) =>

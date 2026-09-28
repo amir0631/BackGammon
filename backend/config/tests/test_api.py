@@ -38,3 +38,11 @@ def test_drf_errors_are_mapped():
 
     body = exception_handler(NotAuthenticated(), {}).data  # type: ignore[union-attr]
     assert body == {"code": "UNAUTHENTICATED", "message_key": "errors.unauthenticated", "details": {}}
+
+
+@pytest.mark.django_db
+def test_public_config_is_readable_signed_out():
+    body = APIClient().get("/api/v1/config").json()
+    assert body["sms_enabled"] is False and body["payments_enabled"] is False
+    assert body["username_change"] == {"cost": 200, "cooldown_days": 30}
+    assert "phone" not in str(body)
