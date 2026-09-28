@@ -454,3 +454,25 @@ export interface PhraseText {
   key: string;
   text: Record<Lang, string>;
 }
+
+// ---- Referrals (CLAUDE.md §7.4) ----
+
+export interface ReferralSummary {
+  /** The referral code is the player's username. */
+  code: string | null;
+  referees: number;
+  active_referees: number;
+  earned: number;
+  commissions: number;
+  pct: number;
+  base: "referee_entry" | "pot";
+  duration_days: number;
+}
+
+export interface ReferralEarningRow {
+  id: number;
+  referee: string | null;
+  amount: number;
+  match_id: string;
+  created_at: string;
+}

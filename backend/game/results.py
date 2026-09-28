@@ -8,6 +8,7 @@ from django.utils import timezone
 from accounts.models import User
 from game.models import Match
 from ranking import services as ranking
+from referrals import services as referrals
 from settingsapp import registry
 from wallet import services as wallet
 
@@ -52,6 +53,7 @@ def finish(live: "Live") -> dict[str, Any]:
         settlement = wallet.settle_match(
             match.id, winner.id, match.entry, int(match.rules.get("table_rake_pct", 0))
         )
+        referrals.pay_commissions(match, [a, b], settlement["rake"])  # from the rake (§7.4)
     elo = ranking.rate_match(match, a, b, e.winner)
     per_match, per_win = registry.get("xp.per_match"), registry.get("xp.per_win")
     xp = {

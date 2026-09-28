@@ -20,6 +20,8 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   AdminWithdrawal,
+  ReferralSummary,
+  ReferralEarningRow,
   ItemKind,
   ShopItem,
   PhraseText,
@@ -222,6 +224,12 @@ export const api = {
     /** Costs `username.change_cost` coins, once per cooldown (§12.1). */
     changeUsername: (username: string, idempotencyKey: string) =>
       apiRequest<Me>("/me/username", { method: "POST", body: { username }, idempotencyKey }),
+  },
+
+  referral: {
+    get: (o?: Opts) => apiRequest<ReferralSummary>("/me/referral", o),
+    earnings: (cursor?: string, o?: Opts) =>
+      apiRequest<Paginated<ReferralEarningRow>>(`/me/referral/earnings${query({ cursor })}`, o),
   },
 
   leaderboard: (scope: "all" | "weekly" | "monthly", o?: Opts) =>

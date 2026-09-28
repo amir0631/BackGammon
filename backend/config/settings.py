@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "antifraud",
     "payments",
     "shop",
+    "referrals",
 ]
 
 MIDDLEWARE = [
