@@ -25,6 +25,19 @@ SECRET_KEY = env("DJANGO_SECRET_KEY", "insecure-dev-key" if DEBUG else None)
 BASE_DOMAIN = env("BASE_DOMAIN", "localhost")
 URL_SCHEME = env("URL_SCHEME", "http")
 APP_NAME = env("APP_NAME", "Takhte Nard")
+# Web Push (CLAUDE.md §11.5): `manage.py vapid_keys` makes the key; empty disables push.
+VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", "")
+VAPID_SUBJECT = env("VAPID_SUBJECT", f"mailto:support@{BASE_DOMAIN}")
+# Browsers' push services; the server only ever POSTs to these (subscriptions are user input: no SSRF).
+PUSH_ALLOWED_HOSTS = [
+    h.strip()
+    for h in env(
+        "PUSH_ALLOWED_HOSTS",
+        "fcm.googleapis.com,updates.push.services.mozilla.com,push.services.mozilla.com,"
+        ".push.apple.com,.notify.windows.com",
+    ).split(",")
+    if h.strip()
+]
 APP_ENV = env("APP_ENV", "development")  # development | staging | production, shown in the admin header
 DESKTOP_ENABLED = env_bool("DESKTOP_ENABLED")
 SURFACE_HOSTS = [f"m.{BASE_DOMAIN}", f"app.{BASE_DOMAIN}", BASE_DOMAIN]

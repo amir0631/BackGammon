@@ -383,6 +383,14 @@ export const api = {
     cancelWithdrawal: (id: number) => apiRequest<Withdrawal>(`/wallet/withdrawals/${id}`, { method: "DELETE" }),
   },
 
+  push: {
+    key: (o?: Opts) => apiRequest<{ enabled: boolean; key: string | null }>("/push/key", o),
+    subscribe: (sub: { endpoint: string; p256dh: string; auth: string }) =>
+      apiRequest<void>("/me/push-subscriptions", { method: "POST", body: sub }),
+    unsubscribe: (endpoint: string) =>
+      apiRequest<void>("/me/push-subscriptions", { method: "DELETE", body: { endpoint } }),
+  },
+
   content: {
     avatars: (o?: Opts) => apiRequest<Paginated<{ key: string }>>("/avatars", o),
     announcements: (o?: Opts) => apiRequest<Paginated<Announcement>>("/announcements", o),
@@ -499,3 +507,4 @@ export const api = {
 };
 
 export * from "./socket";
+export * from "./push";

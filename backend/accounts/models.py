@@ -119,3 +119,20 @@ class Session(models.Model):
 
     def __str__(self) -> str:
         return f"session:{self.pk}"
+
+
+class PushSubscription(models.Model):
+    """A browser's Web Push subscription (CLAUDE.md §11.5): tournament start and your-turn alerts."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="push_subscriptions")
+    endpoint = models.URLField(max_length=1000, unique=True)
+    p256dh = models.CharField(max_length=128)  # the browser's public key, base64url
+    auth = models.CharField(max_length=64)  # the browser's auth secret, base64url
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "push_subscription"
+        indexes: ClassVar[list[models.Index]] = [models.Index(fields=["user", "created_at"])]
+
+    def __str__(self) -> str:
+        return f"push:{self.user_id}"

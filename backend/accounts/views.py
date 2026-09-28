@@ -8,6 +8,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework import serializers as serializers_drf
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -282,3 +283,48 @@ class UsernameAvailableView(PublicView):
 class AvatarsView(PublicView):
     def get(self, request: Request) -> Response:
         return Response({"results": [{"key": key} for key in AVATARS], "next": None})
+
+
+class PushSubscriptionSerializer(serializers_drf.Serializer[Any]):
+    endpoint = serializers_drf.URLField(max_length=1000)
+    p256dh = serializers_drf.RegexField(r"^[A-Za-z0-9_-]{80,100}$")
+    auth = serializers_drf.RegexField(r"^[A-Za-z0-9_-]{16,32}$")
+
+
+class PushKeyView(APIView):
+    """The VAPID public key the browser subscribes with; null while push is not configured."""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request: Request) -> Response:
+        from accounts import push
+
+        return Response({"enabled": push.enabled(), "key": push.public_key()})
+
+
+class PushSubscriptionsView(APIView):
+    """Subscribe this browser (§11.5, only after the user allowed notifications) or remove it."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request: Request) -> Response:
+        from accounts import push
+        from accounts.models import PushSubscription
+
+        s = PushSubscriptionSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        d = s.validated_data
+        if not push.allowed_endpoint(d["endpoint"]):
+            raise errors.PushEndpointInvalid()
+        PushSubscription.objects.update_or_create(
+            endpoint=d["endpoint"],
+            defaults={"user": _user(request), "p256dh": d["p256dh"], "auth": d["auth"]},
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def delete(self, request: Request) -> Response:
+        from accounts.models import PushSubscription
+
+        endpoint = str(request.data.get("endpoint") or "") if isinstance(request.data, dict) else ""
+        PushSubscription.objects.filter(user=_user(request), endpoint=endpoint).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

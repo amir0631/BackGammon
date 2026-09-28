@@ -124,7 +124,8 @@
       "banned": "You can't sign in to this account.",
       "sessionInvalid": "Your session has ended. Please log in again.",
       "avatarInvalid": "This avatar isn't available. Pick another one.",
-      "smsUnavailable": "We can't send text messages right now."
+      "smsUnavailable": "We can't send text messages right now.",
+      "pushEndpointInvalid": "This browser's notification service isn't supported."
     },
     "sms": {
       "unavailable": "We can't send texts right now. Please try again in a few minutes."
@@ -623,5 +624,15 @@
     "avatar_11": "Tulip",
     "avatar_12": "Mountain",
     "fallback": "Avatar"
+  },
+  "push": {
+    "yourTurn": {
+      "title": "Your turn",
+      "body": "Your opponent has played. Tap to return to the match."
+    },
+    "tournamentStarted": {
+      "title": "Tournament started",
+      "body": "Your first match is ready."
+    }
   }
 }

@@ -187,6 +187,9 @@ def start(tournament_id: int) -> bool:
                 tournament=t, round=1, position=position, player_a=a, player_b=b
             )
             _start_match(t, slot)
+        from accounts.tasks import push_tournament_started
+
+        transaction.on_commit(lambda: push_tournament_started.delay(tournament_id))  # §11.5
         return True
 
 

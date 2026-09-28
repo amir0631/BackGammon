@@ -322,6 +322,22 @@ def _start_clock(live: Live, side: int) -> None:
     token = live.tokens.get("turn", 0) + 1
     live.tokens["turn"] = token
     live.new_timers.append((f"{live.match_id}|turn|{token}", deadline))
+    _push_if_away(live, side)
+
+
+def _push_if_away(live: Live, side: int) -> None:
+    """§11.5: a player whose app is closed hears that it is their turn (once a minute at most)."""
+    user_id = live.user_ids[side]
+    if user_id is None or live.channels[side] or live.status != "active":
+        return
+    from django.core.cache import cache
+
+    if not cache.add(f"push:turn:{live.match_id}:{user_id}", 1, timeout=60):
+        return
+    from accounts.tasks import push_your_turn
+
+    match_id = live.match_id
+    transaction.on_commit(lambda: push_your_turn.delay(user_id, match_id))
 
 
 def _stop_clock(live: Live) -> None:

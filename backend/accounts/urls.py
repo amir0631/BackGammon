@@ -17,4 +17,6 @@ urlpatterns = [
     path("me/sessions", views.SessionsView.as_view()),
     path("users/<str:username>", views.UserProfileView.as_view()),
     path("avatars", views.AvatarsView.as_view()),
+    path("push/key", views.PushKeyView.as_view()),
+    path("me/push-subscriptions", views.PushSubscriptionsView.as_view()),
 ]
