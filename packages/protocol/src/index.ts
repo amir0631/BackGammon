@@ -252,20 +252,72 @@ export interface AdminUserRow {
   username: string | null;
   phone: string;
   status: UserStatus;
+  phone_verified: boolean;
   created_at: string;
   balance: number;
+}
+
+export interface AdminLedgerRow {
+  id: number;
+  tx_id: string;
+  type: LedgerType;
+  amount: number;
+  ref_type: string | null;
+  ref_id: string | null;
+  created_at: string;
+}
+
+export interface AdminMatchRow {
+  id: string;
+  opponent: string | null;
+  variant: string;
+  length: number;
+  entry: number;
+  status: string;
+  won: boolean | null;
+  /** This user's score first. */
+  score: [number, number];
+  end_reason: string | null;
+  created_at: string;
 }
 
 export interface AdminUserDetail extends AdminUserRow {
   elo: number;
   level: number;
+  xp: number;
   lang: Lang;
+  referrer: string | null;
   wallet: WalletSummary;
-  ledger: { id: number; type: LedgerType; amount: number; created_at: string }[];
+  /** Newest 50; more through admin.userLedger. */
+  ledger: AdminLedgerRow[];
+  bank_account: { iban: string; bank_code: string; bank: Record<Lang, string> } | null;
+  withdrawals: AdminWithdrawal[];
+  sessions: { active: number; last_used_at: string | null };
+  matches: AdminMatchRow[];
 }
 
 export interface AdminWithdrawal extends Withdrawal {
-  /** Full Sheba, needed to make the bank transfer. */
+  /** Full Sheba for finance and superadmin (needed for the bank transfer); masked for support. */
   iban: string;
-  user: { id: number; username: string | null; phone: string };
+  payout_rial: number;
+  user: { id: number; username: string | null; phone: string; status: UserStatus };
+  decided_by: string | null;
+  claimed_by: string | null;
+  claimed_at: string | null;
+}
+
+export interface AdminWithdrawalFilter {
+  status?: WithdrawalStatus;
+  user_id?: number;
+  /** ISO dates, inclusive. */
+  from?: string;
+  to?: string;
+  order?: "asc" | "desc";
+  cursor?: string;
+}
+
+export interface AdminBalanceChange {
+  balance_before: number;
+  balance_after: number;
+  created: boolean;
 }

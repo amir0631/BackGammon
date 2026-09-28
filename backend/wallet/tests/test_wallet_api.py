@@ -278,6 +278,29 @@ class TestWithdrawal:
         assert len(page["results"]) == 1 and page["next"] is None
         assert c.get("/api/v1/wallet").json()["withdraw"]["expected_by"] == page["results"][0]["expected_by"]
 
+    def test_claim_blocks_a_second_admin_and_queue_filters(self, fixed_code):
+        make_admin("fin1", "finance")
+        make_admin("fin2", "finance")
+        one, two = admin_client("fin1"), admin_client("fin2")
+        user, c = self.setup_user()
+        wid = self.request(c, 300).json()["id"]
+        assert one.post(f"/api/v1/admin/withdrawals/{wid}/claim").json()["claimed_by"] == "fin1"
+        res = two.post(f"/api/v1/admin/withdrawals/{wid}/approve", {"bank_reference": "BR-9"}, format="json")
+        assert res.json()["code"] == "WITHDRAWAL_CLAIMED" and res.json()["details"]["claimed_by"] == "fin1"
+        assert two.post(f"/api/v1/admin/withdrawals/{wid}/claim").json()["code"] == "WITHDRAWAL_CLAIMED"
+        listing = one.get("/api/v1/admin/withdrawals", {"user_id": user.id, "status": "pending"}).json()
+        assert listing["count"] == 1 and listing["results"][0]["user"]["status"] == "active"
+        assert one.get(f"/api/v1/admin/withdrawals/{wid}").json()["claimed_by"] == "fin1"
+        csv_res = one.get("/api/v1/admin/withdrawals", {"export": "csv"})
+        body = csv_res.content.decode("utf-8-sig")
+        assert (
+            csv_res["Content-Type"].startswith("text/csv")
+            and str(wid) in body
+            and "iban" in body.splitlines()[0]
+        )
+        res = one.post(f"/api/v1/admin/withdrawals/{wid}/approve", {"bank_reference": "BR-9"}, format="json")
+        assert res.json()["status"] == "paid" and res.json()["decided_by"] == "fin1"
+
     def test_suspended_can_withdraw(self, fixed_code):
         _, c = self.setup_user(status="suspended")
         assert self.request(c, 200).status_code == 201
@@ -331,9 +354,11 @@ class TestAdminTopup:
         res = admin.post(
             url, {"amount": 500, "reason": "support ticket 12"}, format="json", HTTP_IDEMPOTENCY_KEY="t1"
         )
-        assert res.json()["created"] is False and Wallet.objects.get(user=user).balance == 500
+        # A retry reports the original balances.
+        assert res.json() == {"balance_before": 0, "balance_after": 500, "created": False}
+        assert Wallet.objects.get(user=user).balance == 500
         audit = AdminAudit.objects.get(action="wallet.topup")
-        assert audit.before == {"balance": 0} and audit.after == {"balance": 500, "amount": 500}
+        assert audit.before == {"balance": 0} and audit.after == {"balance": 500, "amount": 500, "key": "t1"}
         res = admin.post(
             url, {"amount": 10_001, "reason": "too much"}, format="json", HTTP_IDEMPOTENCY_KEY="t2"
         )
@@ -353,9 +378,101 @@ class TestAdminTopup:
 
     def test_user_search(self):
         make_admin()
-        make_user("Findme_1")
-        rows = admin_client().get("/api/v1/admin/users", {"q": "findme"}).json()["results"]
-        assert [r["username"] for r in rows] == ["Findme_1"]
+        user = make_user("Findme_1")
+        admin = admin_client()
+        for q in ["findme", "0" + user.phone[3:], "۰" + user.phone[3:], user.phone[3:9], f"#{user.id}"]:
+            rows = admin.get("/api/v1/admin/users", {"q": q}).json()["results"]
+            assert [r["username"] for r in rows] == ["Findme_1"], q
+
+    def test_same_key_for_another_user_is_a_new_topup(self):
+        make_admin("fin", "finance")
+        admin = admin_client("fin")
+        a, b = make_user(), make_user()
+        for u in (a, b):
+            admin.post(
+                f"/api/v1/admin/users/{u.id}/wallet/topup",
+                {"amount": 10, "reason": "same key"},
+                format="json",
+                HTTP_IDEMPOTENCY_KEY="k",
+            )
+        assert [Wallet.objects.get(user=u).balance for u in (a, b)] == [10, 10]
+
+
+@pytest.mark.django_db
+class TestAdminUsers:
+    def test_adjust_credit_and_debit(self):
+        make_admin("fin", "finance")
+        admin = admin_client("fin")
+        user = make_user()
+        fund(user, 100)
+        url = f"/api/v1/admin/users/{user.id}/wallet/adjust"
+        res = admin.post(
+            url, {"amount": -30, "reason": "reverse a mistake"}, format="json", HTTP_IDEMPOTENCY_KEY="a1"
+        )
+        assert res.json() == {"balance_before": 100, "balance_after": 70, "created": True}
+        res = admin.post(
+            url, {"amount": -500, "reason": "too much"}, format="json", HTTP_IDEMPOTENCY_KEY="a2"
+        )
+        assert res.json()["code"] == "WALLET_INSUFFICIENT"
+        res = admin.post(url, {"amount": 0, "reason": "zero"}, format="json", HTTP_IDEMPOTENCY_KEY="a3")
+        assert res.status_code == 400
+        assert invariants.check() == []
+        assert AdminAudit.objects.filter(action="wallet.adjust").count() == 1
+
+    def test_status_and_password_reset(self):
+        make_admin("help", "support")
+        admin = admin_client("help")
+        user = make_user()
+        c = APIClient()
+        res = admin.post(
+            f"/api/v1/admin/users/{user.id}/status",
+            {"status": "suspended", "reason": "chip dumping"},
+            format="json",
+        )
+        assert res.json()["status"] == "suspended"
+        res = admin.post(f"/api/v1/admin/users/{user.id}/password", {"reason": "lost access"}, format="json")
+        new_password = res.json()["password"]
+        res = c.post("/api/v1/auth/login", {"phone": user.phone, "password": new_password}, format="json")
+        assert res.status_code == 200
+        admin.post(
+            f"/api/v1/admin/users/{user.id}/status", {"status": "banned", "reason": "fraud"}, format="json"
+        )
+        assert c.get("/api/v1/me").status_code == 401  # a ban signs out everywhere
+        actions = set(AdminAudit.objects.values_list("action", flat=True))
+        assert {"user.status", "user.password_reset"} <= actions
+        assert new_password not in str(list(AdminAudit.objects.values_list("after", flat=True)))
+
+    def test_finance_cannot_ban_and_support_cannot_adjust(self):
+        make_admin("fin", "finance")
+        make_admin("help", "support")
+        user = make_user()
+        res = admin_client("fin").post(
+            f"/api/v1/admin/users/{user.id}/status", {"status": "banned", "reason": "x y z"}, format="json"
+        )
+        assert res.status_code == 403
+        res = admin_client("help").post(
+            f"/api/v1/admin/users/{user.id}/wallet/adjust",
+            {"amount": 5, "reason": "x y z"},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="k",
+        )
+        assert res.status_code == 403
+
+    def test_detail_and_ledger_pages(self):
+        make_admin("fin", "finance")
+        admin = admin_client("fin")
+        user = make_user()
+        for i in range(55):
+            fund(user, 1, key=f"f{i}")
+        detail = admin.get(f"/api/v1/admin/users/{user.id}").json()
+        assert (
+            detail["wallet"]["balance"] == 55
+            and detail["matches"] == []
+            and detail["sessions"]["active"] == 0
+        )
+        first = admin.get(f"/api/v1/admin/users/{user.id}/ledger").json()
+        second = admin.get(f"/api/v1/admin/users/{user.id}/ledger", {"cursor": first["next"]}).json()
+        assert len(first["results"]) == 50 and len(second["results"]) == 5 and second["next"] is None
 
 
 @pytest.mark.django_db

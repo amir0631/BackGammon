@@ -21,6 +21,7 @@ WithdrawBelowMin = _err("WITHDRAW_BELOW_MIN", "withdrawBelowMin")
 WithdrawLimit = _err("WITHDRAW_LIMIT", "withdrawLimit", 409)
 WithdrawNotWithdrawable = _err("WITHDRAW_NOT_WITHDRAWABLE", "withdrawNotWithdrawable", 409)
 WithdrawalNotPending = _err("WITHDRAWAL_NOT_PENDING", "withdrawalNotPending", 409)
+WithdrawalClaimed = _err("WITHDRAWAL_CLAIMED", "withdrawalClaimed", 409)
 TopupAboveCap = _err("TOPUP_ABOVE_CAP", "topupAboveCap")
 # A wrong password when confirming a coin movement: not a sign-in failure, so not 401.
 PasswordInvalid = _err("WALLET_PASSWORD_INVALID", "passwordInvalid", 400)

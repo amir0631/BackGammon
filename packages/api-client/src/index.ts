@@ -20,6 +20,10 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   AdminWithdrawal,
+  AdminWithdrawalFilter,
+  AdminLedgerRow,
+  AdminBalanceChange,
+  UserStatus,
   BankAccountInfo,
   BankInfo,
   LedgerRow,
@@ -156,6 +160,14 @@ function isApiError(value: unknown): value is ApiError {
 
 type Opts = Pick<RequestOptions, "signal" | "baseUrl">;
 
+/** `?a=1&b=x` from the defined, non-empty values; "" when none. */
+export function query(params: object): string {
+  const entries = Object.entries(params as Record<string, unknown>).filter(
+    ([, v]) => v !== undefined && v !== null && v !== "",
+  );
+  return entries.length ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()}` : "";
+}
+
 export const api = {
   health: (o?: Opts) => apiRequest<HealthResponse>("/health", o),
 
@@ -203,7 +215,8 @@ export const api = {
     /** `confirm` is an SMS code or, while SMS is off, the password (`WalletSummary.withdraw.confirm`). */
     withdraw: (amount: number, confirm: { code: string } | { password: string }, idempotencyKey: string) =>
       apiRequest<Withdrawal>("/wallet/withdrawals", { method: "POST", body: { amount, ...confirm }, idempotencyKey }),
-    withdrawals: (o?: Opts) => apiRequest<Paginated<Withdrawal>>("/wallet/withdrawals", o),
+    withdrawals: (cursor?: string, o?: Opts) =>
+      apiRequest<Paginated<Withdrawal>>(`/wallet/withdrawals${query({ cursor })}`, o),
     withdrawal: (id: number, o?: Opts) => apiRequest<Withdrawal>(`/wallet/withdrawals/${id}`, o),
     cancelWithdrawal: (id: number) => apiRequest<Withdrawal>(`/wallet/withdrawals/${id}`, { method: "DELETE" }),
   },
@@ -231,20 +244,44 @@ export const api = {
       }),
     smsStatus: (refresh = false, o?: Opts) =>
       apiRequest<SmsStatus>(`/admin/sms/status${refresh ? "?refresh=1" : ""}`, o),
-    users: (q: string, o?: Opts) => apiRequest<Paginated<AdminUserRow>>(`/admin/users?q=${encodeURIComponent(q)}`, o),
+    /** Username, phone in any form (Persian digits too), or `#id`. */
+    users: (q: string, cursor?: string, o?: Opts) =>
+      apiRequest<Paginated<AdminUserRow>>(`/admin/users${query({ q, cursor })}`, o),
     user: (id: number, o?: Opts) => apiRequest<AdminUserDetail>(`/admin/users/${id}`, o),
+    userLedger: (id: number, filter: { cursor?: string; from?: string; to?: string } = {}, o?: Opts) =>
+      apiRequest<Paginated<AdminLedgerRow>>(`/admin/users/${id}/ledger${query(filter)}`, o),
+    setUserStatus: (id: number, status: UserStatus, reason: string) =>
+      apiRequest<AdminUserRow>(`/admin/users/${id}/status`, { method: "POST", body: { status, reason } }),
+    /** Returns a one-time password (shown once) and signs the player out everywhere. */
+    resetUserPassword: (id: number, reason: string) =>
+      apiRequest<{ password: string; sessions_revoked: number }>(`/admin/users/${id}/password`, {
+        method: "POST",
+        body: { reason },
+      }),
     topup: (id: number, amount: number, reason: string, idempotencyKey: string) =>
-      apiRequest<{ balance_before: number; balance_after: number; created: boolean }>(`/admin/users/${id}/wallet/topup`, {
+      apiRequest<AdminBalanceChange>(`/admin/users/${id}/wallet/topup`, {
         method: "POST",
         body: { amount, reason },
         idempotencyKey,
       }),
-    withdrawals: (status?: string, o?: Opts) =>
-      apiRequest<Paginated<AdminWithdrawal>>(`/admin/withdrawals${status ? `?status=${status}` : ""}`, o),
+    /** Signed amount: positive credits, negative debits. */
+    adjust: (id: number, amount: number, reason: string, idempotencyKey: string) =>
+      apiRequest<AdminBalanceChange>(`/admin/users/${id}/wallet/adjust`, {
+        method: "POST",
+        body: { amount, reason },
+        idempotencyKey,
+      }),
+    withdrawals: (filter: AdminWithdrawalFilter = {}, o?: Opts) =>
+      apiRequest<Paginated<AdminWithdrawal> & { count: number }>(`/admin/withdrawals${query(filter)}`, o),
+    /** Same filters as `withdrawals`; use as a download link. */
+    withdrawalsCsvUrl: (filter: AdminWithdrawalFilter = {}) =>
+      `${API_PREFIX}/admin/withdrawals${query({ ...filter, cursor: undefined, export: "csv" })}`,
+    withdrawal: (id: number, o?: Opts) => apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}`, o),
+    claimWithdrawal: (id: number) => apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}/claim`, { method: "POST" }),
     approveWithdrawal: (id: number, bank_reference: string) =>
-      apiRequest<Withdrawal>(`/admin/withdrawals/${id}/approve`, { method: "POST", body: { bank_reference } }),
+      apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}/approve`, { method: "POST", body: { bank_reference } }),
     rejectWithdrawal: (id: number, reason: string) =>
-      apiRequest<Withdrawal>(`/admin/withdrawals/${id}/reject`, { method: "POST", body: { reason } }),
+      apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}/reject`, { method: "POST", body: { reason } }),
     smsPattern: (code: string, o?: Opts) =>
       apiRequest<{ code: string; status: string }>(`/admin/sms/patterns/${encodeURIComponent(code)}`, o),
     audit: (filter: { target_type?: string; target_id?: string } = {}, o?: Opts) =>

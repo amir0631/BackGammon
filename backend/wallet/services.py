@@ -374,14 +374,34 @@ def cancel_withdrawal(user: User, withdrawal_id: int) -> WithdrawalRequest:
         return _refund(_pending(withdrawal_id, user), WithdrawalRequest.Status.CANCELLED)
 
 
+def _check_claim(req: WithdrawalRequest, admin: Any) -> None:
+    if req.claimed_by_id is not None and req.claimed_by_id != admin.id:
+        raise errors.WithdrawalClaimed(
+            details={"claimed_by": req.claimed_by.username if req.claimed_by else None}
+        )
+
+
+def claim_withdrawal(admin: Any, withdrawal_id: int) -> WithdrawalRequest:
+    with transaction.atomic():
+        req = _pending(withdrawal_id)
+        _check_claim(req, admin)
+        req.claimed_by = admin
+        req.claimed_at = timezone.now()
+        req.save(update_fields=["claimed_by", "claimed_at"])
+        return req
+
+
 def reject_withdrawal(admin: Any, withdrawal_id: int, reason: str) -> WithdrawalRequest:
     with transaction.atomic():
-        return _refund(_pending(withdrawal_id), WithdrawalRequest.Status.REJECTED, reason, admin)
+        req = _pending(withdrawal_id)
+        _check_claim(req, admin)
+        return _refund(req, WithdrawalRequest.Status.REJECTED, reason, admin)
 
 
 def approve_withdrawal(admin: Any, withdrawal_id: int, bank_reference: str) -> WithdrawalRequest:
     with transaction.atomic():
         req = _pending(withdrawal_id)
+        _check_claim(req, admin)
         entries = [
             (ledger.escrow("withdrawal", req.id), -req.coins),
             (PLATFORM_PAYOUTS, req.coins - req.fee_coins),
@@ -406,6 +426,29 @@ def approve_withdrawal(admin: Any, withdrawal_id: int, bank_reference: str) -> W
     return req
 
 
+# ---- Admin adjustment (§13 Users: manual balance adjustment with reason) ----
+
+
+def admin_adjust(user: User, amount: Any, idempotency_key: str, admin_id: int) -> tuple[int, int, bool]:
+    """Signed correction: a credit comes from platform:rewards, a debit goes to platform:sinks. Returns
+    (balance before, balance after, created)."""
+    if not isinstance(amount, int) or isinstance(amount, bool) or amount == 0:
+        raise errors.AmountInvalid()
+    ledger.ensure_wallet(user.id)
+    source = PLATFORM_REWARDS if amount > 0 else ledger.PLATFORM_SINKS
+    with transaction.atomic():
+        before = Wallet.objects.select_for_update().get(user_id=user.id).balance
+        posted = ledger.post(
+            TxType.ADMIN_ADJUSTMENT,
+            [(source, -amount), (user_account(user.id), amount)],
+            idempotency_key=f"admin_adjust:{user.id}:{idempotency_key}",
+            ref_type="admin",
+            ref_id=admin_id,
+        )
+        after = Wallet.objects.get(user_id=user.id).balance
+    return before, after, posted.created
+
+
 # ---- Admin top-up (§7.9) ----
 
 
@@ -421,7 +464,7 @@ def admin_topup(user: User, amount: Any, idempotency_key: str, admin_id: int) ->
         posted = ledger.post(
             TxType.ADMIN_TOPUP,
             [(PLATFORM_SALES, -amount), (user_account(user.id), amount)],
-            idempotency_key=f"admin_topup:{idempotency_key}",
+            idempotency_key=f"admin_topup:{user.id}:{idempotency_key}",
             ref_type="admin",
             ref_id=admin_id,
         )
