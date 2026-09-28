@@ -455,11 +455,7 @@ def _dispatch(live: Live, side: int, type_: str, payload: dict[str, Any]) -> Non
         do_take(live, side)
     elif type_ == "cube.drop":
         live.timeouts[side] = 0
-        result = e.drop(side)
-        _stop_clock(live)
-        emit(live, "cube.update", _cube_payload(live, "drop", side), side)
-        _record_move(live, side, cube_action="drop")
-        game_over(live, result)
+        do_drop(live, side)
     elif type_ == "react.send":
         body = protocol.ReactSendIn.model_validate(payload)
         kind, key = ("emoji", body.emoji_key) if body.emoji_key else ("phrase", body.phrase_key)
@@ -501,6 +497,14 @@ def do_offer(live: Live, side: int) -> None:
     _record_move(live, side, cube_action="offer")
     if live.is_bot(1 - side):
         _schedule_bot(live)
+
+
+def do_drop(live: Live, side: int) -> None:
+    result = live.engine.drop(side)
+    _stop_clock(live)
+    emit(live, "cube.update", _cube_payload(live, "drop", side), side)
+    _record_move(live, side, cube_action="drop")
+    game_over(live, result)
 
 
 def do_take(live: Live, side: int) -> None:

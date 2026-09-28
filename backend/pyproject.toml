@@ -24,7 +24,7 @@ plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 exclude = ["migrations/"]
 
 [[tool.mypy.overrides]]
-module = ["channels.*", "celery.*", "kombu.*"]
+module = ["channels.*", "celery.*", "kombu.*", "bot", "bot.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -44,4 +44,7 @@ django_settings_module = "config.settings"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
+# The bot service (../bot) runs on the engine in this tree; its tests run with the backend's.
+pythonpath = [".", ".."]
+testpaths = [".", "../bot/tests"]
 addopts = "-q --strict-markers"

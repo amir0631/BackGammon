@@ -1,0 +1,7 @@
+# The root .dockerignore excludes backend/ and bot/ for the Next images; the bot image needs both.
+**
+!backend/game/__init__.py
+!backend/game/engine/**
+!bot/**
+**/__pycache__
+**/tests

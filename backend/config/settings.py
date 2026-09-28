@@ -154,6 +154,8 @@ SMS_PROVIDER = env("SMS_PROVIDER", "console")
 IPPANEL_BASE_URL = env("IPPANEL_BASE_URL", "https://edge.ippanel.com/v1")
 IPPANEL_API_KEY = env("IPPANEL_API_KEY", "")
 PAYMENT_GATEWAY = env("PAYMENT_GATEWAY", "sandbox")
+# Bot service (CLAUDE.md §9); empty uses the in-process fallback.
+BOT_URL = env("BOT_URL", "")
 
 LOGGING = {
     "version": 1,
