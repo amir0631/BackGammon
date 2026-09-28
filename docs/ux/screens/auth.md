@@ -2,8 +2,10 @@
 
 Status: draft for UI build (CLAUDE.md §17 step 2).
 Surface: `m.` (Phase 1). Routes must be identical on `app.` in Phase 2 (§11.0 rule 7).
-Sources: CLAUDE.md §1, §2 rules 8 and 11, §3 (auth cookies), §10.1, §11.3, §11.7, §12.1, §15 (`user.age_confirmed_at`), §18 (18+ checkbox); ia.md §1, §2, §3.5, §4; patterns.md (P§) 4, 6.3, 9.3, 10, 12, 13, 15, 17, 18; journeys.md J1, J2.
+Sources: CLAUDE.md §1, §2 rules 8 and 11, §3 (auth cookies), §10.1, §11.3, §11.7, §12.1, §15 (`user.age_confirmed_at`), §18 (18+ checkbox, SMS off switch); `sms.md` §1 (off switch); ia.md §1, §2, §3.5, §4; patterns.md (P§) 4, 6.3, 9.3, 10, 12, 13, 15, 17, 18; journeys.md J1, J2.
 Screen IDs follow screen-inventory.md §2.1.
+
+**Amendment 2026-09-28: SMS off switch.** While the `sms.enabled` setting is off, signup has no code step and password reset is unavailable. The behavior is specified in §3.5 (SMS off mode). The steps it changes are marked "SMS off: see §3.5" in §3–§5, and its keys, criteria, and questions are in §7, §9 (28–38), and §10 (14–18).
 
 ---
 
@@ -51,11 +53,12 @@ Until the lobby exists (step 7–8), `/play` is a placeholder shell owned by the
 
 1. **AU-01 Welcome.** If the URL has `ref`, store it locally (localStorage, key `bg.ref`, with the capture time). The value is a referrer **username** (the API takes `referrer: username`). User taps "Create account".
 2. **AU-02 Phone, 18+, terms.** User enters the mobile number and ticks both checkboxes (both start unticked). "Get code" stays disabled, with a visible reason, until the number is valid and both boxes are ticked.
-3. On "Get code": normalize the phone (§6.2), then `POST auth/otp {phone, purpose: "register"}`.
-   - `202` → go to AU-03. Start the validity countdown from the server value (open question 1), falling back to 120 s.
+3. On "Get code" (labelled "Continue" when the SMS mode isn't known, §3.5.1): normalize the phone (§6.2), then `POST auth/otp {phone, purpose: "register"}`.
+   - `202 {sms: true, expires_in, resend_after}` → go to AU-03. Start the validity countdown from `expires_in` and the resend wait from `resend_after`.
+   - `200 {sms: false, verification_token}` → SMS off: skip AU-03 and go straight to AU-04 with the token. See §3.5.2.
    - `409 AUTH_PHONE_TAKEN` → field error on the phone: "This number is already registered", with the action "Log in with this number". The action opens AU-06 with the phone prefilled from in-memory state, **not** from the URL.
    - `429 AUTH_OTP_RATE_LIMITED` → action error with a live countdown from `details.retry_after`. "Get code" stays disabled until it reaches 0. If a code was sent earlier in this tab and its validity hasn't run out, also show the link "I already have a code", which opens AU-03.
-   - `SMS unavailable` (if the API returns it, see open question 2) → action error `errors.sms.unavailable`, with retry enabled.
+   - `503 SMS_UNAVAILABLE`: the current API doesn't return this for signup, since SMS off returns a token instead. If it does appear, show the action error `errors.auth.smsUnavailable` with retry enabled.
    - Invalid phone from the server (`400`) → the same field error as client validation.
    - Offline → "Get code" is disabled with the reason `net.offlineAction`.
 4. **AU-03 SMS code.** The code field is focused. The code auto-submits on the 5th digit via `POST auth/otp/verify {phone, purpose: "register", code}`.
@@ -100,6 +103,7 @@ Until the lobby exists (step 7–8), `/play` is a placeholder shell owned by the
 1. **AU-07.** Phone (prefilled if the user typed one on AU-06 or came from settings) → "Get code" → `POST auth/otp {phone, purpose: "password_reset"}`.
    - `202` always (no enumeration) → AU-08.
    - `429` → countdown, as in signup.
+   - `503 SMS_UNAVAILABLE` → the form is replaced by the "reset unavailable" panel (AU-07U). No dead end: support contact and "Back to log in". See §3.5.3.
 2. **AU-08.** Same code component as AU-03, with **neutral copy**: "If an account exists for {phone}, we've texted it a 5-digit code." It also shows the link "No account? Create one" (to AU-02 with the phone kept). Verify → `POST auth/otp/verify {…, purpose: "password_reset"}` → token → AU-09. Errors are handled as in AU-03.
 3. **AU-09.** New password, with the requirement checklist visible before typing. A note before the button: "After you change it, you'll be signed in here and signed out on all other devices." "Save password and log in" → `POST auth/password/reset {verification_token, new_password}`.
    - Success → signed in on this device, and every other session is revoked (§12.1, confirmed) → exit per §2, with the snackbar "Password changed. Other devices were signed out." A suspended account goes to AU-13 first.
@@ -114,6 +118,86 @@ Until the lobby exists (step 7–8), `/play` is a placeholder shell owned by the
    - Success → clear client caches of user data (query cache, `bg.*` sessionStorage, and any user-scoped service worker data, see open question 8) → `/` with a polite announcement "You've logged out".
    - Network failure → the dialog stays open with the action error "Couldn't log out. Check your connection and try again." It never pretends to have logged out, because the HttpOnly cookies can't be cleared by the client.
 3. Logout never resigns or leaves a match, never cancels withdrawals, and never touches other devices. "Sign out other devices" lives in `/me/sessions` (profile.md).
+
+### 3.5 SMS off mode (amendment 2026-09-28; CLAUDE.md §18 "SMS off switch", `sms.md` §1)
+
+The product owner decided that no SMS is sent until the sender line and patterns are approved. The admin setting `sms.enabled` (default `false`) controls this. The switch can change at any time, so the client never assumes a mode. It follows the server response for each request.
+
+| | SMS on (`sms.enabled` true) | SMS off (`sms.enabled` false) |
+| --- | --- | --- |
+| `POST auth/otp` purpose `register` | `202 {sms: true, expires_in, resend_after}` → AU-03 | `200 {sms: false, verification_token}` → AU-04 directly. No code is sent. The phone is **not** verified. |
+| Signup steps | AU-02 → AU-03 → AU-04 ("Step n of 3") | AU-02 → AU-04 ("Step n of 2") |
+| `AUTH_PHONE_TAKEN`, `AUTH_OTP_RATE_LIMITED` on signup | As §3.1 step 3 | Same handling. The rate limit (3 per 10 min per phone and per IP) still applies, but there is no resend cooldown. |
+| `POST auth/otp` purpose `password_reset` | `202` → AU-08 | `503 SMS_UNAVAILABLE` (`errors.auth.smsUnavailable`) for every number (no enumeration) → AU-07U panel |
+| Login, logout, suspended, banned | Unchanged | Unchanged |
+
+#### 3.5.1 Knowing the mode before the first request
+
+- There is no public flag for the mode yet (open question 14). Until one exists, AU-02 and AU-07 use **mode-neutral** copy:
+  - AU-02 note: `auth.signup.phoneNote` "You'll log in with this number. Make sure it's correct."
+  - AU-02 button: `auth.signup.ctaNeutral` "Continue"
+  - Stepper: `auth.stepNoTotal` "Step 1", with no total
+- AU-03 and AU-04 always know the mode from the response, so they show the exact total ("Step 2 of 3", or "Step 2 of 2" when SMS is off).
+- **If the public flag ships**, AU-02 switches to mode-specific copy:
+  - SMS on: the existing `auth.signup.smsNote`, `auth.signup.cta` "Get code", and "Step 1 of 3".
+  - SMS off: `auth.signup.phoneNote`, "Continue", and "Step 1 of 2".
+  - AU-07 shows AU-07U at once, without asking for a phone number.
+- Never write "we'll text you" or "we sent a code" unless the response said `sms: true`.
+
+#### 3.5.2 Signup with SMS off (AU-02 → AU-04)
+
+1. AU-02 is unchanged: phone, the 18+ checkbox, the terms checkbox (both unticked), and the same disabled reasons.
+2. "Continue" → `POST auth/otp {phone, purpose: "register"}` → `200 {sms: false, verification_token}`.
+   - Store the token, the normalized phone, and the time it was issued in this tab's sessionStorage (same key and 10-minute life as the SMS-on token, §3.1 step 4).
+   - Go to AU-04 (a normal navigation push, so Back from AU-04 returns to AU-02).
+   - There is no interstitial and no "number verified" message: nothing was verified.
+3. **AU-04 in SMS off mode** shows the same fields plus one read-only line above the username field:
+   - «شماره موبایل: ۰۹۱۲ ۳۴۵ ۶۷۸۹» / "Mobile number: 0912 345 6789" (full number, `<bdi dir="ltr">`), then the helper `auth.account.phoneCheck` "You'll log in with this number. Check that it's correct."
+   - Next to it, the "Change" text button (`auth.account.changePhone`) → AU-02 with the phone and both checkboxes kept.
+   - Why: without a code step, a typo becomes the login ID and can't be recovered while password reset is off.
+   - Stepper: "Step 2 of 2".
+4. "Create account" → `POST auth/register` exactly as §3.1 step 5. Every error is handled the same way, except:
+   - **`AUTH_VERIFICATION_INVALID`** (`details.reason`: `expired`, `invalid`, or `used`) → action error `auth.verification.expiredNoSms` "This signup session has expired. Tap Continue to try again; what you entered is kept."
+     - Button `auth.verification.renew` "Continue".
+     - One tap calls `POST auth/otp` again. On `200 {sms: false}` it stores the new token and re-submits `POST auth/register` with the same entries. This is one explicit tap for the action the user already chose; nothing is submitted without a tap.
+     - If that call returns `202 {sms: true}` (SMS was switched on meanwhile), go to AU-03. After verification, return to AU-04 with the username and referrer kept and the password cleared, as in §3.1 step 5.
+     - If it returns `409` or `429`, show those errors on AU-04 as action errors with their normal actions ("Log in with this number"; countdown).
+5. **Back or "Change" from AU-04 → AU-02**:
+   - If the phone is unchanged and the stored token is less than 10 minutes old, "Continue" goes straight to AU-04 **without** a new request (saves the rate limit).
+   - If the phone changed, the old token is discarded and "Continue" requests a new one.
+6. AU-05 (avatar) and the exits (§2) are unchanged.
+7. **Direct opens:**
+   - `/signup/verify` without an SMS-on code state in this tab → redirect to `/signup/account` if a valid SMS-off token exists, else to `/signup`.
+   - `/password/reset/verify` and `/password/reset/new` without state → redirect to `/password/reset`.
+8. **The mode changes mid-flow.**
+   - A user holding an SMS-off token when SMS is switched on can still register with it until it expires (the server accepts it).
+   - A user on AU-03 when SMS is switched off: the code they received still verifies until it expires. If it has expired, "Get a new code" returns `200 {sms: false}` → go to AU-04 with the new token. No error is shown.
+
+#### 3.5.3 Password reset with SMS off (AU-07U)
+
+1. AU-07 → "Get code" → `503 SMS_UNAVAILABLE`.
+2. The form is replaced in place by the **AU-07U "Reset unavailable" panel** (same route `/password/reset`; `role="region"` with a heading; focus moves to the heading):
+   1. Title `auth.reset.unavailable.title` "Password reset is unavailable right now"
+   2. Body `auth.reset.unavailable.body` "We can't send verification codes by text at the moment, so passwords can't be reset in the app."
+   3. `auth.reset.unavailable.remember` "If you remember your password, you can log in as usual."
+   4. `auth.reset.unavailable.support` "Can't log in? Contact support: {channel}", with the channel (`support.contact.channel`) as a link or copyable text
+   5. Safety line `auth.reset.unavailable.safety` "Support will never ask for your password."
+   6. Primary button: "Back to log in" (`auth.reset.backToLogin`) → AU-06, with the phone prefilled from memory (never from the URL)
+   7. Secondary text button: "Try again" (`common.retry`). It repeats `POST auth/otp`; when SMS is back on, the flow continues to AU-08. It never auto-retries.
+3. The panel is neutral: it never says whether the number has an account, and it looks the same for every number.
+4. Every entry point to AU-07 ends here while SMS is off:
+   - "Forgot password?" on AU-06
+   - The "Reset password" link in the `AUTH_LOCKED` state
+   - "Change password" in `/settings`
+   The links stay visible: they lead to this explanation and the support contact, which is better than hiding the only route to help.
+5. The panel is not stored. Each visit to AU-07 starts with the form, until the public mode flag exists (§3.5.1).
+
+#### 3.5.4 API alignment noted while amending
+
+- **Open question 1 resolved:** the `202` body has `expires_in` and `resend_after` (`otp.ttl_seconds`, `otp.resend_cooldown_seconds`, default 120 s and 60 s). A resend inside the cooldown returns `429 AUTH_OTP_RATE_LIMITED` with `details.reason: "cooldown"` and `retry_after`.
+- **Open question 5 resolved:** an expired, invalid, or reused token returns `AUTH_VERIFICATION_INVALID` (`errors.auth.verificationInvalid`), with `details.reason` of `expired`, `invalid`, or `used`. The UI treats all three the same (§3.1 step 5, §3.5.2 step 4).
+- **Open question 7 resolved:** the banned code is `AUTH_BANNED` (`errors.auth.banned`), not `ACCOUNT_BANNED`. Read `ACCOUNT_BANNED` in this spec as `AUTH_BANNED`.
+- **Message key for `SMS_UNAVAILABLE`:** the backend key is `errors.auth.smsUnavailable`. The older `errors.sms.unavailable` key (sms.md §4) is kept in the catalog for provider failures shown elsewhere; both have copy in §7.
 
 ---
 
@@ -137,20 +221,22 @@ Common layout for all auth screens: no bottom nav, no balance chip. The top bar 
 
 ### AU-02 Signup: phone, 18+, terms `/signup`
 
-- **Purpose:** collect the number and the two consents, and send the code.
+- **Purpose:** collect the number and the two consents, and send the code (or, with SMS off, get the signup token; §3.5).
 - **Content priority:**
-  1. Title and "Step 1 of 3"
+  1. Title and "Step 1 of 3" ("Step 1" while the SMS mode is unknown; §3.5.1)
   2. Phone field
-  3. SMS note
+  3. SMS note (`auth.signup.phoneNote` while the SMS mode is unknown or off)
   4. 18+ checkbox
   5. Terms/privacy checkbox (inline links)
   6. "Get code"
   7. "Already have an account? Log in"
 - **Components:** stepper text, phone field (P§12), two separate checkboxes (not combined, so each consent is explicit and has its own error), sticky CTA, disabled-reason text.
 - Terms and Privacy links open `/terms` and `/privacy` as full routes. Back returns with every entry kept (sessionStorage).
-- **Primary action:** Get code.
+- **Primary action:** Get code ("Continue" while the SMS mode is unknown or off; §3.5.1).
 
 ### AU-03 Signup: SMS code `/signup/verify`
+
+SMS off: this screen is skipped (§3.5.2).
 
 - **Purpose:** prove ownership of the number.
 - **Content priority:**
@@ -170,7 +256,7 @@ Common layout for all auth screens: no bottom nav, no balance chip. The top bar 
 
 - **Purpose:** create the account.
 - **Content priority:**
-  1. Title and "Step 3 of 3"
+  1. Title and "Step 3 of 3" ("Step 2 of 2" with SMS off). With SMS off only, the read-only mobile number line with "Change" and `auth.account.phoneCheck` follows the title (§3.5.2 step 3).
   2. Username field
   3. Password field with the requirement checklist
   4. Referrer field (optional)
@@ -213,6 +299,21 @@ Common layout for all auth screens: no bottom nav, no balance chip. The top bar 
 - **Purpose:** start recovery.
 - **Content:** title, one-line intro, phone field, "Get code", "Back to log in".
 - **Primary action:** Get code.
+
+### AU-07U Reset unavailable panel (on `/password/reset`, SMS off)
+
+- **Shown when:** `POST auth/otp {purpose: "password_reset"}` returns `503 SMS_UNAVAILABLE` (§3.5.3). It replaces the AU-07 form in place.
+- **Purpose:** explain that reset can't happen in the app right now, and give a way forward. Never a dead end.
+- **Content priority:**
+  1. Title
+  2. Body
+  3. "If you remember your password" line
+  4. Support contact
+  5. Safety line
+  6. "Back to log in" (primary)
+  7. "Try again" (text button)
+- **Components:** an info panel (info icon plus text, not error styling, because this isn't the user's fault), the support channel as a link or copyable text, and two buttons.
+- **Primary action:** Back to log in.
 
 ### AU-08 Reset: SMS code `/password/reset/verify`
 
@@ -301,6 +402,7 @@ Suspended users can sign in and use part of the app (§12.1).
 | **Suspended / banned** | — | Phone of a suspended/banned account → `AUTH_PHONE_TAKEN` like any other; "Log in with this number" then leads to the normal outcome | — | — | — | Suspended → sign-in succeeds → AU-13. Banned → AU-14 panel, no sign-in | Neutral as always | Suspended → signed in → AU-13. Banned → AU-14 panel, no sign-in | Suspended users can log out normally |
 | **First-time user** | Default state: fa, language button visible | Both boxes unticked | Tips visible as a collapsed "Didn't get the code?" | Referrer prefilled only from `ref` | — | — | — | — | — |
 | **Already signed in** | Redirect to `/play` | Redirect | Redirect | Redirect | Allowed (signed-in route) | Redirect | Redirect | Redirect | — |
+| **SMS off (§3.5)** | Unchanged | Neutral note and "Continue" (§3.5.1); `200 {sms: false}` → AU-04 | Skipped; direct open redirects (§3.5.2 step 7) | "Step 2 of 2"; phone line with "Change"; expired token → "Continue" renews and re-submits | Unchanged | Unchanged; "Forgot password?" still shown (leads to AU-07U) | "Get code" → `503` → AU-07U panel | Unreachable; direct open → `/password/reset` | Unchanged |
 
 Timing rules:
 - Countdowns (validity, resend, lock, rate limit) use the server value and the local clock, and display mm:ss in `<bdi dir="ltr">`.
@@ -500,6 +602,30 @@ Timing rules:
 | `account.banned.withdrawals` | اگر درخواست برداشت در انتظار داشته‌اید، تا بررسی تیم ما نگه داشته می‌شود. | If you had a pending withdrawal, it is on hold until our team reviews it. |
 | `account.banned.support` | برای پیگیری با پشتیبانی تماس بگیرید: {channel} | To follow up, contact support: {channel} |
 
+**Keys added by the SMS off amendment (§3.5)**
+
+| Key | fa | en |
+| --- | --- | --- |
+| `auth.stepNoTotal` | مرحله {current} | Step {current} |
+| `auth.signup.phoneNote` | با این شماره وارد حساب می‌شوید. مطمئن شوید درست است. | You'll log in with this number. Make sure it's correct. |
+| `auth.signup.ctaNeutral` | ادامه | Continue |
+| `auth.account.phoneLine` | شماره موبایل: {phone} | Mobile number: {phone} |
+| `auth.account.phoneCheck` | با این شماره وارد حساب می‌شوید. درستی آن را بررسی کنید. | You'll log in with this number. Check that it's correct. |
+| `auth.account.changePhone` | تغییر شماره | Change |
+| `auth.account.changePhoneLabel` | تغییر شماره موبایل | Change mobile number |
+| `auth.verification.expiredNoSms` | زمان این مرحله‌ی ثبت‌نام گذشته است. برای ادامه «ادامه» را بزنید؛ اطلاعاتی که وارد کرده‌اید حفظ می‌شود. | This signup session has expired. Tap Continue to try again; what you entered is kept. |
+| `auth.verification.renew` | ادامه | Continue |
+| `auth.reset.unavailable.title` | بازیابی رمز عبور فعلاً در دسترس نیست | Password reset is unavailable right now |
+| `auth.reset.unavailable.body` | در حال حاضر امکان ارسال کد تأیید با پیامک نداریم؛ برای همین بازیابی رمز در برنامه ممکن نیست. | We can't send verification codes by text at the moment, so passwords can't be reset in the app. |
+| `auth.reset.unavailable.remember` | اگر رمز خود را به خاطر دارید، مثل همیشه وارد شوید. | If you remember your password, you can log in as usual. |
+| `auth.reset.unavailable.support` | نمی‌توانید وارد شوید؟ با پشتیبانی تماس بگیرید: {channel} | Can't log in? Contact support: {channel} |
+| `auth.reset.unavailable.safety` | پشتیبانی هرگز رمز عبور شما را نمی‌پرسد. | Support will never ask for your password. |
+| `errors.auth.smsUnavailable` | ارسال پیامک در حال حاضر ممکن نیست. | We can't send text messages right now. |
+| `errors.auth.verificationInvalid` | زمان تأیید شماره گذشته است. دوباره تلاش کنید. | Your number verification has expired. Please try again. |
+| `errors.auth.banned` | امکان ورود به این حساب وجود ندارد. | You can't sign in to this account. |
+
+`errors.auth.verificationInvalid` and `errors.auth.banned` are the backend `message_key` values (§3.5.4). The screens show the contextual keys (`auth.verification.expired`, `auth.verification.expiredNoSms`, `account.banned.*`). The `errors.*` entries are the catalog fallback, so an unmapped context still shows correct text.
+
 Existing shared keys used: `common.cancel`, `common.back`, `common.retry`, `errors.network`, `errors.generic`, `errors.throttled`, `net.offline`, `support.contact.channel`.
 
 The backend `message_key` values for the auth error codes must equal the `errors.*` keys above (§2 rule 8). The main agent owns keeping them aligned.
@@ -519,6 +645,8 @@ The backend `message_key` values for the auth error codes must equal the `errors
 | AU-05 | Heading → avatar radio group (arrow keys move within, one tab stop) → Continue → Skip |
 | AU-06 | Logo → language → heading → phone → password → show/hide → Log in → Forgot password → Create account |
 | AU-07 | Back → language → heading → phone → Get code → Back to log in |
+| AU-07U | Panel heading (focus moves here when the panel replaces the form; announced politely, not as an alert) → body → support link → Back to log in → Try again |
+| AU-04 (SMS off) | Back → language → heading → mobile number line → Change → username → … (as AU-04) |
 | AU-09 | Back → language → heading → new password → show/hide → Save password and log in |
 | AU-12 | Title (announced) → Cancel (initial focus) → Log out; focus trapped; Esc = Cancel |
 | AU-13 | Heading (focused on load) → until/reason text → "can still" list → "not available" list → support link → Continue |
@@ -570,6 +698,20 @@ The backend `message_key` values for the auth error codes must equal the `errors
 26. No string on these screens is hardcoded; every string has an fa and en entry; no raw API `message` or English text appears in fa.
 27. Contrast of all text ≥ 4.5:1 in both color themes (automated check).
 
+**SMS off mode (§3.5).** Run with `sms.enabled` false, and criteria 3–12 and 18–19 again with it true.
+
+28. With SMS off, AU-02 → "Continue" → `200 {sms: false, verification_token}` lands on AU-04 without rendering AU-03. No screen or announcement says a code was sent or a number was verified.
+29. With SMS off, AU-04 shows "Step 2 of 2", the full mobile number in `<bdi dir="ltr">`, `auth.account.phoneCheck`, and a "Change" button. Change and Back return to AU-02 with the phone and both checkboxes kept.
+30. Back to AU-02 and "Continue" again with the same phone within 10 minutes of the token goes to AU-04 **without** a new `POST auth/otp` (network log). A changed phone sends a new request.
+31. With SMS off, `AUTH_PHONE_TAKEN` and `AUTH_OTP_RATE_LIMITED` on AU-02 behave exactly as with SMS on (criteria 5 and 6).
+32. With SMS off, `AUTH_VERIFICATION_INVALID` on register shows `auth.verification.expiredNoSms`. One tap on "Continue" sends `POST auth/otp` then `POST auth/register` with the same username, password, and referrer, and nothing is sent without that tap.
+33. If SMS is switched on between AU-02 and a token renewal, the renewal's `202` routes to AU-03, and after verification AU-04 keeps the username and referrer with the password cleared.
+34. Opening `/signup/verify` directly with SMS off redirects to `/signup/account` when a valid token is in this tab, else to `/signup`. `/password/reset/verify` and `/password/reset/new` without state redirect to `/password/reset`.
+35. With SMS off, AU-07 "Get code" → `503 SMS_UNAVAILABLE` replaces the form with AU-07U. Focus moves to its heading. It shows the support channel, "Back to log in" (phone kept, not in the URL), and "Try again". The response and panel are identical for registered and unregistered numbers.
+36. "Forgot password?" on AU-06, the `AUTH_LOCKED` "Reset password" link, and "Change password" in `/settings` all reach AU-07U while SMS is off. None of them is hidden or disabled.
+37. AU-02 while the mode is unknown shows `auth.signup.phoneNote`, "Continue", and "Step 1", never "We'll text a code".
+38. All added keys (§7, SMS off amendment) exist in fa and en. `SMS_UNAVAILABLE` never shows raw text or the English message in fa.
+
 ---
 
 ## 10. Open questions
@@ -589,3 +731,11 @@ The backend `message_key` values for the auth error codes must equal the `errors
 11. **Lock and reset.** Does a successful password reset clear the 15-minute login lock? The locked state links to reset, so the answer changes the copy.
 12. **Suspension details in `me`.** AU-13 needs `status`, `suspended_until` (null = indefinite), and optionally a reason category key (e.g., `fair_play`, `payment`, `terms`) mapped to i18n. Can `GET me` return these? Free-text admin reasons must not be shown to users.
 13. **Username change and shop items while suspended.** §12.1 blocks "buy". Does that include coin spends that aren't purchases (username change, shop items)? This spec and profile.md treat every coin spend as blocked while suspended; please confirm.
+
+Open questions 1, 5, and 7 are answered by the current API (§3.5.4). Questions 14–18 come from the SMS off amendment.
+
+14. **Public SMS-mode flag.** The client only learns the mode from `POST auth/otp`, so AU-02 must use neutral copy and AU-07 asks for a phone number before saying reset is unavailable. Please expose it before sign-in, for example `GET config` → `{sms_enabled: bool}` (this could be the same public config as open question 9). Then AU-02 shows exact copy and steps, and AU-07 opens directly on AU-07U.
+15. **Support can't restore access.** With SMS off, AU-07U sends locked-out users to support, but the admin API has no way to reset a player's password or issue a one-time reset. Is a support tool planned (for example, an admin-issued reset link with audit)? Otherwise the support route is a dead end in practice.
+16. **Unverified numbers and squatting.** With SMS off, anyone can register any number. The real owner then gets `AUTH_PHONE_TAKEN` and can't reset. Also, the signup bonus is granted to unverified numbers, keyed by phone (§7.10 says "once its phone is verified"). Options: hold the bonus until the phone is verified; mark accounts `phone_verified: false` and ask them to verify when SMS turns on; or allow a verified owner to reclaim a number. Please decide. The UI can add a "Verify your number" step to `/me` once there is an endpoint and a flag in `me`.
+17. **Mode flips mid-flow.** The UI relies on the server honoring an SMS-off token after SMS is switched on, and an SMS-on code after it is switched off (§3.5.2 step 8). Please confirm both remain valid until they expire, and add a test.
+18. **Login lock while reset is off.** With SMS off, a locked user's only way forward is waiting 15 minutes. Is that acceptable for launch, or should the lock be shorter while `sms.enabled` is false?

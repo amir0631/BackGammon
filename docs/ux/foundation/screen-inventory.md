@@ -19,9 +19,7 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 | `auth.md` | Welcome, signup (phone, 18+, terms, OTP, account, avatar step), login, password reset, logout, account suspended screen and banner, banned panel | 2 |
 | `onboarding.md` | Signup-bonus notice, first-time hints framework (the avatar step moved to `auth.md`) | 3 |
 | `profile.md` | Account hub, edit profile, username change, sessions, public profile, and the step-2 base of `/settings` (language, lite graphics, reduced animations, sound, vibration) | 2 (username change purchase active from step 3) |
-| `wallet.md` | Balance, on-hold amount, transaction history (all §7.2 types), pending payments | 3 |
-| `transfer.md` | Transfer task flow, receipt, received-transfer notice | 3 |
-| `withdrawal.md` | Bank account (one per user: add, change), withdrawal task flow, SMS code, requests list and detail, cancel | 3 |
+| `wallet.md` | Balance, on-hold and welcome-coin amounts, transaction history (all §7.2 types), get-coins (support top-up) sheet, transfer task flow and receipt, received-coins notice, bank account (one per user: add, change, remove), withdrawal task flow (SMS code or password), requests list and detail, cancel. Consolidates the planned `transfer.md` and `withdrawal.md`. Pending payments are added with `coins-purchase.md` (step 9). | 3 |
 | `match.md` | Game screen (player), all in-match sheets, dialogs and overlays, result sheet, finished-match summary, loading, unsupported | 5–6 |
 | `lobby.md` | Play tab, table setup, join confirmation, bot setup, insufficient-coins sheet, resume banner | 7–8 |
 | `matchmaking.md` | Search overlay, match found | 8 |
@@ -38,8 +36,9 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 | `help-legal.md` | Help topics, terms, privacy | 2 |
 | `system.md` | Offline, unsupported device, not found, update available, install banner and iOS guide, push permission sheet, global banners (account status is in `auth.md`) | 1, 6, 17 |
 | `admin-settings.md` | Admin panel (`admin.`): login with TOTP, shell, Settings with every registry key, edit/reset with confirmation and audit, SMS status card | 1–2 |
+| `admin-users-wallet.md` | Admin panel (`admin.`): users search and detail, wallet top-up (§7.9), withdrawals queue with approve and reject (§7.12) | 3 |
 
-Recommended writing order: `auth` → `wallet` → `transfer` → `withdrawal` → `coins-purchase` (support state) → `match` → `lobby` → `matchmaking`, then the rest in step order. The wallet specs move up because step 3 now ships them.
+Recommended writing order: `auth` → `wallet` (includes transfer and withdrawal) → `admin-users-wallet` → `coins-purchase` → `match` → `lobby` → `matchmaking`, then the rest in step order. The wallet specs move up because step 3 now ships them.
 
 ---
 
@@ -58,6 +57,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | AU-05 | Avatar picker | `/signup/avatar` | S | auth | loading avatars, none selected, skip, save failed |
 | AU-06 | Login | `/login` | S | auth | wrong credentials, locked 15 min (countdown), suspended → AU-13, banned → AU-14 panel |
 | AU-07 | Reset: phone | `/password/reset` | S | auth | unknown phone (no account enumeration beyond the login flow) |
+| AU-07U | Reset unavailable (SMS off) | Panel on `/password/reset` | O | auth | `503 SMS_UNAVAILABLE`; support contact; back to log in; try again |
 | AU-08 | Reset: SMS code | `/password/reset/verify` | S | auth | as AU-03 |
 | AU-09 | Reset: new password | `/password/reset/new` | S | auth | weak password, verification expired; success → signed in here, all other sessions revoked (§12.1) |
 | AU-10 | Language picker | Sheet from AU-01 / settings | Sh | auth | fa, en |
@@ -148,21 +148,24 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | WA-01 | Wallet | `/wallet` | S | wallet | available / on hold / withdrawable, empty history, pending payments, actions: Get coins · Send coins · Withdraw (equal prominence, P§9.2) |
 | WA-02 | Transaction detail | Sheet | Sh | wallet | per type (§7.2, including `admin_topup`, `signup_bonus`, `transfer` in/out, `withdrawal_hold` / `_payout` / `_refund`) |
 | WA-03 | Received-coins notice | Snackbar | O | wallet | top-up, transfer received, refund |
-| TR-01 | Transfer step 1: recipient | `/wallet/transfer` | T | transfer | lookup loading, found (card), not found, self, prefilled `to` |
-| TR-02 | Transfer step 2: amount | `/wallet/transfer` | T | transfer | below min, above the rolling 24 h remaining (with next-available time), above balance, fee preview |
-| TR-03 | Transfer step 3: review + password | `/wallet/transfer` | T | transfer | in-flight, wrong password, locked (countdown), refused (linked accounts), recipient unavailable, fee changed |
-| TR-04 | Transfer receipt | `/wallet/transfer` (final state) | T | transfer | — |
-| TR-05 | Discard transfer? | Dialog | D | transfer | — |
-| WD-01 | Withdraw eligibility / intro | `/wallet/withdraw` | T | withdrawal | eligible, nothing withdrawable (bonus-only, with reason), antifraud-blocked, first-time hint |
-| WD-02 | Withdraw step 1: bank account | `/wallet/withdraw` | T | withdrawal | none registered → add (WD-08); registered → the single account card with "Change" (§7.12) |
-| WD-03 | Withdraw step 2: amount | `/wallet/withdraw` | T | withdrawal | below min, above the rolling 24 h remaining (with next-available time), above withdrawable, toman preview |
-| WD-04 | Withdraw step 3: review | `/wallet/withdraw` | T | withdrawal | price or fee changed; expected payout date (one business day) |
-| WD-05 | Withdraw step 4: SMS code | `/wallet/withdraw` | T | withdrawal | expired, wrong, resend cooldown, rate-limited, in-flight |
-| WD-06 | Withdrawal requests | `/wallet/withdrawals` | S | withdrawal | empty, list with status chips (icon + text) |
-| WD-07 | Withdrawal detail | `/wallet/withdrawals/[id]` | S | withdrawal | pending (cancel, expected by date), pending past the expected date (neutral note), paid (bank ref), rejected (reason), cancelled, "already paid" race |
-| WD-08 | Bank account: add or change | `/wallet/bank-accounts` | S | withdrawal | empty; invalid length / checksum / unknown bank code; valid (bank name shown); change confirmation (replaces the old one); change blocked while a withdrawal is pending |
-| WD-09 | Cancel withdrawal | Sheet | Sh | withdrawal | in-flight |
-| WD-10 | Discard withdrawal? | Dialog | D | withdrawal | — |
+| WA-04 | Get coins (support top-up) | Sheet on WA-01 (step 3); `/shop/coins` CO-02 from step 9 | Sh | wallet | rate, support channel, copy username; disabled while suspended |
+| TR-00 | Transfer not available | `/wallet/transfer` (in place of step 1) | T | wallet | suspended, welcome coins only, below minimum, 24 h limit reached |
+| TR-01 | Transfer step 1: recipient | `/wallet/transfer` | T | wallet | lookup loading, found (card), not found, self, prefilled `to` |
+| TR-02 | Transfer step 2: amount | `/wallet/transfer` | T | wallet | below min, above the rolling 24 h remaining (with next-available time), above balance, fee preview |
+| TR-03 | Transfer step 3: review + password | `/wallet/transfer` | T | wallet | in-flight, wrong password, locked (countdown), refused (linked accounts), recipient unavailable, fee changed |
+| TR-04 | Transfer receipt | `/wallet/transfer` (final state) | T | wallet | — |
+| TR-05 | Discard transfer? | Dialog | D | wallet | — |
+| WD-01 | Withdraw eligibility / intro | `/wallet/withdraw` | T | wallet | eligible, nothing withdrawable (bonus-only, with reason), antifraud-blocked, first-time hint |
+| WD-02 | Withdraw step 1: bank account | `/wallet/withdraw` | T | wallet | none registered → add (WD-08); registered → the single account card with "Change" (§7.12) |
+| WD-03 | Withdraw step 2: amount | `/wallet/withdraw` | T | wallet | below min, above the rolling 24 h remaining (with next-available time), above withdrawable, toman preview |
+| WD-04 | Withdraw step 3: review | `/wallet/withdraw` | T | wallet | price or fee changed; expected payout date (one business day) |
+| WD-05 | Withdraw step 4: SMS code (SMS mode only; with SMS off the password is on WD-04) | `/wallet/withdraw` | T | wallet | expired, wrong, resend cooldown, rate-limited, in-flight |
+| WD-06 | Withdrawal requests | `/wallet/withdrawals` | S | wallet | empty, list with status chips (icon + text) |
+| WD-07 | Withdrawal detail | `/wallet/withdrawals/[id]` | S | wallet | pending (cancel, expected by date), pending past the expected date (neutral note), paid (bank ref), rejected (reason), cancelled, "already paid" race |
+| WD-08 | Bank account: add or change | `/wallet/bank-accounts` | S | wallet | empty; invalid length / checksum / unknown bank code; valid (bank name shown); change confirmation (replaces the old one); change blocked while a withdrawal is pending |
+| WD-09 | Cancel withdrawal | Sheet | Sh | wallet | in-flight |
+| WD-10 | Discard withdrawal? | Dialog | D | wallet | — |
+| WD-11 | Remove bank account | Dialog | D | wallet | blocked while a withdrawal is pending |
 
 ### 2.8 Account (Tab 5)
 
@@ -196,7 +199,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 
 ### 2.10 Admin panel (`admin.`, desktop-first)
 
-Reviewed at 1440 × 900, 1280 × 800, 1024 × 768, 768 × 1024, and 390 × 844, in fa then en (admin-settings.md §6). Other §13 sections are added in step 15.
+Reviewed at 1440 × 900, 1280 × 800, 1024 × 768, 768 × 1024, and 390 × 844, in fa then en (admin-settings.md §6). Users (search, detail, top-up) and Withdrawals are added in step 3 (admin-users-wallet.md); other §13 sections in step 15.
 
 | ID | Screen | Route / host | Type | Spec | Key states |
 | --- | --- | --- | --- | --- | --- |
@@ -209,6 +212,13 @@ Reviewed at 1440 × 900, 1280 × 800, 1024 × 768, 768 × 1024, and 390 × 844, 
 | AD-07 | Setting history | Drawer | Sh | admin-settings | empty, partial (latest 200), error |
 | AD-08 | Admin session expired | Dialog | D | admin-settings | — |
 | AD-09 | Access denied (IP or host) | `admin.` any route | S | admin-settings | ip, host |
+| AD-10 | Users search | `admin.` `/users` | S | admin-users-wallet | newest accounts, phone or username query, 50 cap, empty |
+| AD-11 | User detail (profile, status, wallet, recent ledger) | `admin.` `/users/[id]` | S | admin-users-wallet | not found, role-gated top-up, audit block (superadmin) |
+| AD-12 | Wallet top-up (amount + reason → confirm) | Dialog | D | admin-users-wallet | above cap, first top-up unlocks welcome coins, suspended/banned warning, replay, check status |
+| AD-13 | Withdrawals queue | `admin.` `/withdrawals?status=` | S | admin-users-wallet | pending oldest first, overdue, history tabs, 200 cap, no access (support) |
+| AD-14 | Withdrawal drawer | Drawer | Sh | admin-users-wallet | player status, audit (superadmin) |
+| AD-15 | Mark as paid (bank reference) | Dialog | D | admin-users-wallet | ack, banned ack, SMS on/off line, already decided (don't pay again) |
+| AD-16 | Reject with reason | Dialog | D | admin-users-wallet | reason shown to player, already decided |
 
 ---
 

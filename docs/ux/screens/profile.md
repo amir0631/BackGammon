@@ -37,7 +37,7 @@ This spec also owns the step-2 base of `/settings` (ST-01): language and game pr
 | Back from AC-05 | The origin tab's previous screen. AC-05 is a child of the tab it was opened from (ia.md §2). |
 | "Log out" | AU-12 dialog (auth.md) |
 | "Change password" on ST-01 | Password reset flow AU-07 with the phone prefilled (auth.md open question 6) |
-| "Send coins" on another player's AC-05 (step 3+) | `/wallet/transfer?to=<username>` (transfer.md) |
+| "Send coins" on another player's AC-05 (step 3+) | `/wallet/transfer?to=<username>` (wallet.md TR-01) |
 
 ---
 

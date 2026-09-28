@@ -46,7 +46,7 @@ Applies to: `m.` in Phase 1. Every route here must also exist in `apps/desktop` 
 ├── [Tab 5] Account — /me
 │   ├── /wallet                  balance, on-hold amount, history (also via the balance chip)
 │   │   ├── /wallet/transfer                 send coins to a username
-│   │   ├── /wallet/withdraw                 withdrawal request (amount → review → SMS code)
+│   │   ├── /wallet/withdraw                 withdrawal request (bank → amount → review → SMS code, or password while SMS is off)
 │   │   ├── /wallet/withdrawals              withdrawal requests list
 │   │   ├── /wallet/withdrawals/[id]         request detail, status, cancel while pending
 │   │   └── /wallet/bank-accounts            the registered Sheba account (one per user); add or change
@@ -101,11 +101,11 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/shop/items/[id]` | Item preview | Signed in | Tab 4 child | `shop.md` |
 | `/shop/payment/[id]` | Payment status | Signed in | None | `coins-purchase.md` |
 | `/wallet` | Balance, on-hold amount, history, actions (Get coins, Transfer, Withdraw) | Signed in | Tab 5 child | `wallet.md` |
-| `/wallet/transfer` | Transfer: recipient → amount → review + password | Signed in | None (task flow) | `transfer.md` |
-| `/wallet/withdraw` | Withdraw: bank account → amount → review → SMS code → submitted | Signed in | None (task flow) | `withdrawal.md` |
-| `/wallet/withdrawals` | Withdrawal requests list | Signed in | Tab 5 child | `withdrawal.md` |
-| `/wallet/withdrawals/[id]` | Request detail; cancel while pending | Signed in | Tab 5 child | `withdrawal.md` |
-| `/wallet/bank-accounts` | The registered Sheba account (one per user, §7.12); add or change (change blocked while a withdrawal is pending) | Signed in | Tab 5 child | `withdrawal.md` |
+| `/wallet/transfer` | Transfer: recipient → amount → review + password | Signed in | None (task flow) | `wallet.md` |
+| `/wallet/withdraw` | Withdraw: bank account → amount → review → SMS code → submitted | Signed in | None (task flow) | `wallet.md` |
+| `/wallet/withdrawals` | Withdrawal requests list | Signed in | Tab 5 child | `wallet.md` |
+| `/wallet/withdrawals/[id]` | Request detail; cancel while pending | Signed in | Tab 5 child | `wallet.md` |
+| `/wallet/bank-accounts` | The registered Sheba account (one per user, §7.12); add or change (change blocked while a withdrawal is pending) | Signed in | Tab 5 child | `wallet.md` |
 | `/me` | Account hub | Signed in | Tab 5 | `profile.md` |
 | `/me/edit` | Edit avatar and username | Signed in | Tab 5 child | `profile.md` |
 | `/me/matches` | Match history | Signed in | Tab 5 child | `history.md` |
