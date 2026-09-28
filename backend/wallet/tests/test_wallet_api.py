@@ -209,6 +209,7 @@ class TestIban:
 
 
 @pytest.mark.django_db
+@pytest.mark.usefixtures("sms_on")
 class TestWithdrawal:
     def setup_user(self, balance=1000, status="active"):
         user = make_user(status=status)

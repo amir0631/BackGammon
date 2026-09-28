@@ -701,6 +701,7 @@ Implement with the default and keep the value configurable. Do not ask about the
 | Coin package prices | Seed 4 placeholder packages, admin-editable |
 | Payment gateway | Added later. For now implement only the abstract `PaymentGateway` interface and a sandbox adapter; the real Shaparak PSP adapter comes when the provider is chosen. Users are charged through admin top-up (§7.9) until then |
 | SMS provider | Abstract `SmsProvider` interface; IPPanel Edge adapter (pattern sends, see `sms.md`) + a console adapter for dev |
+| SMS off switch | `sms.enabled` (default `false` until the sender line and patterns are approved). While off: nothing is sent; signup gets a verification token without a code (phone not verified); password reset by SMS returns `SMS_UNAVAILABLE`; withdrawals are confirmed with the account password. Turn it on before launch |
 | Brand name | Use `APP_NAME` env var and i18n key `app.name` |
 | Terms of service and privacy text | Placeholder pages with i18n keys; include an 18+ age confirmation checkbox at signup |
 

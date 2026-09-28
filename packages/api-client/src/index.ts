@@ -198,8 +198,9 @@ export const api = {
     setBankAccount: (iban: string) => apiRequest<BankAccountInfo>("/me/bank-accounts", { method: "POST", body: { iban } }),
     deleteBankAccount: (id: number) => apiRequest<void>(`/me/bank-accounts/${id}`, { method: "DELETE" }),
     requestWithdrawalCode: () => apiRequest<OtpRequestResponse>("/wallet/withdrawals/otp", { method: "POST" }),
-    withdraw: (amount: number, code: string, idempotencyKey: string) =>
-      apiRequest<Withdrawal>("/wallet/withdrawals", { method: "POST", body: { amount, code }, idempotencyKey }),
+    /** `confirm` is an SMS code or, while SMS is off, the password (`WalletSummary.withdraw.confirm`). */
+    withdraw: (amount: number, confirm: { code: string } | { password: string }, idempotencyKey: string) =>
+      apiRequest<Withdrawal>("/wallet/withdrawals", { method: "POST", body: { amount, ...confirm }, idempotencyKey }),
     withdrawals: (o?: Opts) => apiRequest<Paginated<Withdrawal>>("/wallet/withdrawals", o),
     withdrawal: (id: number, o?: Opts) => apiRequest<Withdrawal>(`/wallet/withdrawals/${id}`, o),
     cancelWithdrawal: (id: number) => apiRequest<Withdrawal>(`/wallet/withdrawals/${id}`, { method: "DELETE" }),

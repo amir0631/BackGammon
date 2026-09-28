@@ -70,9 +70,12 @@ class CsrfView(PublicView):
 class OtpRequestView(PublicView):
     def post(self, request: Request) -> Response:
         data = _validated(serializers.OtpRequestSerializer, request.data)
-        otp.request_otp(data["phone"], data["purpose"], sessions.client_ip(request._request))
+        token = otp.request_otp(data["phone"], data["purpose"], sessions.client_ip(request._request))
+        if token is not None:  # SMS is off: no code to enter
+            return Response({"sms": False, "verification_token": token})
         return Response(
             {
+                "sms": True,
                 "expires_in": registry.get("otp.ttl_seconds"),
                 "resend_after": registry.get("otp.resend_cooldown_seconds"),
             },

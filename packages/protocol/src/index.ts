@@ -100,12 +100,16 @@ export interface SessionInfo {
   current: boolean;
 }
 
-export interface OtpRequestResponse {
-  /** Seconds the code stays valid. */
-  expires_in: number;
-  /** Seconds before another code can be requested. */
-  resend_after: number;
-}
+/** POST auth/otp. With SMS off (`sms.enabled` false) signup gets a token at once and skips the code step. */
+export type OtpRequestResponse =
+  | {
+      sms: true;
+      /** Seconds the code stays valid. */
+      expires_in: number;
+      /** Seconds before another code can be requested. */
+      resend_after: number;
+    }
+  | { sms: false; verification_token: string };
 
 export interface OtpVerifyResponse {
   verification_token: string;
@@ -204,7 +208,8 @@ export interface WalletSummary {
   withdrawable: number;
   transferable: number;
   transfer: RollingWindow;
-  withdraw: RollingWindow;
+  /** `confirm`: an SMS code, or the account password while SMS is off. */
+  withdraw: RollingWindow & { confirm: "sms" | "password" };
   coin_price_toman: number;
 }
 

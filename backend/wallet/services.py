@@ -12,7 +12,7 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound
 
 from accounts import errors as auth_errors
-from accounts import ratelimit
+from accounts import ratelimit, sms
 from accounts.models import User
 from settingsapp import registry
 from wallet import errors, ledger
@@ -34,6 +34,21 @@ def _positive_int(amount: Any) -> int:
 def _require_active(user: User) -> None:
     if user.status == User.Status.SUSPENDED:
         raise errors.AccountSuspended()
+
+
+def confirm_password(user: User, password: str, scope: str) -> None:
+    """Password confirmation for a coin movement. Wrong passwords count toward a lock per scope,
+    separate from login."""
+    key = f"{scope}-pw:{user.id}"
+    if remaining := ratelimit.locked_for(key):
+        raise auth_errors.Locked(details={"retry_after": remaining})
+    if not user.check_password(password):
+        if lock := ratelimit.record_failure(
+            key, registry.get("auth.login_max_failures"), registry.get("auth.login_lock_seconds")
+        ):
+            raise auth_errors.Locked(details={"retry_after": lock})
+        raise auth_errors.InvalidCredentials()
+    ratelimit.clear_failures(key)
 
 
 # ---- Signup bonus (§7.10) ----
@@ -138,6 +153,8 @@ def summary(user: User) -> dict[str, Any]:
             **withdraw_window(user).as_dict(),
             "min": registry.get("withdraw.min_coins"),
             "fee_pct": registry.get("withdraw.fee_pct"),
+            # How the user confirms a withdrawal: an SMS code, or the password while SMS is off.
+            "confirm": "sms" if sms.enabled() else "password",
         },
         "coin_price_toman": registry.get("coin.price_toman"),
     }
@@ -166,17 +183,7 @@ def transfer(sender: User, username: str, amount: Any, password: str, idempotenc
         return done
     _require_active(sender)
     amount = _positive_int(amount)
-    # Wrong passwords here count toward their own lock, separate from login.
-    pw_key = f"transfer-pw:{sender.id}"
-    if remaining := ratelimit.locked_for(pw_key):
-        raise auth_errors.Locked(details={"retry_after": remaining})
-    if not sender.check_password(password):
-        if lock := ratelimit.record_failure(
-            pw_key, registry.get("auth.login_max_failures"), registry.get("auth.login_lock_seconds")
-        ):
-            raise auth_errors.Locked(details={"retry_after": lock})
-        raise auth_errors.InvalidCredentials()
-    ratelimit.clear_failures(pw_key)
+    confirm_password(sender, password, "transfer")
 
     recipient = (
         User.objects.annotate(u=Lower("username"))
@@ -378,7 +385,8 @@ def approve_withdrawal(admin: Any, withdrawal_id: int, bank_reference: str) -> W
         req.decided_by = admin
         req.decided_at = timezone.now()
         req.save(update_fields=["status", "bank_reference", "decided_by", "decided_at"])
-        transaction.on_commit(lambda: send_withdrawal_paid_sms.delay(req.id))
+        if sms.enabled():
+            transaction.on_commit(lambda: send_withdrawal_paid_sms.delay(req.id))
     return req
 
 

@@ -8,6 +8,9 @@ from accounts import ratelimit
 from accounts.models import Otp, Session, User
 from accounts.signals import user_registered
 
+# These tests cover the code-by-SMS flows; the SMS-off flows are in test_sms_off.py.
+pytestmark = pytest.mark.usefixtures("sms_on")
+
 PHONE = "+989121234567"
 CODE = 48213
 
@@ -193,7 +196,7 @@ class TestOtp:
 
     def test_resend_cooldown(self, client):
         res = client.post("/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json")
-        assert res.json() == {"expires_in": 120, "resend_after": 60}
+        assert res.json() == {"sms": True, "expires_in": 120, "resend_after": 60}
         res = client.post("/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json")
         assert res.status_code == 429
         assert res.json()["details"]["reason"] == "cooldown"

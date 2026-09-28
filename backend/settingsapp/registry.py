@@ -400,6 +400,9 @@ _DEFS: list[SettingDef] = [
         None,
     ),
     # SMS through IPPanel Edge (sms.md). The API key is a secret and stays in the environment.
+    # Off until the sender line and patterns are approved: signup skips the code step, password
+    # reset by SMS is unavailable, and withdrawals are confirmed with the account password.
+    SettingDef("sms.enabled", "bool", False, _d("ارسال پیامک فعال است", "SMS sending enabled")),
     SettingDef(
         "sms.from_number",
         "str",

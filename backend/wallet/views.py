@@ -4,13 +4,13 @@ from typing import Any
 
 from django.db.models import Q
 from rest_framework import serializers, status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts import otp
+from accounts import otp, sms
 from accounts.models import Otp, User
 from accounts.sessions import client_ip
 from settingsapp import registry
@@ -163,7 +163,9 @@ class WithdrawalOtpView(AuthedView):
 
 class WithdrawalCreateSerializer(serializers.Serializer[Any]):
     amount = serializers.IntegerField()
-    code = serializers.CharField(max_length=10)
+    # An SMS code, or the account password while SMS is off (`withdraw.confirm` in GET wallet).
+    code = serializers.CharField(max_length=10, required=False)
+    password = serializers.CharField(max_length=128, trim_whitespace=False, required=False)
 
 
 class WithdrawalsView(AuthedView):
@@ -183,8 +185,17 @@ class WithdrawalsView(AuthedView):
         # Cheap checks first, so an obviously invalid request does not burn the SMS code.
         if not BankAccount.objects.filter(user=user).exists():
             raise errors.NoBankAccount()
-        token = otp.verify_otp(user.phone, Otp.Purpose.WITHDRAWAL, s.validated_data["code"].strip())
-        otp.consume_verification(token, Otp.Purpose.WITHDRAWAL)
+        if sms.enabled():
+            code = s.validated_data.get("code")
+            if not code:
+                raise ValidationError({"code": ["This field is required."]})
+            token = otp.verify_otp(user.phone, Otp.Purpose.WITHDRAWAL, code.strip())
+            otp.consume_verification(token, Otp.Purpose.WITHDRAWAL)
+        else:
+            password = s.validated_data.get("password")
+            if not password:
+                raise ValidationError({"password": ["This field is required."]})
+            services.confirm_password(user, password, "withdraw")
         req = services.request_withdrawal(user, amount, key)
         return Response(withdrawal_payload(req), status=status.HTTP_201_CREATED)
 

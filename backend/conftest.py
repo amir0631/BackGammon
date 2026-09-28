@@ -22,3 +22,12 @@ def _celery_eager():
 @pytest.fixture(autouse=True)
 def _console_sms(settings):
     settings.SMS_PROVIDER = "console"
+
+
+@pytest.fixture
+def sms_on():
+    """`sms.enabled` is off by default; tests of the code-by-SMS flows turn it on."""
+    from unittest import mock
+
+    with mock.patch("accounts.sms.enabled", return_value=True):
+        yield
