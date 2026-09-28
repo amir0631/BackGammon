@@ -142,6 +142,35 @@ class TestTransfer:
         assert Wallet.objects.get(user=b).balance == 3000
         assert LedgerEntry.objects.filter(type="transfer").values("tx_id").distinct().count() == 1
 
+    def test_signup_bonus_is_not_transferable_until_first_top_up(self):
+        a = make_user()
+        make_user("Rec_7")
+        services.grant_signup_bonus(a)
+        c = client_for(a)
+        body = {"username": "Rec_7", "amount": 50, "password": "S3cure-pass!"}
+        res = self.post(c, body, "b1").json()
+        assert res["code"] == "TRANSFER_NOT_TRANSFERABLE"
+        assert res["details"] == {"transferable": 0, "bonus_locked": 100}
+        assert c.get("/api/v1/wallet").json()["transferable"] == 0
+        fund(a, 20)
+        assert self.post(c, body, "b2").status_code == 200
+        assert invariants.check() == []
+
+    def test_received_coins_are_transferable_while_the_bonus_is_locked(self):
+        a, b = make_user(), make_user("Rec_8")
+        make_user("Rec_9")
+        services.grant_signup_bonus(b)
+        fund(a, 100)
+        self.post(client_for(a), {"username": "Rec_8", "amount": 30, "password": "S3cure-pass!"})
+        c = client_for(b)
+        assert c.get("/api/v1/wallet").json()["transferable"] == 30
+        over = self.post(c, {"username": "Rec_9", "amount": 31, "password": "S3cure-pass!"}, "o")
+        assert over.json()["code"] == "TRANSFER_NOT_TRANSFERABLE"
+        assert (
+            self.post(c, {"username": "Rec_9", "amount": 30, "password": "S3cure-pass!"}, "p").status_code
+            == 200
+        )
+
     def test_suspended_cannot_transfer(self):
         a = make_user(status="suspended")
         make_user("Rec_5")

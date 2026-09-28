@@ -199,9 +199,10 @@ export interface WalletSummary {
   balance: number;
   /** Coins in pending withdrawals (already out of `balance`). */
   locked: number;
-  /** Signup-bonus coins that are not withdrawable yet. */
+  /** Signup-bonus coins that can be neither withdrawn nor transferred until the first top-up. */
   bonus_locked: number;
   withdrawable: number;
+  transferable: number;
   transfer: RollingWindow;
   withdraw: RollingWindow;
   coin_price_toman: number;

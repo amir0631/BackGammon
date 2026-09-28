@@ -14,6 +14,7 @@ TransferRecipientNotFound = _err("TRANSFER_RECIPIENT_NOT_FOUND", "transferRecipi
 TransferSelf = _err("TRANSFER_SELF", "transferSelf")
 TransferBelowMin = _err("TRANSFER_BELOW_MIN", "transferBelowMin")
 TransferLimit = _err("TRANSFER_LIMIT", "transferLimit", 409)
+TransferNotTransferable = _err("TRANSFER_NOT_TRANSFERABLE", "transferNotTransferable", 409)
 NoBankAccount = _err("NO_BANK_ACCOUNT", "noBankAccount", 409)
 BankAccountLocked = _err("BANK_ACCOUNT_LOCKED", "bankAccountLocked", 409)
 WithdrawBelowMin = _err("WITHDRAW_BELOW_MIN", "withdrawBelowMin")

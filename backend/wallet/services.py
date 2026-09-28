@@ -58,7 +58,8 @@ def grant_signup_bonus(user: User) -> None:
 
 
 def bonus_locked(user: User, balance: int) -> int:
-    """Signup-bonus coins stay non-withdrawable until the first purchase or top-up (§7.12)."""
+    """Signup-bonus coins stay non-withdrawable and non-transferable until the first purchase or
+    top-up (§7.12), so bonuses from many accounts cannot be pooled into one and cashed out."""
     account = user_account(user.id)
     funded = LedgerEntry.objects.filter(
         account=account, type__in=[TxType.PURCHASE, TxType.ADMIN_TOPUP], amount__gt=0
@@ -127,6 +128,7 @@ def summary(user: User) -> dict[str, Any]:
         "locked": wallet.locked,
         "bonus_locked": locked_bonus,
         "withdrawable": max(0, wallet.balance - locked_bonus),
+        "transferable": max(0, wallet.balance - locked_bonus),
         "transfer": {
             **transfer_window(user).as_dict(),
             "min": registry.get("transfer.min_coins"),
@@ -200,6 +202,12 @@ def transfer(sender: User, username: str, amount: Any, password: str, idempotenc
         # A concurrent retry may have posted while this request waited for the locks.
         if (done := _posted_transfer(sender.id, key)) is not None:
             return done
+        balance = Wallet.objects.get(user_id=sender.id).balance
+        transferable = max(0, balance - bonus_locked(sender, balance))
+        if transferable < amount <= balance:  # beyond the balance: the ledger's WALLET_INSUFFICIENT
+            raise errors.TransferNotTransferable(
+                details={"transferable": transferable, "bonus_locked": balance - transferable}
+            )
         window = transfer_window(sender)
         if amount > window.remaining:
             raise errors.TransferLimit(
