@@ -4,6 +4,7 @@ from typing import Any
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.db import transaction
+from django.utils import timezone
 
 from accounts.models import User
 from adminapi import totp
@@ -41,7 +42,11 @@ class Command(BaseCommand):
                 user = User.objects.filter(username=username).first()
                 if user is None:
                     user = User.objects.create_user(
-                        phone=f"+98900000{i:04d}", password=password, username=username, lang="fa"
+                        phone=f"+98900000{i:04d}",
+                        password=password,
+                        username=username,
+                        lang="fa",
+                        phone_verified_at=timezone.now(),
                     )
                 else:
                     user.set_password(password)

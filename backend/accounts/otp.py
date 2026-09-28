@@ -78,7 +78,18 @@ def _unverified_token(phone: str, purpose: str, ip: str | None) -> str:
         verified_at=timezone.now(),
         ip=ip,
     )
-    return signing.dumps({"otp": otp.id, "phone": phone, "purpose": purpose}, salt=VERIFICATION_SALT)
+    return signing.dumps(
+        {"otp": otp.id, "phone": phone, "purpose": purpose, "unverified": True}, salt=VERIFICATION_SALT
+    )
+
+
+def proves_phone(token: str) -> bool:
+    """True when the token came from an SMS code (not from signup while SMS is off)."""
+    try:
+        data = signing.loads(token, salt=VERIFICATION_SALT, max_age=VERIFICATION_MAX_AGE_SECONDS)
+    except signing.BadSignature:
+        return False
+    return not data.get("unverified")
 
 
 def verify_otp(phone: str, purpose: str, code: str) -> str:

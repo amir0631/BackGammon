@@ -88,7 +88,7 @@ class TestTransfer:
                 "TRANSFER_RECIPIENT_NOT_FOUND",
             ),
             ({"username": "Rec_3", "amount": 5, "password": "S3cure-pass!"}, "TRANSFER_BELOW_MIN"),
-            ({"username": "Rec_3", "amount": 20, "password": "wrong-pass"}, "AUTH_INVALID_CREDENTIALS"),
+            ({"username": "Rec_3", "amount": 20, "password": "wrong-pass"}, "WALLET_PASSWORD_INVALID"),
             ({"username": "Rec_3", "amount": 900, "password": "S3cure-pass!"}, "WALLET_INSUFFICIENT"),
         ],
     )
@@ -261,6 +261,23 @@ class TestWithdrawal:
         ratelimit.reset(f"otp:resend:{user.phone}:withdrawal")
         assert self.request(c, 50, "w2").json()["code"] == "WITHDRAW_BELOW_MIN"
 
+    def test_refused_amount_does_not_burn_the_code(self, fixed_code):
+        _user, c = self.setup_user(balance=1000)
+        assert c.post("/api/v1/wallet/withdrawals/otp").json()["sms"] is True
+        body = {"amount": 50, "code": str(CODE)}
+        res = c.post("/api/v1/wallet/withdrawals", body, format="json", HTTP_IDEMPOTENCY_KEY="x1")
+        assert res.json()["code"] == "WITHDRAW_BELOW_MIN"
+        body["amount"] = 300
+        res = c.post("/api/v1/wallet/withdrawals", body, format="json", HTTP_IDEMPOTENCY_KEY="x2")
+        assert res.status_code == 201, res.json()
+
+    def test_history_pages_and_summary_shows_expected_date(self, fixed_code):
+        _user, c = self.setup_user()
+        self.request(c, 300)
+        page = c.get("/api/v1/wallet/withdrawals").json()
+        assert len(page["results"]) == 1 and page["next"] is None
+        assert c.get("/api/v1/wallet").json()["withdraw"]["expected_by"] == page["results"][0]["expected_by"]
+
     def test_suspended_can_withdraw(self, fixed_code):
         _, c = self.setup_user(status="suspended")
         assert self.request(c, 200).status_code == 201
@@ -339,3 +356,19 @@ class TestAdminTopup:
         make_user("Findme_1")
         rows = admin_client().get("/api/v1/admin/users", {"q": "findme"}).json()["results"]
         assert [r["username"] for r in rows] == ["Findme_1"]
+
+
+@pytest.mark.django_db
+def test_ledger_hides_which_admin_topped_up_and_lists_banks():
+    make_admin("fin2", "finance")
+    user = make_user()
+    admin_client("fin2").post(
+        f"/api/v1/admin/users/{user.id}/wallet/topup",
+        {"amount": 50, "reason": "support ticket"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="t1",
+    )
+    row = client_for(user).get("/api/v1/wallet/ledger").json()["results"][0]
+    assert row["type"] == "admin_topup" and row["ref_id"] is None and row["tx_id"]
+    banks = APIClient().get("/api/v1/wallet/banks").json()["results"]
+    assert {"code": "054", "name": {"fa": "بانک پارسیان", "en": "Parsian Bank"}} in banks

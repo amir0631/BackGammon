@@ -51,6 +51,8 @@ export interface Me {
   avatar: string;
   prefs: UserPrefs;
   status: UserStatus;
+  /** Proven by an SMS code; false for signups while SMS is off (no signup bonus then). */
+  phone_verified: boolean;
   elo: number;
   xp: number;
   level: number;
@@ -183,7 +185,7 @@ export interface WalletSummary {
   transferable: number;
   transfer: RollingWindow;
   /** `confirm`: an SMS code, or the account password while SMS is off. */
-  withdraw: RollingWindow & { confirm: "sms" | "password" };
+  withdraw: RollingWindow & { confirm: "sms" | "password"; /** ISO date: next Iranian working day. */ expected_by: string };
   coin_price_toman: number;
 }
 
@@ -196,6 +198,7 @@ export type LedgerType =
 
 export interface LedgerRow {
   id: number;
+  tx_id: string;
   type: LedgerType;
   /** Signed coins for this user. */
   amount: number;
@@ -211,6 +214,12 @@ export interface TransferResult {
   balance: number;
   fee: number;
   received: number;
+  created_at: string;
+}
+
+export interface BankInfo {
+  code: string;
+  name: Record<Lang, string>;
 }
 
 export interface BankAccountInfo {

@@ -9,5 +9,7 @@ from wallet.services import grant_signup_bonus
 
 @receiver(user_registered)
 def on_user_registered(sender: Any, user: User, **kwargs: Any) -> None:
-    # Runs inside the registration transaction: a failed grant rolls back the signup.
-    grant_signup_bonus(user)
+    # Runs inside the registration transaction: a failed grant rolls back the signup. Only a number
+    # proven by SMS gets the bonus (§7.10); while SMS is off, new accounts start without it.
+    if user.phone_verified_at is not None:
+        grant_signup_bonus(user)

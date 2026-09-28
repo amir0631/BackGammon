@@ -63,6 +63,7 @@ def me_payload(user: User) -> dict[str, Any]:
         "avatar": user.avatar,
         "prefs": {**default_prefs(), **(user.prefs or {})},
         "status": user.status,
+        "phone_verified": user.phone_verified_at is not None,
         "elo": user.elo,
         "xp": user.xp,
         "level": user.level,

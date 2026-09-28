@@ -41,7 +41,9 @@ class TestSignupWithoutSms:
             format="json",
         )
         assert res.status_code == 201, res.json()
-        assert c.get("/api/v1/wallet").json()["balance"] == 100  # signup bonus
+        # The number is not proven, so no signup bonus (§7.10).
+        assert c.get("/api/v1/me").json()["phone_verified"] is False
+        assert c.get("/api/v1/wallet").json()["balance"] == 0
         assert invariants.check() == []
 
     def test_token_is_single_use(self):
@@ -101,7 +103,7 @@ class TestWithdrawalWithoutSms:
         assert c.get("/api/v1/wallet").json()["withdraw"]["confirm"] == "password"
         assert c.post("/api/v1/wallet/withdrawals/otp").json()["code"] == "SMS_UNAVAILABLE"
         assert self.post(c, {"amount": 300}).json()["code"] == "VALIDATION"
-        assert self.post(c, {"amount": 300, "password": "wrong"}).json()["code"] == "AUTH_INVALID_CREDENTIALS"
+        assert self.post(c, {"amount": 300, "password": "wrong"}).json()["code"] == "WALLET_PASSWORD_INVALID"
         res = self.post(c, {"amount": 300, "password": "S3cure-pass!"})
         assert res.status_code == 201, res.json()
         assert WithdrawalRequest.objects.get().coins == 300

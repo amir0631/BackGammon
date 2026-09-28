@@ -118,6 +118,9 @@ class RegisterView(PublicView):
                     username=username,
                     referrer=referrer,
                     age_confirmed_at=timezone.now(),
+                    phone_verified_at=timezone.now()
+                    if otp.proves_phone(data["verification_token"])
+                    else None,
                     lang=data.get("lang") or _cookie_lang(request),
                 )
                 user_registered.send(sender=User, user=user)

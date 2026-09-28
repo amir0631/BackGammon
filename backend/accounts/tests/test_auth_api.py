@@ -69,7 +69,9 @@ class TestRegister:
         assert settings.ACCESS_COOKIE in res.cookies and settings.REFRESH_COOKIE in res.cookies
         assert res.cookies[settings.ACCESS_COOKIE]["httponly"]
         assert [u.username for u in received] == ["Reza_90"]
-        assert client.get("/api/v1/me").json()["username"] == "Reza_90"
+        me = client.get("/api/v1/me").json()
+        assert me["username"] == "Reza_90" and me["phone_verified"] is True
+        assert client.get("/api/v1/wallet").json()["balance"] == 100  # signup bonus for a proven number
 
     def test_otp_is_stored_hashed_only(self, client, fixed_code):
         client.post("/api/v1/auth/otp", {"phone": "09121234567", "purpose": "register"}, format="json")

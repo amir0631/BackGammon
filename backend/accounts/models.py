@@ -47,6 +47,8 @@ class User(AbstractBaseUser):
         "self", null=True, blank=True, on_delete=models.PROTECT, related_name="referees", db_index=True
     )
     age_confirmed_at = models.DateTimeField(null=True, blank=True)
+    # Set when the number was proven by an SMS code; the signup bonus needs it (§7.10).
+    phone_verified_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects: ClassVar[UserManager] = UserManager()

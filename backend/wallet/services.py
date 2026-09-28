@@ -11,7 +11,6 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from rest_framework.exceptions import NotFound
 
-from accounts import errors as auth_errors
 from accounts import ratelimit, sms
 from accounts.models import User
 from settingsapp import registry
@@ -41,13 +40,13 @@ def confirm_password(user: User, password: str, scope: str) -> None:
     separate from login."""
     key = f"{scope}-pw:{user.id}"
     if remaining := ratelimit.locked_for(key):
-        raise auth_errors.Locked(details={"retry_after": remaining})
+        raise errors.PasswordLocked(details={"retry_after": remaining})
     if not user.check_password(password):
         if lock := ratelimit.record_failure(
             key, registry.get("auth.login_max_failures"), registry.get("auth.login_lock_seconds")
         ):
-            raise auth_errors.Locked(details={"retry_after": lock})
-        raise auth_errors.InvalidCredentials()
+            raise errors.PasswordLocked(details={"retry_after": lock})
+        raise errors.PasswordInvalid()
     ratelimit.clear_failures(key)
 
 
@@ -155,6 +154,7 @@ def summary(user: User) -> dict[str, Any]:
             "fee_pct": registry.get("withdraw.fee_pct"),
             # How the user confirms a withdrawal: an SMS code, or the password while SMS is off.
             "confirm": "sms" if sms.enabled() else "password",
+            "expected_by": next_working_day(timezone.now()).isoformat(),
         },
         "coin_price_toman": registry.get("coin.price_toman"),
     }
@@ -165,14 +165,26 @@ def summary(user: User) -> dict[str, Any]:
 
 def _posted_transfer(sender_id: int, key: str) -> dict[str, Any] | None:
     """The result of a transfer already posted under `key`, or None."""
-    rows = list(LedgerEntry.objects.filter(idempotency_key=key).values_list("tx_id", "account", "amount"))
+    rows = list(
+        LedgerEntry.objects.filter(idempotency_key=key).values_list(
+            "tx_id", "account", "amount", "created_at"
+        )
+    )
     if not rows:
         return None
     sender = user_account(sender_id)
-    fee = sum(amount for _, account, amount in rows if account == PLATFORM_RAKE)
-    received = sum(amount for _, account, amount in rows if account.startswith("user:") and account != sender)
+    fee = sum(amount for _, account, amount, _t in rows if account == PLATFORM_RAKE)
+    received = sum(
+        amount for _, account, amount, _t in rows if account.startswith("user:") and account != sender
+    )
     balance = Wallet.objects.get(user_id=sender_id).balance
-    return {"tx_id": str(rows[0][0]), "balance": balance, "fee": fee, "received": received}
+    return {
+        "tx_id": str(rows[0][0]),
+        "balance": balance,
+        "fee": fee,
+        "received": received,
+        "created_at": rows[0][3].isoformat(),
+    }
 
 
 def transfer(sender: User, username: str, amount: Any, password: str, idempotency_key: str) -> dict[str, Any]:
@@ -228,15 +240,10 @@ def transfer(sender: User, username: str, amount: Any, password: str, idempotenc
         entries = [(user_account(sender.id), -amount), (user_account(recipient.id), amount - fee)]
         if fee:
             entries.append((PLATFORM_RAKE, fee))
-        posted = ledger.post(
-            TxType.TRANSFER,
-            entries,
-            idempotency_key=key,
-            ref_type="user",
-            ref_id=recipient.id,
-        )
-    wallet = Wallet.objects.get(user_id=sender.id)
-    return {"tx_id": str(posted.tx_id), "balance": wallet.balance, "fee": fee, "received": amount - fee}
+        ledger.post(TxType.TRANSFER, entries, idempotency_key=key, ref_type="user", ref_id=recipient.id)
+        result = _posted_transfer(sender.id, key)
+    assert result is not None
+    return result
 
 
 # ---- Bank account and withdrawals (§7.12) ----
@@ -267,34 +274,43 @@ def delete_bank_account(user: User) -> None:
         BankAccount.objects.filter(user=user).delete()
 
 
+def check_withdrawal(user: User, amount: Any, balance: int | None = None) -> int:
+    """Every withdrawal rule except the confirmation. The view calls it before using the SMS code or
+    password (so a refused amount does not burn a code); the service repeats it under the lock."""
+    value = _positive_int(amount)
+    if not BankAccount.objects.filter(user=user).exists():
+        raise errors.NoBankAccount()
+    minimum = registry.get("withdraw.min_coins")
+    if value < minimum:
+        raise errors.WithdrawBelowMin(details={"min": minimum})
+    window = withdraw_window(user)
+    if value > window.remaining:
+        raise errors.WithdrawLimit(
+            details={
+                "remaining": window.remaining,
+                "next_available_at": window.next_available_at.isoformat()
+                if window.next_available_at
+                else None,
+            }
+        )
+    if balance is None:
+        balance = ledger.ensure_wallet(user.id).balance
+    withdrawable = max(0, balance - bonus_locked(user, balance))
+    if value > withdrawable:
+        raise errors.WithdrawNotWithdrawable(details={"withdrawable": withdrawable})
+    return value
+
+
 def request_withdrawal(user: User, amount: Any, idempotency_key: str) -> WithdrawalRequest:
-    """Call after the SMS code was verified. Holds the coins in escrow."""
-    amount = _positive_int(amount)
+    """Call after the SMS code or password was confirmed. Holds the coins in escrow."""
     existing = WithdrawalRequest.objects.filter(user=user, idempotency_key=idempotency_key).first()
     if existing is not None:
         return existing
-    bank = BankAccount.objects.filter(user=user).first()
-    if bank is None:
-        raise errors.NoBankAccount()
-    minimum = registry.get("withdraw.min_coins")
-    if amount < minimum:
-        raise errors.WithdrawBelowMin(details={"min": minimum})
-
+    ledger.ensure_wallet(user.id)
     with transaction.atomic():
         wallet = Wallet.objects.select_for_update().get(user_id=user.id)
-        window = withdraw_window(user)
-        if amount > window.remaining:
-            raise errors.WithdrawLimit(
-                details={
-                    "remaining": window.remaining,
-                    "next_available_at": window.next_available_at.isoformat()
-                    if window.next_available_at
-                    else None,
-                }
-            )
-        withdrawable = max(0, wallet.balance - bonus_locked(user, wallet.balance))
-        if amount > withdrawable:
-            raise errors.WithdrawNotWithdrawable(details={"withdrawable": withdrawable})
+        amount = check_withdrawal(user, amount, wallet.balance)
+        bank = BankAccount.objects.get(user=user)
         price = registry.get("coin.price_toman")
         fee = amount * registry.get("withdraw.fee_pct") // 100
         req = WithdrawalRequest.objects.create(
