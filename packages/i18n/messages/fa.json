@@ -5,10 +5,76 @@
   },
   "common": {
     "loading": "در حال بارگذاری…",
+    "loadingSlow": "بیش از حد معمول طول کشیده است.",
+    "loadingProgress": "{percent} بارگذاری شد",
     "retry": "تلاش دوباره",
     "cancel": "انصراف",
     "confirm": "تأیید",
-    "back": "بازگشت"
+    "back": "بازگشت",
+    "close": "بستن",
+    "help": "راهنما",
+    "done": "تمام",
+    "skipToContent": "پرش به محتوای اصلی",
+    "stillWorking": "هنوز در حال انجام است…",
+    "checkStatus": "بررسی وضعیت",
+    "errorCode": "کد پیگیری: {code}"
+  },
+  "nav": {
+    "label": "ناوبری اصلی",
+    "play": "بازی",
+    "live": "زنده",
+    "tournaments": "تورنمنت‌ها",
+    "shop": "فروشگاه",
+    "account": "حساب من"
+  },
+  "languages": {
+    "fa": "فارسی",
+    "en": "English"
+  },
+  "coins": {
+    "cost": "هزینه",
+    "amount": "مبلغ",
+    "fee": "کارمزد",
+    "balance": "موجودی شما",
+    "balanceAfter": "موجودی پس از این کار",
+    "shortfall": "کسری",
+    "tomanEquivalent": "معادل {amount} تومان",
+    "value": "{amount} سکه",
+    "balanceChip": "موجودی: {amount} سکه، باز کردن کیف پول",
+    "balanceUpdated": "موجودی به‌روز شد: {amount} سکه"
+  },
+  "units": {
+    "megabytes": "{value} مگابایت"
+  },
+  "money": {
+    "toman": "{amount} تومان"
+  },
+  "transfer": {
+    "recipientReceives": "دریافتی گیرنده"
+  },
+  "withdraw": {
+    "youReceive": "مبلغ واریزی به حساب شما"
+  },
+  "net": {
+    "offline": "اتصال اینترنت برقرار نیست. به‌محض برقراری، دوباره وصل می‌شویم."
+  },
+  "forms": {
+    "phone": {
+      "label": "شماره موبایل",
+      "hint": "مثال: \u2066۰۹۱۲ ۳۴۵ ۶۷۸۹\u2069"
+    },
+    "password": {
+      "label": "رمز عبور",
+      "show": "نمایش رمز عبور",
+      "hide": "پنهان کردن رمز عبور",
+      "requirementsTitle": "رمز عبور باید:",
+      "met": "انجام شد",
+      "notMet": "هنوز نه"
+    },
+    "otp": {
+      "label": "کد پیامکی",
+      "hint": "کد {length} رقمی ارسال‌شده را وارد کنید."
+    }
   },
   "home": {
     "comingSoon": "به‌زودی",
@@ -30,6 +96,83 @@
     "settings": {
       "invalid": "مقدار تنظیم معتبر نیست.",
       "unknown": "تنظیم ناشناخته است."
+    }
+  },
+  "devGallery": {
+    "title": "گالری اجزا (فقط محیط توسعه)",
+    "intro": "همهٔ اجزای پایه با توکن‌های طراحی. اندازهٔ پنجره را تغییر دهید یا نمای اندازه‌ها را باز کنید.",
+    "controls": {
+      "locale": "زبان",
+      "colorMode": "حالت رنگ",
+      "dark": "تیره",
+      "light": "روشن",
+      "system": "سیستم",
+      "reducedMotion": "کاهش حرکت",
+      "textSize": "اندازهٔ متن",
+      "textSizeValue": "{percent}",
+      "viewports": "نمای اندازه‌ها",
+      "viewportsHint": "این قاب‌ها همین گالری را در اندازه‌های بخش ۱۱.۷ نشان می‌دهند.",
+      "openFrame": "باز کردن در زبانهٔ تازه",
+      "landscape": "افقی"
+    },
+    "sections": {
+      "colors": "رنگ‌ها",
+      "typography": "حروف‌نگاری",
+      "spacing": "فاصله‌ها و گردی گوشه‌ها",
+      "icons": "آیکون‌ها",
+      "buttons": "دکمه‌ها",
+      "inputs": "فیلدها",
+      "chips": "تراشه‌ها",
+      "topBar": "نوار بالا",
+      "banners": "بنرها و پیام‌ها",
+      "sheets": "برگهٔ پایین",
+      "cost": "تأیید هزینه",
+      "states": "حالت‌های خالی، خطا و بارگذاری"
+    },
+    "specimen": {
+      "fa": "می‌خواهم امشب در تورنمنت‌های تخته‌نرد بازی کنم؛ جایزه ۱۲٬۵۰۰ سکه است. ۰۱۲۳۴۵۶۷۸۹",
+      "en": "Play tonight's backgammon tournaments; the prize is 12,500 coins. 0123456789",
+      "mixed": "بازیکن {username} برنده شد و {amount} سکه گرفت."
+    },
+    "sample": {
+      "primary": "ادامه",
+      "secondary": "انصراف",
+      "text": "بیشتر بدانید",
+      "destructive": "انصراف از مسابقه",
+      "disabled": "مبلغ را وارد کنید",
+      "chipQuick": "{amount} سکه",
+      "chipStatus": "در انتظار",
+      "field": "نام کاربری",
+      "fieldHelper": "۳ تا ۲۰ نویسه",
+      "fieldError": "این نام کاربری گرفته شده است.",
+      "otpError": "کد اشتباه است.",
+      "reqLength": "حداقل {count} نویسه",
+      "reqDigit": "حداقل یک عدد",
+      "screenTitle": "کیف پول",
+      "rootTitle": "بازی",
+      "taskTitle": "انتقال سکه",
+      "bannerInfo": "نسخهٔ تازه‌ای از برنامه آماده است.",
+      "bannerAction": "به‌روزرسانی",
+      "bannerWarning": "یک بار دیگر زمانتان تمام شود، مسابقه به پایان می‌رسد.",
+      "bannerError": "برداشت برای حساب شما فعلاً در دسترس نیست. با پشتیبانی تماس بگیرید.",
+      "bannerSuccess": "۱۰۰ سکهٔ هدیهٔ ثبت‌نام به حساب شما اضافه شد.",
+      "toast": "پوسته فعال شد.",
+      "toastWithAction": "سکه‌ها به کیف پول شما اضافه شد.",
+      "toastAction": "مشاهده",
+      "openSheet": "باز کردن برگه",
+      "sheetTitle": "تنظیم میز",
+      "sheetBody": "نوع بازی، طول مسابقه و میز را انتخاب کنید. هیچ گزینه‌ای از پیش انتخاب نشده است.",
+      "openCost": "باز کردن تأیید هزینه",
+      "inFlight": "شبیه‌سازی ارسال",
+      "costTitle": "ورود به میز {amount} سکه‌ای",
+      "costSummary": "استاندارد با مکعب دوبل · مسابقهٔ {length} امتیازی",
+      "costFacts": "مجموع جوایز {pot} · کارمزد پلتفرم {fee} · سهم برنده {payout}",
+      "costCta": "پرداخت {amount} سکه و جستجو",
+      "costInFlight": "در حال پرداخت…",
+      "emptyMessage": "هنوز بازی نکرده‌اید.",
+      "emptyAction": "بازی با ربات",
+      "progressLabel": "بارگذاری صفحهٔ بازی",
+      "progressDetail": "{size} باقی مانده"
     }
   }
 }

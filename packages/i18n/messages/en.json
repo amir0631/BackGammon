@@ -5,10 +5,76 @@
   },
   "common": {
     "loading": "Loading…",
+    "loadingSlow": "This is taking longer than usual.",
+    "loadingProgress": "{percent} loaded",
     "retry": "Try again",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "back": "Back"
+    "back": "Back",
+    "close": "Close",
+    "help": "Help",
+    "done": "Done",
+    "skipToContent": "Skip to main content",
+    "stillWorking": "Still working…",
+    "checkStatus": "Check status",
+    "errorCode": "Reference: {code}"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "play": "Play",
+    "live": "Live",
+    "tournaments": "Tournaments",
+    "shop": "Shop",
+    "account": "Account"
+  },
+  "languages": {
+    "fa": "فارسی",
+    "en": "English"
+  },
+  "coins": {
+    "cost": "Cost",
+    "amount": "Amount",
+    "fee": "Fee",
+    "balance": "Your balance",
+    "balanceAfter": "Balance after",
+    "shortfall": "Shortfall",
+    "tomanEquivalent": "Equals {amount} toman",
+    "value": "{count, plural, one {{amount} coin} other {{amount} coins}}",
+    "balanceChip": "Balance: {count, plural, one {{amount} coin} other {{amount} coins}}, open wallet",
+    "balanceUpdated": "Balance updated: {count, plural, one {{amount} coin} other {{amount} coins}}"
+  },
+  "units": {
+    "megabytes": "{value} MB"
+  },
+  "money": {
+    "toman": "{amount} toman"
+  },
+  "transfer": {
+    "recipientReceives": "Recipient receives"
+  },
+  "withdraw": {
+    "youReceive": "Paid to your bank account"
+  },
+  "net": {
+    "offline": "You're offline. We'll reconnect automatically."
+  },
+  "forms": {
+    "phone": {
+      "label": "Mobile number",
+      "hint": "Example: 0912 345 6789"
+    },
+    "password": {
+      "label": "Password",
+      "show": "Show password",
+      "hide": "Hide password",
+      "requirementsTitle": "Your password needs:",
+      "met": "done",
+      "notMet": "not yet"
+    },
+    "otp": {
+      "label": "SMS code",
+      "hint": "Enter the {length}-digit code we sent."
+    }
   },
   "home": {
     "comingSoon": "Coming soon",
@@ -30,6 +96,83 @@
     "settings": {
       "invalid": "The setting value is not valid.",
       "unknown": "Unknown setting."
+    }
+  },
+  "devGallery": {
+    "title": "Component gallery (development only)",
+    "intro": "Every base component, built from the design tokens. Resize the window or open the viewport view.",
+    "controls": {
+      "locale": "Language",
+      "colorMode": "Color mode",
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System",
+      "reducedMotion": "Reduced motion",
+      "textSize": "Text size",
+      "textSizeValue": "{percent}",
+      "viewports": "Viewports",
+      "viewportsHint": "These frames load this gallery at the §11.7 viewports.",
+      "openFrame": "Open in a new tab",
+      "landscape": "Landscape"
+    },
+    "sections": {
+      "colors": "Colors",
+      "typography": "Typography",
+      "spacing": "Spacing and radii",
+      "icons": "Icons",
+      "buttons": "Buttons",
+      "inputs": "Fields",
+      "chips": "Chips",
+      "topBar": "Top bar",
+      "banners": "Banners and toasts",
+      "sheets": "Bottom sheet",
+      "cost": "Cost confirmation",
+      "states": "Empty, error, and loading states"
+    },
+    "specimen": {
+      "fa": "می‌خواهم امشب در تورنمنت‌های تخته‌نرد بازی کنم؛ جایزه ۱۲٬۵۰۰ سکه است. ۰۱۲۳۴۵۶۷۸۹",
+      "en": "Play tonight's backgammon tournaments; the prize is 12,500 coins. 0123456789",
+      "mixed": "Player {username} won and received {amount} coins."
+    },
+    "sample": {
+      "primary": "Continue",
+      "secondary": "Cancel",
+      "text": "Learn more",
+      "destructive": "Resign match",
+      "disabled": "Enter an amount",
+      "chipQuick": "{amount} coins",
+      "chipStatus": "Pending",
+      "field": "Username",
+      "fieldHelper": "3 to 20 characters",
+      "fieldError": "This username is taken.",
+      "otpError": "The code is not correct.",
+      "reqLength": "At least {count} characters",
+      "reqDigit": "At least one number",
+      "screenTitle": "Wallet",
+      "rootTitle": "Play",
+      "taskTitle": "Send coins",
+      "bannerInfo": "A new version of the app is ready.",
+      "bannerAction": "Update",
+      "bannerWarning": "One more timeout ends the match.",
+      "bannerError": "Withdrawals aren't available for your account right now. Contact support.",
+      "bannerSuccess": "100 welcome coins were added to your account.",
+      "toast": "Theme equipped.",
+      "toastWithAction": "Coins were added to your wallet.",
+      "toastAction": "View",
+      "openSheet": "Open sheet",
+      "sheetTitle": "Table setup",
+      "sheetBody": "Choose the variant, match length, and table. Nothing is pre-selected.",
+      "openCost": "Open cost confirmation",
+      "inFlight": "Simulate request",
+      "costTitle": "Enter {amount}-coin table",
+      "costSummary": "Standard with doubling cube · {length}-point match",
+      "costFacts": "Pot {pot} · Platform fee {fee} · Winner receives {payout}",
+      "costCta": "Pay {amount} coins and search",
+      "costInFlight": "Paying…",
+      "emptyMessage": "You haven't played yet.",
+      "emptyAction": "Play vs bot",
+      "progressLabel": "Loading the game",
+      "progressDetail": "{size} remaining"
     }
   }
 }

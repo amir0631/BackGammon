@@ -2,38 +2,45 @@
 
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import CssBaseline from "@mui/material/CssBaseline";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
 import rtlPlugin from "@mui/stylis-plugin-rtl";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { prefixer } from "stylis";
-import { breakpoints, palette, radii, spacingUnit } from "@bg/design-tokens";
+import { defaultColorMode, type Script } from "@bg/design-tokens";
+import { ToastProvider } from "@/components/feedback/Toast";
+import { MotionProvider, usePrefersReducedMotion } from "./motion";
+import { createAppTheme } from "./theme";
 
-export function ThemeRegistry({ direction, children }: { direction: "rtl" | "ltr"; children: ReactNode }) {
-  const theme = useMemo(() => {
-    const colors = palette.dark;
-    return createTheme({
-      direction,
-      spacing: spacingUnit,
-      shape: { borderRadius: radii.md },
-      breakpoints: { values: { ...breakpoints, xl: 1440 } },
-      palette: {
-        mode: "dark",
-        background: { default: colors.background, paper: colors.surface },
-        primary: { main: colors.primary, contrastText: colors.onPrimary },
-        error: { main: colors.error },
-        text: { primary: colors.textPrimary, secondary: colors.textSecondary },
-      },
-    });
-  }, [direction]);
+export interface ThemeRegistryProps {
+  direction: "rtl" | "ltr";
+  script: Script;
+  /** The user's `animations.reduced` setting, when known (CLAUDE.md §11.6). */
+  reducedMotionSetting?: boolean;
+  children: ReactNode;
+}
 
+export function ThemeRegistry({ direction, script, reducedMotionSetting = false, children }: ThemeRegistryProps) {
+  const prefersReduced = usePrefersReducedMotion();
+  const [setting, setSetting] = useState(reducedMotionSetting);
+  useEffect(() => setSetting(reducedMotionSetting), [reducedMotionSetting]);
+  const reducedMotion = setting || prefersReduced;
+
+  const theme = useMemo(
+    () => createAppTheme({ direction, script, reducedMotion }),
+    [direction, script, reducedMotion],
+  );
+
+  // Separate Emotion caches per direction so RTL-flipped styles never leak into LTR.
   const cacheOptions =
     direction === "rtl" ? { key: "muirtl", stylisPlugins: [prefixer, rtlPlugin] } : { key: "mui" };
 
   return (
     <AppRouterCacheProvider options={cacheOptions}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
+      <ThemeProvider theme={theme} defaultMode={defaultColorMode} modeStorageKey="bg-color-mode">
+        <CssBaseline enableColorScheme />
+        <MotionProvider reduced={reducedMotion} setting={setting} setSetting={setSetting}>
+          <ToastProvider>{children}</ToastProvider>
+        </MotionProvider>
       </ThemeProvider>
     </AppRouterCacheProvider>
   );
