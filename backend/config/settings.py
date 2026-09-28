@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "settingsapp",
     "adminapi",
     "wallet",
+    "game",
 ]
 
 MIDDLEWARE = [
