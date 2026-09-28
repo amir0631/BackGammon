@@ -51,6 +51,7 @@ def _user_for(token: str) -> User | None:
 class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
     async def connect(self) -> None:
         self.user: User | None = None
+        self.admin_id: int | None = None  # an admin socket: hidden spectating only (§13)
         self.match_id: str | None = None
         self.queued = False
         self._window = (0.0, 0)
@@ -58,7 +59,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
         self._auth_deadline = asyncio.get_running_loop().call_later(AUTH_TIMEOUT, self._close_if_anonymous)
 
     def _close_if_anonymous(self) -> None:
-        if self.user is None:
+        if self.user is None and self.admin_id is None:
             self._closing = asyncio.ensure_future(self.close(code=CLOSE_UNAUTHENTICATED))
 
     async def disconnect(self, code: int) -> None:
@@ -102,13 +103,23 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
             await self.send_json(_error("BAD_MESSAGE", "errors.ws.badMessage", {"reason": str(exc)[:200]}))
             return
 
-        if self.user is None:
+        if self.user is None and self.admin_id is None:
             if env.type != "auth":
                 await self.close(code=CLOSE_UNAUTHENTICATED)
                 return
             user = await database_sync_to_async(_user_for)(payload["token"])
             if user is None:
-                await self.close(code=CLOSE_UNAUTHENTICATED)
+                from adminapi.auth import admin_for_ws
+
+                admin = await database_sync_to_async(admin_for_ws)(payload["token"])
+                if admin is None:
+                    await self.close(code=CLOSE_UNAUTHENTICATED)
+                    return
+                self.admin_id = admin.id
+                self._auth_deadline.cancel()
+                await self.send_json(
+                    {"type": "auth.ok", "match_id": None, "seq": 0, "payload": {"username": None}}
+                )
                 return
             self.user = user
             self._auth_deadline.cancel()
@@ -121,6 +132,14 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
             )
             return
 
+        if self.user is None:  # an admin: watch only, never play, queue, or react
+            if env.type in {"spectate.join", "spectate.leave"}:
+                await self._spectate(env.type, env.match_id, payload)
+            else:
+                await self.send_json(
+                    _error("ADMIN_WATCH_ONLY", "errors.ws.adminWatchOnly", match_id=env.match_id)
+                )
+            return
         if env.type == "match.sync":
             await self._attach(env.match_id, payload["last_seq"])
             return

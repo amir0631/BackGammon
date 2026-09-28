@@ -823,6 +823,9 @@ export interface PublicConfig {
   payments_enabled: boolean;
   predictions_enabled: boolean;
   spectating_enabled: boolean;
+  /** Spectators see the match this many seconds late (§20.4); show "Delayed by n s" when > 0. */
+  spectator_delay_seconds: number;
+  spectator_reactions_enabled: boolean;
   coin_price_toman: number;
   username_change: { cost: number; cooldown_days: number };
   allowed_lengths: number[];

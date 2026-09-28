@@ -5,7 +5,7 @@ from typing import Any
 from django.core.management.base import BaseCommand
 from django.db import close_old_connections
 
-from realtime import live
+from realtime import delay, live
 
 logger = logging.getLogger("realtime.timers")
 POLL_SECONDS = 0.25  # §10.4
@@ -26,6 +26,10 @@ class Command(BaseCommand):
                     live.fire(member)
                 except Exception:
                     logger.exception("timer failed: %s", member)
+            try:
+                delay.flush()  # delayed spectator events (§20.4)
+            except Exception:
+                logger.exception("spectator delay flush failed")
             if loops % 4 == 0:  # about once a second: widening ELO windows (§8)
                 try:
                     matchmaking.tick()

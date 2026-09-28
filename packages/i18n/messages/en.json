@@ -161,10 +161,33 @@
     },
     "wallet": {
       "transferLinked": "Transfers between linked accounts aren't allowed.",
-      "withdrawUnderReview": "Your account is under review; withdrawals are paused."
+      "withdrawUnderReview": "Your account is under review; withdrawals are paused.",
+      "accountSuspended": "Not available while your account is suspended.",
+      "amountInvalid": "That amount isn't valid.",
+      "bankAccountLocked": "You can't change your bank account while a withdrawal is pending.",
+      "ibanInvalid": "That Sheba number isn't valid.",
+      "idempotencyKeyRequired": "The request was incomplete. Please try again.",
+      "insufficient": "Not enough coins.",
+      "noBankAccount": "Add your bank account first.",
+      "passwordInvalid": "That password isn't right.",
+      "passwordLocked": "Too many wrong passwords. Try again later.",
+      "topupAboveCap": "The amount is above the top-up cap.",
+      "transferBelowMin": "The amount is below the minimum transfer.",
+      "transferLimit": "This is over your 24-hour sending limit.",
+      "transferNotTransferable": "Welcome coins can't be sent yet.",
+      "transferRecipientNotFound": "Recipient not found.",
+      "transferSelf": "You can't send coins to yourself.",
+      "withdrawBelowMin": "The amount is below the minimum withdrawal.",
+      "withdrawLimit": "This is over your 24-hour withdrawal limit.",
+      "withdrawNotWithdrawable": "That many coins can't be withdrawn.",
+      "withdrawalClaimed": "Another admin is handling this request.",
+      "withdrawalNotPending": "This request is no longer pending."
     },
     "ws": {
       "badMessage": "The request was invalid."
+    },
+    "profile": {
+      "usernameCooldown": "You can't change your username again yet."
     }
   },
   "devGallery": {

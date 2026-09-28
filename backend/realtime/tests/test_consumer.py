@@ -190,3 +190,82 @@ def test_rate_limit_closes_flooding_socket():
         assert closed
 
     asyncio.run(run())
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_admin_watches_hidden_and_read_only(clock):
+    from adminapi.tests.test_admin_api import admin_client, make_admin
+
+    a, b = make_user("Wsa_2"), make_user("Wsb_2")
+    token = ws_token(a)
+    match = create_match(a, b, "standard_cube", 3)
+    mid = str(match.id)
+    make_admin()
+    admin_token = admin_client().get("/api/v1/admin/ws-token").json()["token"]
+
+    async def run():
+        ca = await connect(token)
+        await ca.send_json_to({"type": "match.sync", "match_id": mid, "seq": 0, "payload": {"last_seq": 0}})
+        await until(ca, "match.state")
+        cadm = WebsocketCommunicator(
+            app(), "/ws", headers=[(b"host", b"admin.localhost"), (b"origin", b"http://admin.localhost")]
+        )
+        connected, _ = await cadm.connect()
+        assert connected
+        await cadm.send_json_to({"type": "auth", "seq": 0, "payload": {"token": admin_token}})
+        assert (await cadm.receive_json_from())["type"] == "auth.ok"
+        await cadm.send_json_to({"type": "spectate.join", "match_id": mid, "seq": 0, "payload": {}})
+        spect = await until(cadm, "spectate.state")
+        assert spect["payload"]["spectators"] == 0  # hidden: not counted
+        assert (await database_sync_to_async(live.load)(mid)).spectators == 0
+        await cadm.send_json_to({"type": "turn.roll", "match_id": mid, "seq": 0, "payload": {}})
+        assert (await until(cadm, "error"))["payload"]["code"] == "ADMIN_WATCH_ONLY"
+        await cadm.send_json_to(
+            {
+                "type": "queue.join",
+                "seq": 0,
+                "payload": {"tier_id": 50, "variant": "standard_cube", "length": 3},
+            }
+        )
+        assert (await until(cadm, "error"))["payload"]["code"] == "ADMIN_WATCH_ONLY"
+        await cadm.disconnect()
+        await ca.disconnect()
+        assert (await database_sync_to_async(live.load)(mid)).spectators == 0
+
+    asyncio.run(run())
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_spectators_are_delayed_players_are_not(clock):
+    from realtime import delay
+    from settingsapp import registry
+
+    registry.set_value("live.spectator_delay_seconds", 10)
+    a, b, watcher = make_user("Wsa_3"), make_user("Wsb_3"), make_user("Wsw_3")
+    tokens = [ws_token(a), ws_token(b), ws_token(watcher)]
+    match = create_match(a, b, "standard_cube", 3)
+    mid = str(match.id)
+
+    async def run():
+        ca, cb, cw = [await connect(t) for t in tokens]
+        for comm in (ca, cb):
+            await comm.send_json_to(
+                {"type": "match.sync", "match_id": mid, "seq": 0, "payload": {"last_seq": 0}}
+            )
+            await until(comm, "match.state")
+        await cw.send_json_to({"type": "spectate.join", "match_id": mid, "seq": 0, "payload": {}})
+        assert await cw.receive_nothing(timeout=0.3)  # the first state waits too
+        clock.t += live.OPENING_DELAY
+        for m in await database_sync_to_async(live.due_timers)():
+            await database_sync_to_async(live.fire)(m)
+        await until(ca, "turn.rolled")  # players at once
+        assert await cw.receive_nothing(timeout=0.3)
+        assert await database_sync_to_async(delay.flush)() == 0
+        clock.t += 10
+        assert await database_sync_to_async(delay.flush)() >= 2
+        assert (await until(cw, "spectate.state"))["payload"]["match_id"] == mid
+        assert (await until(cw, "turn.rolled"))["match_id"] == mid
+        for comm in (ca, cb, cw):
+            await comm.disconnect()
+
+    asyncio.run(run())

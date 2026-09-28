@@ -16,7 +16,13 @@ if TYPE_CHECKING:
 COUNT_THROTTLE_SECONDS = 5.0
 
 
-def _join(match_id: str, user_id: int) -> dict[str, Any]:
+def _join(match_id: str, user_id: int | None) -> dict[str, Any]:
+    """user_id None: an admin, hidden from players and from the count, and never turned away (§13)."""
+    if user_id is None:
+        state = live.load(match_id)
+        if state.status != "active":
+            raise live.LiveError(details={"reason": "not_live"})
+        return live.state_envelope(match_id, None, spectator=True)
     cap = registry.get("live.max_spectators_per_match")
     with live.session(match_id) as state:
         if state.status != "active" or any(p["is_bot"] for p in state.players):
@@ -32,7 +38,9 @@ def _join(match_id: str, user_id: int) -> dict[str, Any]:
     return live.state_envelope(match_id, None, spectator=True)
 
 
-def _leave(match_id: str) -> None:
+def _leave(match_id: str, hidden: bool = False) -> None:
+    if hidden:
+        return
     try:
         with live.session(match_id) as state:
             state.spectators = max(0, state.spectators - 1)
@@ -58,7 +66,7 @@ def _react(match_id: str, key: str, user_id: int) -> None:
 
 
 async def handle(consumer: "GameConsumer", type_: str, match_id: str | None, payload: dict[str, Any]) -> None:
-    assert consumer.user is not None
+    viewer = consumer.user.id if consumer.user is not None else None  # None: a hidden admin
     if not match_id:
         await consumer.send_json(
             {
@@ -75,23 +83,29 @@ async def handle(consumer: "GameConsumer", type_: str, match_id: str | None, pay
         if type_ == "spectate.join":
             if match_id in watching:
                 return
-            state = await database_sync_to_async(_join)(match_id, consumer.user.id)
+            state = await database_sync_to_async(_join)(match_id, viewer)
             watching.add(match_id)
             await consumer.channel_layer.group_add(
                 live.group_name(match_id, spectators=True), consumer.channel_name
             )
-            await consumer.send_json(state)
+            from realtime import delay
+
+            if (held := delay.seconds()) > 0 and viewer is not None:
+                # The first state comes with the same delay as the events after it (§20.4).
+                await database_sync_to_async(delay.hold)("channel", consumer.channel_name, [state], held)
+            else:
+                await consumer.send_json(state)
         elif type_ == "spectate.leave":
             if match_id in watching:
                 watching.discard(match_id)
                 await consumer.channel_layer.group_discard(
                     live.group_name(match_id, spectators=True), consumer.channel_name
                 )
-                await database_sync_to_async(_leave)(match_id)
+                await database_sync_to_async(_leave)(match_id, viewer is None)
         elif type_ == "spectate.react":
-            if match_id not in watching:
+            if match_id not in watching or viewer is None:
                 raise live.LiveError(details={"reason": "not_watching"})
-            await database_sync_to_async(_react)(match_id, payload["emoji_key"], consumer.user.id)
+            await database_sync_to_async(_react)(match_id, payload["emoji_key"], viewer)
     except live.LiveError as exc:
         await consumer.send_json(
             {
@@ -108,4 +122,4 @@ async def leave_all(consumer: "GameConsumer") -> None:
         await consumer.channel_layer.group_discard(
             live.group_name(match_id, spectators=True), consumer.channel_name
         )
-        await database_sync_to_async(_leave)(match_id)
+        await database_sync_to_async(_leave)(match_id, consumer.user is None)

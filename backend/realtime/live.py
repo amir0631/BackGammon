@@ -163,6 +163,11 @@ def _channel_publish(match_id: str, envelopes: list[dict[str, Any]], spectators_
     message = {"type": "match.events", "envelopes": envelopes}
     if not spectators_only:
         async_to_sync(layer.group_send)(group_name(match_id), message)
+        from realtime import delay
+
+        if (held := delay.seconds()) > 0:  # §20.4: spectators see the match with a delay
+            delay.hold("group", group_name(match_id, spectators=True), envelopes, held)
+            return
     async_to_sync(layer.group_send)(group_name(match_id, spectators=True), message)
 
 

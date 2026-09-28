@@ -468,6 +468,8 @@ export const api = {
     matches: (filter: { q?: string; user_id?: number; status?: string; from?: string; to?: string; cursor?: string } = {}, o?: Opts) =>
       apiRequest<Paginated<AdminMatchSearchRow>>(`/admin/matches${query(filter)}`, o),
     liveMatches: (o?: Opts) => apiRequest<Paginated<LiveMatchRow>>("/admin/matches/live", o),
+    /** For a GameSocket that may only spectate, hidden from players and the count (§13). */
+    wsToken: () => apiRequest<{ token: string; expires_in: number }>("/admin/ws-token"),
 
     packages: crud<AdminCoinPackage>("/admin/shop/packages"),
     items: crud<AdminItem>("/admin/shop/items"),

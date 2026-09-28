@@ -48,6 +48,8 @@ server {
     include /etc/nginx/snippets/security.conf;
 
     location /api/ { include /etc/nginx/snippets/proxy.conf; proxy_pass http://backend; }
+    # Hidden spectating only: the backend accepts nothing but spectate.join/leave from admin sockets.
+    location /ws   { include /etc/nginx/snippets/websocket.conf; proxy_pass http://backend; }
     location /     { include /etc/nginx/snippets/proxy.conf; proxy_pass http://admin; }
 }
 

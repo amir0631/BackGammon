@@ -161,10 +161,33 @@
     },
     "wallet": {
       "transferLinked": "انتقال بین حساب‌های مرتبط مجاز نیست.",
-      "withdrawUnderReview": "حساب شما در حال بررسی است و برداشت موقتاً متوقف است."
+      "withdrawUnderReview": "حساب شما در حال بررسی است و برداشت موقتاً متوقف است.",
+      "accountSuspended": "در زمان تعلیق حساب، این کار ممکن نیست.",
+      "amountInvalid": "این مبلغ معتبر نیست.",
+      "bankAccountLocked": "تا وقتی یک درخواست برداشت در انتظار است، حساب بانکی قابل تغییر نیست.",
+      "ibanInvalid": "شماره شبا معتبر نیست.",
+      "idempotencyKeyRequired": "درخواست ناقص بود. دوباره تلاش کنید.",
+      "insufficient": "موجودی کافی نیست.",
+      "noBankAccount": "ابتدا حساب بانکی خود را ثبت کنید.",
+      "passwordInvalid": "رمز عبور درست نیست.",
+      "passwordLocked": "به دلیل چند رمز اشتباه، تأیید با رمز فعلاً ممکن نیست.",
+      "topupAboveCap": "مبلغ از سقف شارژ دستی بیشتر است.",
+      "transferBelowMin": "مبلغ کمتر از حداقل ارسال است.",
+      "transferLimit": "این مبلغ از سقف ارسال ۲۴ ساعت بیشتر است.",
+      "transferNotTransferable": "سکه‌های هدیه‌ی ثبت‌نام هنوز قابل ارسال نیستند.",
+      "transferRecipientNotFound": "گیرنده پیدا نشد.",
+      "transferSelf": "نمی‌توانید به خودتان سکه بفرستید.",
+      "withdrawBelowMin": "مبلغ کمتر از حداقل برداشت است.",
+      "withdrawLimit": "این مبلغ از سقف برداشت ۲۴ ساعت بیشتر است.",
+      "withdrawNotWithdrawable": "این مقدار سکه قابل برداشت نیست.",
+      "withdrawalClaimed": "مدیر دیگری در حال بررسی این درخواست است.",
+      "withdrawalNotPending": "وضعیت این درخواست تغییر کرده است."
     },
     "ws": {
       "badMessage": "درخواست نامعتبر بود."
+    },
+    "profile": {
+      "usernameCooldown": "هنوز نمی‌توانید نام کاربری را دوباره تغییر دهید."
     }
   },
   "devGallery": {

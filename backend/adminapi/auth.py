@@ -117,3 +117,40 @@ class IsAdmin(AdminGate):
         if allowed and request.user.role not in allowed:
             raise AdminForbidden(details={"reason": "role"})
         return True
+
+
+ADMIN_WS_SALT = "admin-ws"
+ADMIN_WS_TTL_SECONDS = 60
+
+
+def ws_token(session: AdminSession) -> str:
+    """For the admin panel's hidden spectating socket (§13 Live and replays): signed with the admin key,
+    never accepted as a player token, valid for 60 s, bound to the admin session."""
+    from django.core import signing
+
+    return signing.dumps(
+        {"adm": session.admin_id, "sid": str(session.id)}, key=settings.ADMIN_SECRET_KEY, salt=ADMIN_WS_SALT
+    )
+
+
+def admin_for_ws(token: str) -> AdminUser | None:
+    from django.core import signing
+
+    try:
+        claims = signing.loads(
+            token, key=settings.ADMIN_SECRET_KEY, salt=ADMIN_WS_SALT, max_age=ADMIN_WS_TTL_SECONDS
+        )
+    except signing.BadSignature:
+        return None
+    session = (
+        AdminSession.objects.select_related("admin")
+        .filter(
+            id=claims.get("sid"),
+            admin_id=claims.get("adm"),
+            revoked_at__isnull=True,
+            expires_at__gt=timezone.now(),
+            admin__is_active=True,
+        )
+        .first()
+    )
+    return session.admin if session else None

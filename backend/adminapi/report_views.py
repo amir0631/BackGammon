@@ -173,3 +173,15 @@ class LiveMatchesAdminView(AdminView):
         from game.views import live_rows
 
         return Response({"results": live_rows(request.query_params), "next": None})
+
+
+class AdminWsTokenView(AdminView):
+    """A token for the admin's WebSocket, which may only watch matches, hidden from players (§13)."""
+
+    def get(self, request: Request) -> Response:
+        from adminapi.auth import ADMIN_WS_TTL_SECONDS, ws_token
+        from adminapi.models import AdminSession
+
+        session = request.auth
+        assert isinstance(session, AdminSession)
+        return Response({"token": ws_token(session), "expires_in": ADMIN_WS_TTL_SECONDS})

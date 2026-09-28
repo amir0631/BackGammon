@@ -39,6 +39,7 @@ urlpatterns = [
     path("reports/dice/run", report_views.DiceTestRunView.as_view()),
     path("matches", report_views.MatchSearchView.as_view()),
     path("matches/live", report_views.LiveMatchesAdminView.as_view()),
+    path("ws-token", report_views.AdminWsTokenView.as_view()),
     path("shop/packages", content_views.packages[0]),
     path("shop/packages/<int:pk>", content_views.packages[1]),
     path("shop/items", content_views.items[0]),
