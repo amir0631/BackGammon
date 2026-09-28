@@ -321,3 +321,112 @@ export interface AdminBalanceChange {
   balance_after: number;
   created: boolean;
 }
+
+// ---- Shop: coin purchase (CLAUDE.md §7.7, §7.11) ----
+
+export interface CoinPackageInfo {
+  id: number;
+  coins: number;
+  price_toman: number;
+  name: Record<Lang, string>;
+}
+
+export interface CoinPackages extends Paginated<CoinPackageInfo> {
+  /** False until a payment provider is connected; coins are then topped up by support. */
+  enabled: boolean;
+  price_toman: number;
+  custom_min_toman: number;
+  custom_max_toman: number;
+}
+
+export type PaymentStatus = "pending" | "callback_received" | "verified" | "failed" | "expired";
+
+export interface PaymentInfo {
+  id: string;
+  coins: number;
+  amount_toman: number;
+  status: PaymentStatus;
+  reference: string | null;
+  card_mask: string | null;
+  failure: string | null;
+  created_at: string;
+  verified_at: string | null;
+}
+
+// ---- Matches (CLAUDE.md §10.2 Matches, §20) ----
+
+export interface MatchPlayerSummary {
+  username: string | null;
+  avatar: string;
+  elo: number;
+  is_bot: boolean;
+  bot_level: string | null;
+}
+
+export interface MatchSummary {
+  id: string;
+  variant: string;
+  length: number;
+  entry: number;
+  status: "active" | "finished" | "aborted" | "voided";
+  is_bot: boolean;
+  players: MatchPlayerSummary[];
+  you: number | null;
+  winner: number | null;
+  score: [number, number];
+  end_reason: string | null;
+  seed_commit: string;
+  created_at: string;
+  ended_at: string | null;
+}
+
+export interface ReplayEvent {
+  seq: number;
+  type: string;
+  actor: "player_a" | "player_b" | "system";
+  payload: Record<string, unknown>;
+  server_ts: string;
+}
+
+export interface Replay extends MatchSummary {
+  /** Published once the match is over (§6.3). */
+  seed: string | null;
+  events: ReplayEvent[];
+}
+
+export interface Tier {
+  id: number;
+  entry: number;
+  variants: string[];
+  lengths: number[];
+  waiting: number;
+}
+
+export interface LiveMatchRow {
+  match_id: string;
+  variant: string;
+  length: number;
+  entry: number;
+  tier_id: number;
+  players: { username: string; avatar: string; elo: number; level: number }[];
+  score: [number, number];
+  game_no: number;
+  spectators: number;
+  pool: number;
+  avg_elo: number;
+  tournament_id: number | null;
+}
+
+export interface LeaderboardRow {
+  rank: number;
+  username: string | null;
+  avatar: string;
+  level: number;
+  value: number;
+}
+
+export interface Leaderboard {
+  scope: "all" | "weekly" | "monthly";
+  results: LeaderboardRow[];
+  me: { rank: number; value: number } | null;
+}

@@ -20,6 +20,13 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   AdminWithdrawal,
+  CoinPackages,
+  PaymentInfo,
+  Leaderboard,
+  Tier,
+  LiveMatchRow,
+  MatchSummary,
+  Replay,
   AdminWithdrawalFilter,
   AdminLedgerRow,
   AdminBalanceChange,
@@ -188,7 +195,33 @@ export const api = {
     wsToken: (o?: Opts) => apiRequest<{ token: string; expires_in: number }>("/auth/ws-token", o),
   },
 
+  shop: {
+    packages: (o?: Opts) => apiRequest<CoinPackages>("/shop/packages", o),
+    /** Returns the gateway page to send the user to (`redirect_url`). */
+    checkout: (
+      pick: { package_id: number } | { custom_toman: number },
+      surface: "m" | "app",
+      idempotencyKey: string,
+    ) =>
+      apiRequest<PaymentInfo & { redirect_url: string | null }>("/shop/checkout", {
+        method: "POST",
+        body: { ...pick, surface },
+        idempotencyKey,
+      }),
+    payment: (id: string, o?: Opts) => apiRequest<PaymentInfo>(`/payments/${encodeURIComponent(id)}`, o),
+  },
+
+  leaderboard: (scope: "all" | "weekly" | "monthly", o?: Opts) =>
+    apiRequest<Leaderboard>(`/leaderboard${query({ scope })}`, o),
+
   matches: {
+    tiers: (o?: Opts) => apiRequest<Paginated<Tier>>("/tiers", o),
+    live: (filter: { tier?: number; variant?: string; sort?: "spectators" | "pool" | "elo" } = {}, o?: Opts) =>
+      apiRequest<Paginated<LiveMatchRow>>(`/matches/live${query(filter)}`, o),
+    mine: (cursor?: string, o?: Opts) => apiRequest<Paginated<MatchSummary>>(`/me/matches${query({ cursor })}`, o),
+    get: (id: string, o?: Opts) => apiRequest<MatchSummary>(`/matches/${encodeURIComponent(id)}`, o),
+    /** Players of the match only (403 for anyone else). */
+    replay: (id: string, o?: Opts) => apiRequest<Replay>(`/matches/${encodeURIComponent(id)}/replay`, o),
     startBot: (level: "easy" | "medium" | "hard", variant: string, length: number) =>
       apiRequest<{ match_id: string; seed_commit: string }>("/matches/bot", {
         method: "POST",

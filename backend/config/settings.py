@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "ranking",
     "matchmaking",
     "antifraud",
+    "payments",
 ]
 
 MIDDLEWARE = [
@@ -97,6 +98,8 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULE = {
     "ledger-invariants-hourly": {"task": "wallet.tasks.check_ledger_invariants", "schedule": 3600.0},
     "leaderboards-nightly": {"task": "ranking.tasks.rebuild_leaderboards_nightly", "schedule": 86400.0},
+    "payments-reconcile-nightly": {"task": "payments.tasks.reconcile_yesterday", "schedule": 86400.0},
+    "payments-expire": {"task": "payments.tasks.expire_stale_payments", "schedule": 900.0},
 }
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]

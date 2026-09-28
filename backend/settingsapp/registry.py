@@ -252,6 +252,10 @@ _DEFS: list[SettingDef] = [
         None,
     ),
     SettingDef("coin.price_toman", "int", 1000, _d("قیمت هر سکه (تومان)", "Price per coin (toman)"), 1, None),
+    # Off until a real payment provider is connected (§18); until then support tops up wallets (§7.9).
+    SettingDef(
+        "payments.enabled", "bool", False, _d("خرید آنلاین سکه فعال است", "Online coin purchase enabled")
+    ),
     SettingDef(
         "shop.custom_min_toman",
         "int",
