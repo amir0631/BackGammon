@@ -184,3 +184,10 @@ def test_engine_has_no_django_imports():
     for path in pathlib.Path(__file__).resolve().parents[1].joinpath("engine").glob("*.py"):
         text = path.read_text()
         assert "django" not in text and "rest_framework" not in text, path.name
+
+
+def test_game_core_fixtures_are_current():
+    """packages/game-core tests its turn builder against these. Fix: manage.py engine_fixtures."""
+    from game import ts_fixtures
+
+    assert ts_fixtures.PATH.read_text() == ts_fixtures.generate()

@@ -184,6 +184,17 @@ export const api = {
     logout: () => apiRequest<void>("/auth/logout", { method: "POST" }),
     usernameAvailable: (username: string, o?: Opts) =>
       apiRequest<UsernameAvailability>(`/auth/username-available?username=${encodeURIComponent(username)}`, o),
+    /** A 60 s token for the WebSocket `auth` message. */
+    wsToken: (o?: Opts) => apiRequest<{ token: string; expires_in: number }>("/auth/ws-token", o),
+  },
+
+  matches: {
+    startBot: (level: "easy" | "medium" | "hard", variant: string, length: number) =>
+      apiRequest<{ match_id: string; seed_commit: string }>("/matches/bot", {
+        method: "POST",
+        body: { level, variant, length },
+      }),
+    active: (o?: Opts) => apiRequest<{ match_id: string | null }>("/me/matches/active", o),
   },
 
   me: {
@@ -288,3 +299,5 @@ export const api = {
       apiRequest<Paginated<AdminAuditEntry>>(`/admin/audit?${new URLSearchParams(filter).toString()}`, o),
   },
 };
+
+export * from "./socket";
