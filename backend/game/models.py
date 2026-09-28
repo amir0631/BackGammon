@@ -23,7 +23,6 @@ class Match(models.Model):
     variant = models.CharField(max_length=20, choices=Variant.choices)
     length = models.PositiveSmallIntegerField()
     entry = models.BigIntegerField(default=0)
-    tier = models.ForeignKey("game.TableTier", null=True, blank=True, on_delete=models.PROTECT)
     player_a = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     player_b = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
@@ -65,24 +64,6 @@ class Match(models.Model):
         if user_id == self.player_b_id:
             return 1
         return None
-
-
-class TableTier(models.Model):
-    """A table entry fee with its allowed variants and lengths (CLAUDE.md §5.2, §13)."""
-
-    entry = models.BigIntegerField()
-    variants = models.JSONField(default=list)
-    lengths = models.JSONField(default=list)
-    name_i18n = models.JSONField(default=dict)
-    active = models.BooleanField(default=True)
-    sort = models.IntegerField(default=0)
-
-    class Meta:
-        db_table = "table_tier"
-        ordering: ClassVar[list[str]] = ["sort", "entry"]
-
-    def __str__(self) -> str:
-        return f"tier:{self.entry}"
 
 
 class Game(models.Model):
@@ -147,3 +128,23 @@ class MatchEvent(models.Model):
 
     def __str__(self) -> str:
         return f"event:{self.match_id}:{self.seq}:{self.type}"
+
+
+class ReplayView(models.Model):
+    """Every replay access (CLAUDE.md §15, §20)."""
+
+    class Role(models.TextChoices):
+        PLAYER = "player"
+        ADMIN = "admin"
+
+    match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name="replay_views")
+    viewer_id = models.BigIntegerField()
+    viewer_role = models.CharField(max_length=10, choices=Role.choices)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "replay_view"
+        indexes: ClassVar[list[models.Index]] = [models.Index(fields=["match", "viewed_at"])]
+
+    def __str__(self) -> str:
+        return f"replay_view:{self.match_id}:{self.viewer_role}:{self.viewer_id}"

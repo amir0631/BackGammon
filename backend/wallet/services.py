@@ -426,6 +426,64 @@ def approve_withdrawal(admin: Any, withdrawal_id: int, bank_reference: str) -> W
     return req
 
 
+# ---- Match entry, refund, and settlement (§7.3) ----
+
+
+def escrow_match_entries(match_id: object, user_ids: list[int], entry: int) -> None:
+    """Both entry fees into escrow:match:{id} in one transaction; WalletInsufficient names no one, so
+    callers check balances first to tell the players apart."""
+    if entry <= 0:
+        return
+    for uid in user_ids:
+        ledger.ensure_wallet(uid)
+    ledger.post(
+        TxType.MATCH_ENTRY,
+        [
+            *((user_account(uid), -entry) for uid in user_ids),
+            (ledger.escrow("match", match_id), entry * len(user_ids)),
+        ],
+        idempotency_key=f"match_entry:{match_id}",
+        ref_type="match",
+        ref_id=match_id,
+    )
+
+
+def refund_match(match_id: object, user_ids: list[int], entry: int) -> None:
+    """Aborted before the first roll: full refund, no rake."""
+    if entry <= 0:
+        return
+    ledger.post(
+        TxType.MATCH_REFUND,
+        [
+            (ledger.escrow("match", match_id), -entry * len(user_ids)),
+            *((user_account(uid), entry) for uid in user_ids),
+        ],
+        idempotency_key=f"match_refund:{match_id}",
+        ref_type="match",
+        ref_id=match_id,
+    )
+
+
+def settle_match(match_id: object, winner_id: int, entry: int, rake_pct: int) -> dict[str, int]:
+    """pot = entry * 2; rake = floor(pot * rake_pct / 100); the winner gets the rest."""
+    if entry <= 0:
+        return {"entry": 0, "pot": 0, "rake": 0, "payout": 0}
+    pot = entry * 2
+    rake = pot * rake_pct // 100
+    payout = pot - rake
+    entries = [(ledger.escrow("match", match_id), -pot), (user_account(winner_id), payout)]
+    if rake:
+        entries.append((PLATFORM_RAKE, rake))
+    ledger.post(
+        TxType.MATCH_PAYOUT,
+        entries,
+        idempotency_key=f"match_settle:{match_id}",
+        ref_type="match",
+        ref_id=match_id,
+    )
+    return {"entry": entry, "pot": pot, "rake": rake, "payout": payout}
+
+
 # ---- Admin adjustment (§13 Users: manual balance adjustment with reason) ----
 
 

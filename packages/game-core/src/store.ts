@@ -180,9 +180,10 @@ function reduce(v: MatchView, env: ServerEnvelope): MatchView {
       const p = env.payload;
       return {
         ...v,
-        status: "finished",
+        // No winner: ended before the first roll, entries refunded.
+        status: p.winner === null ? "aborted" : "finished",
         phase: "match_over",
-        winner: p.winner as Player,
+        winner: p.winner as Player | null,
         score: [p.score[0] ?? 0, p.score[1] ?? 0],
         endReason: p.reason,
         seed: p.seed,

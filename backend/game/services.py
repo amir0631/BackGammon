@@ -54,7 +54,6 @@ def create_match(
     length: int,
     entry: int = 0,
     bot_level: str = "",
-    tier_id: int | None = None,
     extra_rules: dict[str, Any] | None = None,
 ) -> Match:
     """Creates the match row and its live state; the first game starts at once. Entry fees are moved to
@@ -67,7 +66,6 @@ def create_match(
             variant=variant,
             length=length,
             entry=entry,
-            tier_id=tier_id,
             player_a=player_a,
             player_b=player_b,
             is_bot=player_b is None,

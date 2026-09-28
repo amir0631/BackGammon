@@ -52,6 +52,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
     async def connect(self) -> None:
         self.user: User | None = None
         self.match_id: str | None = None
+        self.queued = False
         self._window = (0.0, 0)
         await self.accept()
         self._auth_deadline = asyncio.get_running_loop().call_later(AUTH_TIMEOUT, self._close_if_anonymous)
@@ -65,6 +66,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
 
         self._auth_deadline.cancel()
         await spectate.leave_all(self)
+        if self.queued and self.user is not None:
+            from matchmaking import service as mm
+
+            await database_sync_to_async(mm.leave)(self.user)  # a closed app never gets paired
         if self.user is not None:
             await self.channel_layer.group_discard(f"user.{self.user.id}", self.channel_name)
         if self.match_id is not None and self.user is not None:
@@ -153,8 +158,24 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
                 await self.send_json(env)
 
     async def _queue(self, type_: str, payload: dict[str, Any]) -> None:
-        # Matchmaking arrives in §17 step 8.
-        await self.send_json(_error("QUEUE_UNAVAILABLE", "errors.queue.unavailable"))
+        from config.errors import AppError
+        from matchmaking import service as mm
+
+        assert self.user is not None
+        try:
+            if type_ == "queue.join":
+                status = await database_sync_to_async(mm.join)(
+                    self.user, payload["tier_id"], payload["variant"], payload["length"]
+                )
+                self.queued = True
+            else:
+                status = await database_sync_to_async(mm.leave)(self.user)
+                self.queued = False
+        except AppError as exc:
+            await self.send_json(_error(exc.code, exc.message_key, exc.details))
+            return
+        if status is not None:
+            await self.send_json({"type": "queue.status", "match_id": None, "seq": 0, "payload": status})
 
     async def _spectate(self, type_: str, match_id: str | None, payload: dict[str, Any]) -> None:
         from realtime import spectate

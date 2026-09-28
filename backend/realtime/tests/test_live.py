@@ -158,13 +158,29 @@ class TestDisconnect:
         advance(clock, 120)
         assert "match.ended" not in types(published)
 
-    def test_never_connecting_forfeits(self, clock, published, django_capture_on_commit_callbacks):
+    def test_never_connecting_aborts_with_refund(self, clock, published, django_capture_on_commit_callbacks):
+        """No opening roll until both players are in; a no-show ends the match before the first roll,
+        so both entries come back and nothing is rated (§7.3)."""
+        from wallet import services as wallet_services
+        from wallet.models import Wallet
+        from wallet.tests.helpers import fund
+
         a, b = make_user(), make_user()
+        fund(a, 100)
+        fund(b, 100)
         with django_capture_on_commit_callbacks(execute=True):
-            mid = str(create_match(a, b, "standard_nocube", 1).id)
+            match = create_match(a, b, "standard_nocube", 1, entry=50)
+            wallet_services.escrow_match_entries(match.id, [a.id, b.id], 50)
+        mid = str(match.id)
         live.connect(mid, a.id, "chan-a")
-        advance(clock, 91)
-        assert last(published, "match.ended")["payload"]["winner"] == 0
+        advance(clock, 30)
+        assert "turn.rolled" not in types(published)
+        advance(clock, 61)
+        ended = last(published, "match.ended")["payload"]
+        assert ended["winner"] is None and ended["reason"] == "aborted:forfeit:disconnect"
+        assert ended["settlement"] == {"refund": 50} and ended["elo"] is None
+        assert Match.objects.get(pk=mid).status == Match.Status.ABORTED
+        assert [Wallet.objects.get(user=u).balance for u in (a, b)] == [100, 100]
 
     def test_sync_returns_missed_events(self, game, clock, published):
         mid, _a, _b = game

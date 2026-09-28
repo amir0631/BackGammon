@@ -5,6 +5,7 @@ invalidated on write, so admin changes take effect without a redeploy. Writes re
 new value so the admin API can record them in `admin_audit` (CLAUDE.md §2 rule 12).
 """
 
+import itertools
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -299,6 +300,15 @@ _DEFS: list[SettingDef] = [
     ),
     SettingDef("xp.per_win", "int", 15, _d("امتیاز تجربه برد", "XP per win"), 0, None),
     SettingDef(
+        "xp.level_thresholds",
+        "int_list",
+        [100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200, 4000, 5000, 6200, 7600, 9200, 11000],
+        _d("تجربهٔ لازم برای سطح ۲ به بعد", "XP to reach level 2, 3, ..."),
+        1,
+        None,
+        check=lambda v: all(a < b for a, b in itertools.pairwise(v)),
+    ),
+    SettingDef(
         "elo.k_new",
         "int",
         40,
@@ -510,6 +520,7 @@ _UNITS: dict[str, str] = {
     "username.change_cost": "coins",
     "xp.per_match": "xp",
     "xp.per_win": "xp",
+    "xp.level_thresholds": "xp",
 }
 _SUFFIX_UNITS = [
     ("_seconds", "seconds"),

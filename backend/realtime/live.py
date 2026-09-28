@@ -38,6 +38,7 @@ OPENING_DELAY = 1.5
 NEXT_GAME_DELAY = 3.0
 EVENT_LOG_KEEP = 2000
 TIMERS_KEY = "rt:timers"
+LIVE_SET = "rt:live"  # active human-vs-human matches, for the live list (§20.4)
 ENDED_TTL = 3600
 
 # Game actions must be sent against the latest state the client applied (§10.3 "seq").
@@ -72,7 +73,9 @@ class _Stale(Exception):
 _client: redis.Redis | None = None
 
 
-def r() -> "redis.Redis":
+def r() -> Any:
+    """The shared sync Redis client. Typed as Any: redis-py's stubs give every sync call an
+    `Awaitable | T` return type, which would need a cast at each use."""
     global _client
     if _client is None:
         _client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
@@ -371,10 +374,12 @@ def create(match: Match, players: list[dict[str, Any]], user_ids: list[int | Non
     with transaction.atomic():
         _new_game_row(live)
         emit(live, "game.started", _game_started_payload(live))
-        _schedule(live, "auto", OPENING_DELAY)
-        live.auto = {"kind": "opening"}
+        # The opening roll waits until every human player has joined (see connect), so a match whose
+        # player never comes ends before the first roll and is refunded (§7.3).
         _commit(live)
     _save(live)
+    if not any(p["is_bot"] for p in players):
+        r().sadd(LIVE_SET, live.match_id)
     _publish(live)
 
 
@@ -671,17 +676,18 @@ def match_over(live: Live) -> None:
     for kind in ("auto", "bot", "grace0", "grace1"):
         _cancel(live, kind)
     live.auto = None
-    live.status = "finished"
     e = live.engine
-    assert e.winner is not None
     outcome = results.finish(live)
+    aborted = outcome.pop("aborted")
+    live.status = "aborted" if aborted else "finished"
+    r().srem(LIVE_SET, live.match_id)
     emit(
         live,
         "match.ended",
         {
-            "winner": e.winner,
+            "winner": None if aborted else e.winner,
             "score": list(e.score),
-            "reason": e.end_reason or "",
+            "reason": f"aborted:{e.end_reason or ''}" if aborted else e.end_reason or "",
             "seed": seeds.decrypt(live.seed_encrypted).hex(),
             **outcome,
         },
@@ -772,6 +778,9 @@ def connect(match_id: str, user_id: int, channel: str) -> int:
             if live.away[side]:
                 emit(live, "opponent.back", {"player": side}, side)
         live.away[side] = False
+        everyone_here = all(live.channels[i] or live.is_bot(i) for i in (0, 1))
+        if live.status == "active" and live.roll_n == 0 and live.auto is None and everyone_here:
+            _schedule_auto(live, "opening", OPENING_DELAY)
         return side
 
 

@@ -54,7 +54,7 @@ export interface GameStartedOut {
 }
 
 export interface MatchEndedOut {
-  winner: number;
+  winner: number | null;
   score: number[];
   reason: string;
   seed: string;
@@ -140,6 +140,14 @@ export interface QueueJoinIn {
   length: number;
 }
 
+export interface QueueStatusOut {
+  state: "waiting" | "left" | "removed";
+  tier_id: number;
+  variant: string;
+  length: number;
+  reason: string | null;
+}
+
 export interface ReactRecvOut {
   key: string;
   kind: "emoji" | "phrase";
@@ -217,6 +225,7 @@ export interface ServerMessages {
   "auth.ok": AuthOkOut;
   "error": ErrorOut;
   "match.found": MatchFoundOut;
+  "queue.status": QueueStatusOut;
   "match.state": MatchStateOut;
   "turn.rolled": TurnRolledOut;
   "turn.moved": TurnMovedOut;

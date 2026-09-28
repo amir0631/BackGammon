@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 
@@ -31,3 +33,44 @@ def sms_on():
 
     with mock.patch("accounts.sms.enabled", return_value=True):
         yield
+
+
+@pytest.fixture(autouse=True)
+def _redis(settings):
+    """Tests share Redis DB 15, emptied around each test (live matches, queues, leaderboards)."""
+    from realtime import live
+
+    settings.REDIS_URL = "redis://localhost:6379/15"
+    live._client = None
+    live.r().flushdb()
+    yield
+    live.r().flushdb()
+    live._client = None
+
+
+class _Clock:
+    def __init__(self) -> None:
+        self.t = 1_900_000_000.0
+
+    def __call__(self) -> float:
+        return self.t
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    """Controls the live runtime's clock: set `clock.t` and fire due timers."""
+    from realtime import live
+
+    c = _Clock()
+    monkeypatch.setattr(live, "now", c)
+    return c
+
+
+@pytest.fixture
+def published(monkeypatch):
+    """Captures what the live runtime publishes to match groups."""
+    from realtime import live
+
+    sent: list[dict[str, Any]] = []
+    monkeypatch.setattr(live, "publisher", lambda match_id, envs, spect: sent.extend(envs))
+    return sent

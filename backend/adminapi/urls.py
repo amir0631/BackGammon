@@ -18,6 +18,7 @@ urlpatterns = [
     path("users/<int:user_id>/password", wallet_views.UserPasswordResetView.as_view()),
     path("users/<int:user_id>/wallet/topup", wallet_views.TopupView.as_view()),
     path("users/<int:user_id>/wallet/adjust", wallet_views.AdjustView.as_view()),
+    path("matches/<str:match_id>/replay", wallet_views.MatchReplayAdminView.as_view()),
     path("withdrawals", wallet_views.WithdrawalsAdminView.as_view()),
     path("withdrawals/<int:withdrawal_id>", wallet_views.WithdrawalDetailAdminView.as_view()),
     path("withdrawals/<int:withdrawal_id>/claim", wallet_views.WithdrawalClaimView.as_view()),

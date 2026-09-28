@@ -537,3 +537,17 @@ class WithdrawalRejectView(AdminView):
                 s.validated_data["reason"],
             )
         return Response(_admin_withdrawal(req, _admin(request)))
+
+
+class MatchReplayAdminView(AdminView):
+    """Admins can open any replay (§2 rule 13, §20.3); the access is logged."""
+
+    def get(self, request: Request, match_id: str) -> Response:
+        from game.models import ReplayView
+        from game.views import _match_or_404, replay_payload
+
+        match = _match_or_404(match_id)
+        ReplayView.objects.create(
+            match=match, viewer_id=_admin(request).id, viewer_role=ReplayView.Role.ADMIN
+        )
+        return Response(replay_payload(match))

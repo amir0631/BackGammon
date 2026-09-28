@@ -137,6 +137,9 @@ Board rules are standard backgammon for all variants: 24 points, 15 checkers eac
 
 - Match = first to N points. Allowed N: 1, 3, 5, 7, 11. Admin chooses the allowed subset per table tier and tournament.
 - Entry fee is paid once per match, not per game.
+- Table tiers are the entries in `table.tiers`; every tier offers every variant and the lengths in `game.allowed_lengths`. A queue's `tier_id` is the tier's entry fee.
+- The opening roll waits until both players have joined; a match that ends before its first roll (a player never came) is aborted: entries refunded, unrated, `match.ended` with no winner.
+- XP is granted for human-vs-human matches only, so bot matches cannot be farmed for levels.
 
 ### 5.3 Turn flow
 
@@ -377,6 +380,7 @@ Envelope (both directions):
 | S→C | `turn.passed` / `turn.timeout` | player (timeout: count and limit) |
 | S→C | `cube.update` | `offer`, `take`, or `drop`, cube value and owner |
 | S→C | `game.started` / `game.ended` | game number, Crawford flag, score / result and score |
+| S→C | `queue.status` | `waiting`, `left`, or `removed` (with reason), tier, variant, length |
 
 Payload types are generated from the pydantic models in `backend/realtime/protocol.py` into `packages/protocol/src/ws.ts` (`manage.py protocol_ts`); a contract test fails when they differ. An unanswered double is taken on timeout.
 

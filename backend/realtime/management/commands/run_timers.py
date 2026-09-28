@@ -15,7 +15,10 @@ class Command(BaseCommand):
     help = "Fire due match timers (turn deadlines, reconnect grace, automatic moves, bot turns)."
 
     def handle(self, *args: Any, **options: Any) -> None:
+        from matchmaking import service as matchmaking
+
         logger.info("timer worker started")
+        loops = 0
         while True:
             close_old_connections()
             for member in live.due_timers():
@@ -23,4 +26,10 @@ class Command(BaseCommand):
                     live.fire(member)
                 except Exception:
                     logger.exception("timer failed: %s", member)
+            if loops % 4 == 0:  # about once a second: widening ELO windows (§8)
+                try:
+                    matchmaking.tick()
+                except Exception:
+                    logger.exception("matchmaking tick failed")
+            loops += 1
             time.sleep(POLL_SECONDS)

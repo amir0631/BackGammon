@@ -32,7 +32,7 @@ class AuthIn(_Model):
 
 
 class QueueJoinIn(_Model):
-    tier_id: int
+    tier_id: int  # the tier's entry fee (GET /api/v1/tiers)
     variant: Literal["standard_cube", "standard_nocube", "traditional"]
     length: int
 
@@ -232,13 +232,21 @@ class OpponentBackOut(_Model):
 
 
 class MatchEndedOut(_Model):
-    winner: int
+    winner: int | None  # None when aborted before the first roll (entries refunded)
     score: list[int]
     reason: str
     seed: str
     elo: dict[str, int] | None
     xp: dict[str, int] | None
     settlement: dict[str, int] | None
+
+
+class QueueStatusOut(_Model):
+    state: Literal["waiting", "left", "removed"]
+    tier_id: int
+    variant: str
+    length: int
+    reason: str | None
 
 
 class PoolUpdateOut(_Model):
@@ -259,6 +267,7 @@ SERVER_MESSAGES: dict[str, type[_Model]] = {
     "auth.ok": AuthOkOut,
     "error": ErrorOut,
     "match.found": MatchFoundOut,
+    "queue.status": QueueStatusOut,
     "match.state": MatchStateOut,
     "turn.rolled": TurnRolledOut,
     "turn.moved": TurnMovedOut,
