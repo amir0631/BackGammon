@@ -13,6 +13,7 @@ import type {
   AdminPool,
   AdminRole,
   AdminTextOverride,
+  AdminTournamentCreate,
   Announcement,
   DiceTestResult,
   FinancialReport,
@@ -24,6 +25,7 @@ import type {
   FraudDecision,
   FraudFlag,
   FraudFlagFilter,
+  MatchAnalysis,
   AdminMe,
   AdminSetting,
   ApiError,
@@ -245,6 +247,17 @@ export function query(params: object): string {
   return entries.length ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()}` : "";
 }
 
+/** The audit log filters (§13 Access); dates are ISO Tehran days. */
+export interface AuditFilter {
+  target_type?: string;
+  target_id?: string;
+  admin?: string;
+  action?: string;
+  from?: string;
+  to?: string;
+  cursor?: string;
+}
+
 /** List, create, read, update, and delete for an admin catalog (writes are audited server-side). */
 function crud<T extends { id: number }>(base: string) {
   return {
@@ -461,8 +474,8 @@ export const api = {
       apiRequest<AdminWithdrawal>(`/admin/withdrawals/${id}/reject`, { method: "POST", body: { reason } }),
     smsPattern: (code: string, o?: Opts) =>
       apiRequest<{ code: string; status: string }>(`/admin/sms/patterns/${encodeURIComponent(code)}`, o),
-    audit: (filter: { target_type?: string; target_id?: string } = {}, o?: Opts) =>
-      apiRequest<Paginated<AdminAuditEntry>>(`/admin/audit?${new URLSearchParams(filter).toString()}`, o),
+    audit: (filter: AuditFilter = {}, o?: Opts) => apiRequest<Paginated<AdminAuditEntry>>(`/admin/audit${query(filter)}`, o),
+    auditCsvUrl: (filter: AuditFilter = {}) => `${API_PREFIX}/admin/audit${query({ ...filter, cursor: undefined, export: "csv" })}`,
     fraudFlags: (filter: FraudFlagFilter = {}, o?: Opts) =>
       apiRequest<Paginated<FraudFlag>>(`/admin/fraud/flags${query(filter)}`, o),
     decideFlag: (id: number, decision: FraudDecision) =>
@@ -494,6 +507,17 @@ export const api = {
       apiRequest<Paginated<AdminPool>>(`/admin/predictions/pools${query({ status })}`, o),
     decidePool: (id: number, approve: boolean, reason: string) =>
       apiRequest<AdminPool>(`/admin/predictions/pools/${id}/decide`, { method: "POST", body: { approve, reason } }),
+
+    tournaments: (o?: Opts) => apiRequest<Paginated<TournamentInfo>>("/admin/tournaments", o),
+    createTournament: (t: AdminTournamentCreate) =>
+      apiRequest<TournamentInfo>("/admin/tournaments", { method: "POST", body: t }),
+    cancelTournament: (id: number, reason: string) =>
+      apiRequest<TournamentInfo>(`/admin/tournaments/${id}/cancel`, { method: "POST", body: { reason } }),
+    bracket: (id: number, o?: Opts) =>
+      apiRequest<{ tournament: TournamentInfo; slots: BracketSlotInfo[] }>(`/admin/tournaments/${id}/bracket`, o),
+    replay: (matchId: string, o?: Opts) => apiRequest<Replay>(`/admin/matches/${encodeURIComponent(matchId)}/replay`, o),
+    matchAnalysis: (matchId: string, o?: Opts) =>
+      apiRequest<MatchAnalysis>(`/admin/matches/${encodeURIComponent(matchId)}/analysis`, o),
 
     admins: (o?: Opts) => apiRequest<Paginated<AdminAccount>>("/admin/admins", o),
     createAdmin: (username: string, role: AdminRole) =>

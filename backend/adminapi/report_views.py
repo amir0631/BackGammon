@@ -185,3 +185,51 @@ class AdminWsTokenView(AdminView):
         session = request.auth
         assert isinstance(session, AdminSession)
         return Response({"token": ws_token(session), "expires_in": ADMIN_WS_TTL_SECONDS})
+
+
+class MatchAnalysisView(AdminView):
+    """§20.3: per move, whether the player chose what the strong bot would (anti-fraud review)."""
+
+    def get(self, request: Request, match_id: str) -> Response:
+        from antifraud.rules import _bot_choice
+        from game.engine.board import Position, initial_position
+        from game.engine.moves import legal_plays, validate_play
+        from game.views import _match_or_404
+
+        match = _match_or_404(match_id)
+        rows = []
+        for game in match.games.order_by("number"):
+            position = initial_position()
+            for mv in game.moves.order_by("seq"):
+                if mv.moves_json is not None and len(mv.dice) == 2:
+                    dice = (mv.dice[0], mv.dice[1])
+                    plays = legal_plays(position, mv.player, dice)
+                    row: dict[str, Any] = {
+                        "game": game.number,
+                        "seq": mv.seq,
+                        "player": mv.player,
+                        "dice": list(dice),
+                        "played": mv.moves_json,
+                        "choices": len(plays),
+                        "best": None,
+                        "agrees": None,
+                        "ts": mv.ts.isoformat(),
+                    }
+                    if len(plays) > 1 and mv.moves_json:
+                        best = _bot_choice(position, mv.player, dice)
+                        if best is not None:
+                            played = validate_play(position, mv.player, dice, mv.moves_json).position
+                            row["best"] = best
+                            row["agrees"] = validate_play(position, mv.player, dice, best).position == played
+                    rows.append(row)
+                if mv.position_after:
+                    position = Position.decode(mv.position_after)
+        judged = [r for r in rows if r["agrees"] is not None]
+        summary = {
+            str(side): {
+                "moves": sum(1 for r in judged if r["player"] == side),
+                "agree": sum(1 for r in judged if r["player"] == side and r["agrees"]),
+            }
+            for side in (0, 1)
+        }
+        return Response({"match_id": str(match.id), "moves": rows, "summary": summary})

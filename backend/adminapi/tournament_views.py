@@ -84,3 +84,13 @@ class AdminTournamentCancelView(AdminView):
                 s.validated_data["reason"],
             )
         return Response(services.tournament_payload(t))
+
+
+class AdminBracketView(AdminView):
+    """The live bracket for the admin panel (§13 Tournaments), whoever is signed in."""
+
+    def get(self, request: Request, tournament_id: int) -> Response:
+        t = Tournament.objects.filter(pk=tournament_id).first()
+        if t is None:
+            raise NotFound()
+        return Response({"tournament": services.tournament_payload(t), "slots": services.bracket(t)})

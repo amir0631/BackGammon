@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { HOME } from "@/lib/nav";
 
-// Settings is the only section in this step; later the Dashboard (CLAUDE.md §13).
+// Signed-in admins land on the dashboard (CLAUDE.md §13).
 export default function AdminHome() {
-  redirect("/settings");
+  redirect(HOME);
 }

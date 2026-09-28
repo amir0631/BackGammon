@@ -302,3 +302,46 @@ class TestAdminSections:
         assert [r["id"] for r in c.get(f"/api/v1/admin/matches?q={m.id}").json()["results"]] == [str(m.id)]
         assert len(c.get("/api/v1/admin/matches").json()["results"]) == 2
         assert c.get("/api/v1/admin/matches/live").status_code == 200
+
+
+@pytest.mark.django_db
+def test_admin_match_analysis_compares_moves_with_the_bot(
+    clock, published, django_capture_on_commit_callbacks
+):
+    from game.services import create_match
+    from game.tests.test_match_api import play_to_end
+    from realtime import live
+
+    a, b = make_user(), make_user()
+    with django_capture_on_commit_callbacks(execute=True):
+        m = create_match(a, b, "standard_nocube", 1)
+    mid = str(m.id)
+    live.connect(mid, a.id, "ca")
+    live.connect(mid, b.id, "cb")
+    with django_capture_on_commit_callbacks(execute=True):
+        play_to_end(mid, [a, b], clock)
+    make_admin()
+    body = admin_client().get(f"/api/v1/admin/matches/{mid}/analysis").json()
+    judged = [r for r in body["moves"] if r["agrees"] is not None]
+    assert body["moves"] and judged
+    assert body["summary"]["0"]["moves"] + body["summary"]["1"]["moves"] == len(judged)
+    assert all(r["choices"] > 1 for r in judged)
+
+
+@pytest.mark.django_db
+def test_audit_log_filters_pages_and_exports():
+    make_admin()
+    c = admin_client()
+    for i in range(3):
+        c.post(
+            "/api/v1/admin/content/texts",
+            {"key": f"a.k{i}", "text_i18n": {"fa": "x", "en": "y"}},
+            format="json",
+        )
+    c.post("/api/v1/admin/admins", {"username": "helper2", "role": "support"}, format="json")
+    rows = c.get("/api/v1/admin/audit?action=text_override").json()["results"]
+    assert [r["action"] for r in rows] == ["text_override.create"] * 3
+    assert c.get("/api/v1/admin/audit?admin=nobody").json()["results"] == []
+    assert len(c.get("/api/v1/admin/audit?admin=boss").json()["results"]) == 4
+    csv = c.get("/api/v1/admin/audit?export=csv")
+    assert csv["Content-Type"].startswith("text/csv") and "admin.create" in csv.content.decode()

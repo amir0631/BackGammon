@@ -12,6 +12,7 @@
   "dependencies": {
     "@bg/api-client": "workspace:*",
     "@bg/design-tokens": "workspace:*",
+    "@bg/game-core": "workspace:*",
     "@bg/i18n": "workspace:*",
     "@bg/protocol": "workspace:*",
     "@emotion/cache": "^11.14.0",

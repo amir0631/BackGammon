@@ -474,6 +474,23 @@ export interface AdminMatchSearchRow {
   ended_at: string | null;
 }
 
+/** §20.3: each move against the strong bot's choice (null where there was only one choice). */
+export interface MatchAnalysis {
+  match_id: string;
+  moves: {
+    game: number;
+    seq: number;
+    player: 0 | 1;
+    dice: number[];
+    played: number[][];
+    choices: number;
+    best: number[][] | null;
+    agrees: boolean | null;
+    ts: string;
+  }[];
+  summary: Record<"0" | "1", { moves: number; agree: number }>;
+}
+
 // ---- Admin: shop, content, predictions, access (CLAUDE.md §13) ----
 
 /** Translatable admin content: both languages are required. */
@@ -823,6 +840,19 @@ export interface TournamentInfo {
   prizes: number[];
   joined: boolean;
   cancel_reason: string | null;
+}
+
+export interface AdminTournamentCreate {
+  name: Bilingual;
+  variant: Variant;
+  length: number;
+  entry: number;
+  /** A power of two: single elimination. */
+  capacity: number;
+  starts_at: string;
+  /** Percent per place; defaults to tournament.default_prize_split. */
+  prize_split?: number[];
+  prize_items?: (number | null)[];
 }
 
 export interface BracketSlotInfo {
