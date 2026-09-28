@@ -7,5 +7,12 @@ FREE_PHRASES = ("hello", "good_luck", "nice_move", "well_played", "thanks", "oop
 RATE_SECONDS = 3.0  # §10.3: 1 per 3 s
 
 
-def allowed(kind: str, key: str) -> bool:
-    return key in (FREE_EMOJIS if kind == "emoji" else FREE_PHRASES)
+def allowed(kind: str, key: str, user_id: int | None = None) -> bool:
+    """A player may send the keys of the packs they own (§17 step 10); spectators the free emojis."""
+    if key in (FREE_EMOJIS if kind == "emoji" else FREE_PHRASES):
+        return True  # the free default packs, open to everyone
+    if user_id is None:
+        return False
+    from shop.services import reaction_keys
+
+    return key in reaction_keys(user_id)[kind]

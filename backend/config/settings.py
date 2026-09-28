@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "matchmaking",
     "antifraud",
     "payments",
+    "shop",
 ]
 
 MIDDLEWARE = [

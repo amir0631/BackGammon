@@ -125,6 +125,8 @@ export interface PlayerInfo {
   level: number;
   is_bot: boolean;
   bot_level: string | null;
+  board_theme: string;
+  checker_theme: string;
   connected: boolean;
 }
 

@@ -69,7 +69,7 @@ def test_get_returns_default_without_a_row():
     assert registry.get("table.rake_pct") == 10
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_set_value_persists_invalidates_cache_and_returns_before_after():
     assert registry.get("table.rake_pct") == 10  # warms the cache
     before, after = registry.set_value("table.rake_pct", 8)
@@ -78,7 +78,7 @@ def test_set_value_persists_invalidates_cache_and_returns_before_after():
     assert registry.get("table.rake_pct") == 8
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_reset_restores_default():
     registry.set_value("bonus.signup_coins", 50)
     assert registry.reset("bonus.signup_coins") == (50, 100)

@@ -20,6 +20,9 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   AdminWithdrawal,
+  ItemKind,
+  ShopItem,
+  PhraseText,
   CoinPackages,
   PaymentInfo,
   Leaderboard,
@@ -209,6 +212,16 @@ export const api = {
         idempotencyKey,
       }),
     payment: (id: string, o?: Opts) => apiRequest<PaymentInfo>(`/payments/${encodeURIComponent(id)}`, o),
+    items: (kind?: ItemKind, o?: Opts) => apiRequest<Paginated<ShopItem>>(`/shop/items${query({ kind })}`, o),
+    buy: (id: number, idempotencyKey: string) =>
+      apiRequest<ShopItem>(`/shop/items/${id}/buy`, { method: "POST", idempotencyKey }),
+    equip: (id: number) => apiRequest<ShopItem>(`/me/items/${id}/equip`, { method: "POST" }),
+    themes: (o?: Opts) =>
+      apiRequest<Paginated<ShopItem> & { equipped: { board_theme: string; checker_theme: string } | null }>("/themes", o),
+    phrases: (o?: Opts) => apiRequest<Paginated<PhraseText>>("/phrases", o),
+    /** Costs `username.change_cost` coins, once per cooldown (§12.1). */
+    changeUsername: (username: string, idempotencyKey: string) =>
+      apiRequest<Me>("/me/username", { method: "POST", body: { username }, idempotencyKey }),
   },
 
   leaderboard: (scope: "all" | "weekly" | "monthly", o?: Opts) =>

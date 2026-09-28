@@ -15,8 +15,8 @@ function state(overrides: Partial<MatchStateOut> = {}): { type: "match.state"; m
       status: "active",
       you: 0,
       players: [
-        { username: "a", avatar: "x", elo: 1500, level: 1, is_bot: false, bot_level: null, connected: true },
-        { username: "b", avatar: "y", elo: 1500, level: 1, is_bot: false, bot_level: null, connected: true },
+        { username: "a", avatar: "x", elo: 1500, level: 1, is_bot: false, bot_level: null, board_theme: "walnut", checker_theme: "classic", connected: true },
+        { username: "b", avatar: "y", elo: 1500, level: 1, is_bot: false, bot_level: null, board_theme: "walnut", checker_theme: "classic", connected: true },
       ],
       variant: "standard_cube",
       length: 5,

@@ -465,7 +465,8 @@ def _dispatch(live: Live, side: int, type_: str, payload: dict[str, Any]) -> Non
         body = protocol.ReactSendIn.model_validate(payload)
         kind, key = ("emoji", body.emoji_key) if body.emoji_key else ("phrase", body.phrase_key)
         assert key is not None
-        if not reactions.allowed(kind, key):
+        user_id = live.user_ids[side]
+        if not reactions.allowed(kind, key, user_id):
             raise ReactionRejected(details={"reason": "unknown"})
         if now() - live.last_react[side] < reactions.RATE_SECONDS:
             raise ReactionRejected(details={"reason": "rate"})

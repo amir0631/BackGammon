@@ -107,6 +107,8 @@ class PlayerInfo(_Model):
     level: int
     is_bot: bool
     bot_level: str | None
+    board_theme: str
+    checker_theme: str
     connected: bool
 
 

@@ -79,7 +79,7 @@ async def until(comm, type_, limit=20):
     raise AssertionError(f"no {type_}")
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_unauthenticated_socket_is_closed(monkeypatch):
     monkeypatch.setattr(consumers, "AUTH_TIMEOUT", 0.1)
 
@@ -91,7 +91,7 @@ def test_unauthenticated_socket_is_closed(monkeypatch):
     asyncio.run(run())
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_bad_token_is_closed():
     async def run():
         comm = await connect()
@@ -102,7 +102,7 @@ def test_bad_token_is_closed():
     asyncio.run(run())
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_players_play_and_spectator_watches(clock):
     a, b, watcher = make_user("Wsa_1"), make_user("Wsb_1"), make_user("Wsw_1")
     tokens = [ws_token(a), ws_token(b), ws_token(watcher)]
@@ -160,7 +160,7 @@ def test_players_play_and_spectator_watches(clock):
     asyncio.run(run())
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_rate_limit_closes_flooding_socket():
     user = make_user()
     token = ws_token(user)

@@ -430,3 +430,27 @@ export interface Leaderboard {
   results: LeaderboardRow[];
   me: { rank: number; value: number } | null;
 }
+
+// ---- Shop items and content (CLAUDE.md §10.2 Shop, Content, §11.2) ----
+
+export type ItemKind = "board_theme" | "checker_theme" | "avatar" | "emoji_pack" | "phrase_pack";
+
+export interface ShopItem {
+  id: number;
+  kind: ItemKind;
+  key: string;
+  name: Record<Lang, string>;
+  unlock: "free" | "level_locked" | "purchasable";
+  price: number;
+  unlock_level: number | null;
+  owned: boolean;
+  locked: boolean;
+  equipped: boolean;
+  /** Themes: { asset }; packs: { keys }. */
+  data: { asset?: string; keys?: string[] };
+}
+
+export interface PhraseText {
+  key: string;
+  text: Record<Lang, string>;
+}

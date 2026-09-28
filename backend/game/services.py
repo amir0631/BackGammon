@@ -26,6 +26,9 @@ def rules_snapshot() -> dict[str, Any]:
 
 
 def player_info(user: User) -> dict[str, Any]:
+    from shop.services import equipped
+
+    themes = equipped(user)
     return {
         "username": user.username or "",
         "avatar": user.avatar,
@@ -33,6 +36,9 @@ def player_info(user: User) -> dict[str, Any]:
         "level": user.level,
         "is_bot": False,
         "bot_level": None,
+        # Each player sees their own board; the opponent's checkers use the opponent's theme (§11.1).
+        "board_theme": themes["board_theme"],
+        "checker_theme": themes["checker_theme"],
     }
 
 
@@ -44,6 +50,8 @@ def bot_info(level: str) -> dict[str, Any]:
         "level": 0,
         "is_bot": True,
         "bot_level": level,
+        "board_theme": "",
+        "checker_theme": "",
     }
 
 

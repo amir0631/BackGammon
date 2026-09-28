@@ -47,7 +47,7 @@ class TestPost:
         assert Wallet.objects.get(user=a).balance == 10
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 class TestDatabaseGuards:
     def test_entries_cannot_be_updated_or_deleted(self):
         a = make_user()
@@ -125,7 +125,7 @@ def test_random_operations_keep_invariants(ops):
 # ---- Concurrency (CLAUDE.md §16): 50 parallel settlements, no double spend, no deadlock ----
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_parallel_transfers_do_not_double_spend_or_deadlock():
     users = [make_user() for _ in range(5)]
     for u in users:
@@ -157,7 +157,7 @@ def test_parallel_transfers_do_not_double_spend_or_deadlock():
     assert invariants.check() == []
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_opposite_transfers_through_the_service_do_not_deadlock():
     """A→B and B→A at once: the service must lock wallets in the ledger's order (§7.1)."""
     a, b = make_user(), make_user()
@@ -187,7 +187,7 @@ def test_opposite_transfers_through_the_service_do_not_deadlock():
     assert invariants.check() == []
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_concurrent_retries_of_one_transfer_all_get_the_original_result():
     a, b = make_user(), make_user()
     fund(a, 10_000)
