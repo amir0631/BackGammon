@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "shop",
     "referrals",
     "predictions",
+    "tournaments",
 ]
 
 MIDDLEWARE = [

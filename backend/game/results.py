@@ -24,7 +24,7 @@ def finish(live: "Live") -> dict[str, Any]:
     humans = [uid for uid in live.user_ids if uid is not None]
     now = timezone.now()
 
-    if live.roll_n == 0:
+    if live.roll_n == 0 and match.tournament_id is None:
         # Ended before the first roll (a player never came): full refund, unrated (§7.3).
         wallet.refund_match(match.id, humans, match.entry)
         predictions.settle(match, None)
@@ -57,6 +57,10 @@ def finish(live: "Live") -> dict[str, Any]:
         )
         referrals.pay_commissions(match, [a, b], settlement["rake"])  # from the rake (§7.4)
     predictions.settle(match, e.winner)
+    if match.tournament_id is not None:
+        from tournaments.services import on_match_end
+
+        on_match_end(match, e.winner)  # a no-show forfeits: the bracket always gets a winner
     elo = ranking.rate_match(match, a, b, e.winner)
     per_match, per_win = registry.get("xp.per_match"), registry.get("xp.per_win")
     xp = {

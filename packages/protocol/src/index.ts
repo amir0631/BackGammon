@@ -500,3 +500,34 @@ export interface PredictionRow {
   pool_status: "open" | "closed" | "held" | "settled" | "refunded";
   created_at: string;
 }
+
+// ---- Tournaments (CLAUDE.md §7.6) ----
+
+export interface TournamentInfo {
+  id: number;
+  name: Record<Lang, string>;
+  variant: string;
+  length: number;
+  entry: number;
+  capacity: number;
+  entries: number;
+  starts_at: string;
+  status: "scheduled" | "running" | "finished" | "cancelled";
+  round: number;
+  rounds: number;
+  prize_split: number[];
+  /** Coins per place when full (it only starts full). */
+  prizes: number[];
+  joined: boolean;
+  cancel_reason: string | null;
+}
+
+export interface BracketSlotInfo {
+  round: number;
+  position: number;
+  players: [string | null, string | null];
+  winner: string | null;
+  match_id: string | null;
+  score: [number, number] | null;
+  live: boolean;
+}

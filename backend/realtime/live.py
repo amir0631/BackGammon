@@ -122,6 +122,7 @@ class Live:
     last_dice: list[int] | None = None
     spectators: int = 0
     spectators_sent_at: float = 0.0
+    tournament_id: int | None = None
     # Not stored: work for the end of the current session.
     outbox: list[tuple[dict[str, Any], str, bool]] = field(default_factory=list)
     new_timers: list[tuple[str, float]] = field(default_factory=list)
@@ -129,7 +130,7 @@ class Live:
     _STORED = (
         "match_id players user_ids variant length entry seed_commit seed_encrypted settings seq roll_n "
         "status clock timeouts channels grace away tokens auto last_react game_pk move_seq last_dice "
-        "spectators spectators_sent_at"
+        "spectators spectators_sent_at tournament_id"
     ).split()
 
     def to_json(self) -> str:
@@ -363,6 +364,7 @@ def create(match: Match, players: list[dict[str, Any]], user_ids: list[int | Non
         seed_encrypted=match.seed_encrypted,
         engine=engine,
         settings=rules,
+        tournament_id=match.tournament_id,
     )
     _init_clock(live)
     grace = float(rules["reconnect_grace_seconds"])

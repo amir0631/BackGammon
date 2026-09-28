@@ -62,6 +62,7 @@ def create_match(
     length: int,
     entry: int = 0,
     bot_level: str = "",
+    tournament_id: int | None = None,
     extra_rules: dict[str, Any] | None = None,
 ) -> Match:
     """Creates the match row and its live state; the first game starts at once. Entry fees are moved to
@@ -81,6 +82,7 @@ def create_match(
             seed_commit=fair.commit(seed),
             seed_encrypted=seeds.encrypt(seed),
             rules=rules,
+            tournament_id=tournament_id,
             started_at=timezone.now(),
         )
         players = [player_info(player_a), player_info(player_b) if player_b else bot_info(bot_level)]

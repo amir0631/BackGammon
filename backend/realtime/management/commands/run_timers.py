@@ -31,5 +31,9 @@ class Command(BaseCommand):
                     matchmaking.tick()
                 except Exception:
                     logger.exception("matchmaking tick failed")
+            if loops % 20 == 0:  # every 5 s: tournaments whose start time came
+                from tournaments.services import start_due
+
+                start_due()
             loops += 1
             time.sleep(POLL_SECONDS)

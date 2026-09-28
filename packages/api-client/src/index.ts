@@ -20,6 +20,8 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   AdminWithdrawal,
+  TournamentInfo,
+  BracketSlotInfo,
   OpenPool,
   PredictionRow,
   ReferralSummary,
@@ -233,6 +235,17 @@ export const api = {
     place: (matchId: string, side: 0 | 1, amount: number, idempotencyKey: string) =>
       apiRequest<PredictionRow>("/predictions", { method: "POST", body: { match_id: matchId, side, amount }, idempotencyKey }),
     mine: (cursor?: string, o?: Opts) => apiRequest<Paginated<PredictionRow>>(`/me/predictions${query({ cursor })}`, o),
+  },
+
+  tournaments: {
+    list: (status?: TournamentInfo["status"], o?: Opts) =>
+      apiRequest<Paginated<TournamentInfo>>(`/tournaments${query({ status })}`, o),
+    get: (id: number, o?: Opts) => apiRequest<TournamentInfo>(`/tournaments/${id}`, o),
+    join: (id: number, idempotencyKey: string) =>
+      apiRequest<TournamentInfo>(`/tournaments/${id}/join`, { method: "POST", idempotencyKey }),
+    leave: (id: number) => apiRequest<TournamentInfo>(`/tournaments/${id}/join`, { method: "DELETE" }),
+    bracket: (id: number, o?: Opts) =>
+      apiRequest<{ tournament: TournamentInfo; slots: BracketSlotInfo[] }>(`/tournaments/${id}/bracket`, o),
   },
 
   referral: {

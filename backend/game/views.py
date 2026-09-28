@@ -244,7 +244,7 @@ class LiveMatchesView(APIView):
                     "spectators": state.spectators,
                     "pool": 0,
                     "avg_elo": sum(p["elo"] for p in state.players) // 2,
-                    "tournament_id": None,
+                    "tournament_id": state.tournament_id,
                 }
             )
         p = request.query_params
@@ -252,10 +252,13 @@ class LiveMatchesView(APIView):
             rows = [r for r in rows if r["entry"] == int(tier)]
         if variant := p.get("variant"):
             rows = [r for r in rows if r["variant"] == variant]
+        if (tournament := p.get("tournament") or "").isdigit():
+            rows = [r for r in rows if r["tournament_id"] == int(tournament)]
+        # Tournament matches first (§20.4: highlighted), then the chosen sort.
         sort = {"spectators": "spectators", "pool": "pool", "elo": "avg_elo"}.get(
             p.get("sort") or "", "spectators"
         )
-        rows.sort(key=lambda r: (-r[sort], r["match_id"]))
+        rows.sort(key=lambda r: (r["tournament_id"] is None, -r[sort], r["match_id"]))
         return Response({"results": rows[:100], "next": None})
 
 
