@@ -46,6 +46,7 @@ class Match(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     void_reason = models.TextField(blank=True, default="")
+    replay_purged_at = models.DateTimeField(null=True, blank=True)  # replay.retention_days (§20.1)
 
     class Meta:
         db_table = "match"

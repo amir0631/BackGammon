@@ -145,3 +145,37 @@ def test_k_drops_after_threshold_and_scales_with_length():
     )
     deltas = rate_match(m, a, b, 0)
     assert deltas["a"] == round(40 * 7**0.5 * 0.5)  # K 40 while new, times sqrt(7)
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_replay_retention_purges_events_but_never_under_review(finished):
+    from datetime import timedelta
+
+    from django.db import ProgrammingError, transaction
+    from django.utils import timezone
+
+    from antifraud.rules import flag
+    from game.models import MatchEvent
+    from game.tasks import purge_replays
+    from settingsapp import registry
+
+    mid, a, b = finished
+    assert purge_replays() == 0  # 0 days: kept forever
+    registry.set_value("replay.retention_days", 30)
+    old = timezone.now() - timedelta(days=31)
+    Match.objects.filter(pk=mid).update(ended_at=old)
+    other = Match.objects.create(
+        variant="standard_nocube", length=1, player_a=a, player_b=b, status="finished",
+        seed_commit="c", seed_encrypted="e", ended_at=old,
+    )  # fmt: skip
+    MatchEvent.objects.create(match=other, seq=1, type="game.started", actor="system", server_ts=old)
+    flag("chip_dumping", a, b, match=other)
+    assert purge_replays() == 1
+    assert not MatchEvent.objects.filter(match_id=mid).exists()
+    assert MatchEvent.objects.filter(match=other).count() == 1  # under an open flag: kept
+    res = client(a).get(f"/api/v1/matches/{mid}/replay")
+    assert res.status_code == 410 and res.json()["code"] == "REPLAY_PURGED"
+    assert client(make_user()).get(f"/api/v1/matches/{mid}/replay").status_code == 403
+    # Outside the purge job the log is still append-only.
+    with pytest.raises(ProgrammingError), transaction.atomic():
+        MatchEvent.objects.filter(match=other).delete()

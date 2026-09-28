@@ -44,3 +44,31 @@ def generate() -> str:
                 break
             player = B if player == A else A
     return json.dumps(cases[:MAX_CASES], separators=(",", ":")) + "\n"
+
+
+DICE_PATH = PATH.with_name("dice.json")
+
+
+def generate_dice() -> str:
+    """Provably fair dice vectors (§6): the client-side verifier must reproduce every roll."""
+    from game.engine import dice as fair
+
+    cases = []
+    for i, match_id in enumerate(("00000000-0000-4000-8000-000000000001", "m-2")):
+        seed = hashlib.sha256(f"fixture-seed-{i}".encode()).digest()
+        cases.append(
+            {
+                "seed": seed.hex(),
+                "seed_commit": fair.commit(seed),
+                "match_id": match_id,
+                "rolls": [
+                    {
+                        "n": n,
+                        "dice": list(fair.roll(seed, match_id, n)),
+                        "throw_seed": fair.throw_seed(seed, match_id, n),
+                    }
+                    for n in range(40)
+                ],
+            }
+        )
+    return json.dumps(cases, separators=(",", ":")) + "\n"

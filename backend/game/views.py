@@ -268,6 +268,7 @@ def replay_payload(match: Match, you: int | None = None) -> dict[str, Any]:
     return {
         **match_summary(match, you),
         "seed": seeds.decrypt(match.seed_encrypted).hex() if finished else None,
+        "purged_at": match.replay_purged_at.isoformat() if match.replay_purged_at else None,
         "events": events,
     }
 
@@ -287,6 +288,8 @@ class MatchReplayView(APIView):
         match = _match_or_404(match_id)
         if match.side_of(user.id) is None:
             raise PermissionDenied()
+        if match.replay_purged_at is not None:
+            raise errors.ReplayPurged()
         ReplayView.objects.create(match=match, viewer_id=user.id, viewer_role=ReplayView.Role.PLAYER)
         return Response(replay_payload(match, match.side_of(user.id)))
 

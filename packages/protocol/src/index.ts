@@ -669,6 +669,8 @@ export interface ReplayEvent {
 export interface Replay extends MatchSummary {
   /** Published once the match is over (§6.3). */
   seed: string | null;
+  /** Set when replay.retention_days removed the event log (players then get 410 REPLAY_PURGED). */
+  purged_at: string | null;
   events: ReplayEvent[];
 }
 

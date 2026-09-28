@@ -4,3 +4,4 @@
 export * from "./position";
 export * from "./moves";
 export * from "./store";
+export * from "./replay";

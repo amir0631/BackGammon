@@ -191,3 +191,4 @@ def test_game_core_fixtures_are_current():
     from game import ts_fixtures
 
     assert ts_fixtures.PATH.read_text() == ts_fixtures.generate()
+    assert ts_fixtures.DICE_PATH.read_text() == ts_fixtures.generate_dice()

@@ -137,7 +137,8 @@
       "notAPlayer": "You aren't a player in this match.",
       "notAttached": "Open the match first.",
       "notFound": "Match not found.",
-      "reactionRejected": "That reaction can't be sent now."
+      "reactionRejected": "That reaction can't be sent now.",
+      "replayPurged": "This replay is no longer kept."
     },
     "payments": {
       "amountInvalid": "Choose a whole number of coins within the allowed range.",
