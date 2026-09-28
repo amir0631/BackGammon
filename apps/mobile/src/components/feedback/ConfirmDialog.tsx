@@ -12,6 +12,7 @@ import { useId, useRef, type ReactNode } from "react";
 import { useCloseOnBack } from "@/lib/useCloseOnBack";
 import { visuallyHidden } from "@/theme/layout";
 import { Banner } from "./Banner";
+import { SlowNotice, useSlowRequest } from "./SlowNotice";
 
 // Confirmation dialog for non-coin actions that deserve one (patterns.md §3): log out (AU-12) and
 // sign out other devices (AC-06). Neutral styling (these are not destructive). Initial focus on
@@ -25,11 +26,15 @@ export interface ConfirmDialogProps {
   title: string;
   children: ReactNode;
   confirmLabel: string;
+  /** The safe option (initial focus). Default "Cancel"; e.g. "Keep going" for discard dialogs. */
+  cancelLabel?: string;
   inFlight?: boolean;
   inFlightLabel?: string;
   error?: string | null;
   /** Reason the confirm button is blocked (e.g. offline); shown as text. */
   disabledReason?: string | null;
+  /** After 10 s in flight: "Still working…" with this re-check (never a blind retry). */
+  onCheckStatus?: () => void;
 }
 
 export function ConfirmDialog({
@@ -39,11 +44,14 @@ export function ConfirmDialog({
   title,
   children,
   confirmLabel,
+  cancelLabel,
   inFlight = false,
   inFlightLabel,
   error,
   disabledReason,
+  onCheckStatus,
 }: ConfirmDialogProps) {
+  const slow = useSlowRequest(inFlight);
   const t = useTranslations("common");
   const cancelRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -77,6 +85,11 @@ export function ConfirmDialog({
             <Banner severity="error">{error}</Banner>
           </Box>
         )}
+        {inFlight && slow && (
+          <Box sx={{ mt: 2 }}>
+            <SlowNotice onCheckStatus={onCheckStatus} />
+          </Box>
+        )}
         {disabledReason && (
           <Typography id={reasonId} variant="caption" component="p" color="text.secondary" sx={{ mt: 2 }}>
             {disabledReason}
@@ -85,7 +98,7 @@ export function ConfirmDialog({
       </DialogContent>
       <DialogActions sx={{ flexWrap: "wrap", gap: 1, px: 3, pb: 3, "& > :not(style) ~ :not(style)": { marginInlineStart: 0 } }}>
         <Button ref={cancelRef} variant="text" onClick={cancel} disabled={inFlight}>
-          {t("cancel")}
+          {cancelLabel ?? t("cancel")}
         </Button>
         <Button
           variant="contained"

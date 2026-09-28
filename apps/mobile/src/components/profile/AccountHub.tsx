@@ -4,8 +4,10 @@ import Stack from "@mui/material/Stack";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { Me } from "@bg/protocol";
-import { DevicesIcon, DocumentIcon, LockIcon, LogoutIcon, SettingsIcon } from "@/components/icons";
+import { BankIcon, DevicesIcon, DocumentIcon, LockIcon, LogoutIcon, SettingsIcon, WalletIcon } from "@/components/icons";
 import { ActionRow, NavGroup, NavRow } from "@/components/lists/NavList";
+import { useFormat } from "@/lib/useFormat";
+import { useWallet } from "@/lib/wallet";
 import { LogoutDialog } from "./LogoutDialog";
 import { ProfileCard } from "./ProfileViews";
 
@@ -16,10 +18,21 @@ import { ProfileCard } from "./ProfileViews";
 export function AccountHub({ me, current }: { me: Me | null; current?: string }) {
   const t = useTranslations();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const f = useFormat();
+  const { summary } = useWallet();
 
   return (
     <Stack spacing={3}>
       <ProfileCard me={me} />
+      <NavGroup title={t("profile.hub.group.wallet")}>
+        <NavRow
+          href="/wallet"
+          icon={WalletIcon}
+          label={t("profile.hub.wallet")}
+          secondary={summary ? t("profile.hub.walletBalance", { amount: f.coins(summary.balance) }) : undefined}
+        />
+        <NavRow href="/wallet/bank-accounts" icon={BankIcon} label={t("profile.hub.bankAccount")} />
+      </NavGroup>
       <NavGroup title={t("profile.hub.group.account")}>
         <NavRow href="/me/sessions" icon={DevicesIcon} label={t("profile.hub.sessions")} current={current === "/me/sessions"} />
         <NavRow href="/settings" icon={SettingsIcon} label={t("profile.hub.settings")} current={current === "/settings"} />

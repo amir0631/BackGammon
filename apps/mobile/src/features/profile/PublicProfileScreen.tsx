@@ -2,6 +2,7 @@
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
 import { styled } from "@mui/material/styles";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,7 +11,9 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@bg/api-client";
 import { layout, radii } from "@bg/design-tokens";
 import type { PublicUser } from "@bg/protocol";
-import { EditIcon } from "@/components/icons";
+import { EditIcon, SendIcon } from "@/components/icons";
+import { ActionButton } from "@/components/forms/ActionButton";
+import { StandaloneLink } from "@/components/forms/StandaloneLink";
 import { PublicProfileSkeleton, PublicProfileView } from "@/components/profile/ProfileViews";
 import { SignedInShell } from "@/components/shell/SignedInShell";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -22,8 +25,9 @@ import { tokensOf } from "@/theme/theme";
 // AC-05 Public profile `/profile/[username]` (profile.md §3.5, §4). Case-insensitive URL: the
 // canonical casing is displayed and replaces the URL. Shows only what the API returns (username,
 // avatar, level, ELO, member since); never a phone, balance, sessions, or account status. Own
-// profile adds "This is how other players see you" and Edit profile. Other players get no actions
-// in this step (Send coins needs the transfer flow, step 3 screens).
+// profile adds "This is how other players see you" and Edit profile. Other players get "Send
+// coins" (secondary styling, wallet.md TR-01 via `?to=`); disabled with the reason while the
+// viewer is suspended (profile.md §5).
 
 const Card = styled("div")(({ theme }) => {
   const t = tokensOf(theme);
@@ -102,7 +106,29 @@ export function PublicProfileScreen({ username }: { username: string }) {
                   <Button variant="contained" size="large" component={NextLink} href="/me/edit" startIcon={<EditIcon />} fullWidth>
                     {t("profile.hub.editProfile")}
                   </Button>
-                ) : undefined
+                ) : (
+                  <Stack spacing={0.5} sx={{ width: "100%" }}>
+                    {me?.status === "suspended" ? (
+                      <>
+                        <ActionButton variant="outlined" startIcon={<SendIcon />} disabledReason={t("account.suspended.actionBlocked")}>
+                          {t("publicProfile.sendCoins")}
+                        </ActionButton>
+                        <StandaloneLink href="/account/status">{t("account.suspended.details")}</StandaloneLink>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        size="large"
+                        fullWidth
+                        component={NextLink}
+                        href={`/wallet/transfer?to=${encodeURIComponent(state.user.username)}`}
+                        startIcon={<SendIcon />}
+                      >
+                        {t("publicProfile.sendCoins")}
+                      </Button>
+                    )}
+                  </Stack>
+                )
               }
             />
           )}

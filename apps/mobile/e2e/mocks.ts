@@ -105,6 +105,22 @@ function baseHandlers(me: Me | null): Handlers {
       return err(404, "NOT_FOUND", "errors.notFound");
     },
     "POST /auth/logout": { status: 204 },
+    // The balance chip on every signed-in screen reads the wallet summary (wallet.md §3.1).
+    "GET /wallet": me
+      ? {
+          status: 200,
+          body: {
+            balance: 1250,
+            locked: 0,
+            bonus_locked: 0,
+            withdrawable: 1250,
+            transferable: 1250,
+            transfer: { daily_max: 5000, used_24h: 0, remaining: 5000, next_available_at: null, min: 10, fee_pct: 0 },
+            withdraw: { daily_max: 10000, used_24h: 0, remaining: 10000, next_available_at: null, min: 100, fee_pct: 0, confirm: "password", expected_by: "2026-09-29" },
+            coin_price_toman: 1000,
+          },
+        }
+      : err(401, "UNAUTHENTICATED", "errors.unauthenticated"),
   };
 }
 

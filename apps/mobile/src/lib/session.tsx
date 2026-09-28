@@ -1,6 +1,11 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
@@ -39,6 +44,14 @@ interface SessionValue {
   signOut: () => void;
   /** True between a logout and the next sign-in: guards do not bounce to /login meanwhile. */
   leaving: boolean;
+  /**
+   * Session-level API errors from any request (wallet.md §3.9): AUTH_BANNED ends the session and
+   * opens /login with the AU-14 panel; an expired session (401 AUTH_SESSION_INVALID /
+   * UNAUTHENTICATED after the api-client's one refresh) opens the SY-08 dialog. Returns true when
+   * the error was consumed. Other 401s (none today) and wallet password errors are never treated
+   * as a session problem.
+   */
+  handleAuthError: (error: unknown) => boolean;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -50,7 +63,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SessionStatus>("loading");
   const [me, setMeState] = useState<Me | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [expired, setExpired] = useState(false);
   const lastFetch = useRef(0);
+  const router = useRouter();
+  const t = useTranslations();
   const { setSetting: setReducedMotion } = useReducedMotionSetting();
   const { switchLocale } = useLocaleSwitch();
   const locale = useLocale();
@@ -68,6 +84,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [setReducedMotion],
   );
 
+  /** AUTH_BANNED: no session any more; the login screen explains (auth.md AU-14). */
+  const endBanned = useCallback(() => {
+    clearUserData();
+    setLeaving(true);
+    setMeState(null);
+    setStatus("guest");
+    setReducedMotion(false);
+    router.replace("/login?reason=banned");
+  }, [router, setReducedMotion]);
+
+  const handleAuthError = useCallback(
+    (error: unknown) => {
+      if (!(error instanceof ApiRequestError)) return false;
+      if (error.body.code === "AUTH_BANNED") {
+        endBanned();
+        return true;
+      }
+      if (error.status === 401 && (error.body.code === "AUTH_SESSION_INVALID" || error.body.code === "UNAUTHENTICATED")) {
+        setExpired(true);
+        return true;
+      }
+      return false;
+    },
+    [endBanned],
+  );
+
   const reload = useCallback(async () => {
     lastFetch.current = Date.now();
     try {
@@ -75,6 +117,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       applyMe(next);
       return next;
     } catch (error) {
+      if (error instanceof ApiRequestError && error.body.code === "AUTH_BANNED") {
+        endBanned();
+        return null;
+      }
       if (error instanceof ApiRequestError && error.status !== 0 && error.status < 500) {
         setMeState(null);
         setStatus("guest");
@@ -84,7 +130,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
       return null;
     }
-  }, [applyMe]);
+  }, [applyMe, endBanned]);
 
   // First load: who is this, and which language does the account prefer (auth.md §3.2 step 2).
   useEffect(() => {
@@ -133,10 +179,36 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [setReducedMotion]);
 
   const value = useMemo(
-    () => ({ status, me, reload, signIn, setMe: applyMe, signOut, leaving }),
-    [status, me, reload, signIn, applyMe, signOut, leaving],
+    () => ({ status, me, reload, signIn, setMe: applyMe, signOut, leaving, handleAuthError }),
+    [status, me, reload, signIn, applyMe, signOut, leaving, handleAuthError],
   );
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+
+  // SY-08: the session ended mid-task. Task-flow entries stay in sessionStorage (not cleared here)
+  // so the flow resumes after logging in again via `next`.
+  const logInAgain = () => {
+    setExpired(false);
+    setLeaving(true);
+    setMeState(null);
+    setStatus("guest");
+    router.replace(loginHref(`${window.location.pathname}${window.location.search}`));
+  };
+
+  return (
+    <SessionContext.Provider value={value}>
+      {children}
+      <Dialog open={expired} aria-labelledby="session-expired-title" aria-describedby="session-expired-body" disableEscapeKeyDown>
+        <DialogTitle id="session-expired-title" variant="h4" component="h2">
+          {t("session.expired.title")}
+        </DialogTitle>
+        <DialogContent id="session-expired-body">{t("session.expired.body")}</DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button variant="contained" onClick={logInAgain} autoFocus>
+            {t("session.expired.cta")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </SessionContext.Provider>
+  );
 }
 
 export function useSession(): SessionValue {

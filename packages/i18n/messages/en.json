@@ -19,7 +19,9 @@
     "checkStatus": "Check status",
     "errorCode": "Reference: {code}",
     "copy": "Copy",
-    "lastUpdated": "Last updated: {time}"
+    "lastUpdated": "Last updated: {time}",
+    "showMore": "Show more",
+    "copied": "Copied"
   },
   "nav": {
     "label": "Main navigation",
@@ -27,7 +29,10 @@
     "live": "Live",
     "tournaments": "Tournaments",
     "shop": "Shop",
-    "account": "Account"
+    "account": "Account",
+    "badge": {
+      "withdrawal": "A withdrawal request has an update"
+    }
   },
   "languages": {
     "fa": "فارسی",
@@ -43,7 +48,11 @@
     "tomanEquivalent": "Equals {amount} toman",
     "value": "{count, plural, one {{amount} coin} other {{amount} coins}}",
     "balanceChip": "Balance: {count, plural, one {{amount} coin} other {{amount} coins}}, open wallet",
-    "balanceUpdated": "Balance updated: {count, plural, one {{amount} coin} other {{amount} coins}}"
+    "balanceUpdated": "Balance updated: {count, plural, one {{amount} coin} other {{amount} coins}}",
+    "insufficient": {
+      "title": "Not enough coins"
+    },
+    "getCoins": "Get coins"
   },
   "units": {
     "megabytes": "{value} MB"
@@ -52,10 +61,187 @@
     "toman": "{amount} toman"
   },
   "transfer": {
-    "recipientReceives": "Recipient receives"
+    "recipientReceives": "Recipient receives",
+    "title": "Send coins",
+    "unavailable": {
+      "suspended": {
+        "title": "You can't send coins while your account is suspended",
+        "body": "You can still withdraw your coins and see your wallet history."
+      },
+      "bonus": {
+        "title": "You have no coins you can send yet",
+        "body": "Welcome coins become sendable after your first coin purchase or top-up by support."
+      },
+      "belowMin": {
+        "title": "Not enough coins to send",
+        "body": "The minimum transfer is {min} coins. You can send {amount}."
+      },
+      "limit": {
+        "title": "You've reached the 24-hour sending limit",
+        "body": "You can send coins again from {time}."
+      },
+      "help": "About sending coins"
+    },
+    "recipient": {
+      "title": "Who are you sending to?",
+      "label": "Recipient's username",
+      "helper": "Enter the exact username.",
+      "searching": "Looking up…",
+      "notFound": "No player with this username.",
+      "self": "You can't send coins to yourself.",
+      "lookupError": "Couldn't look up this username. Try again.",
+      "checkTitle": "Check the recipient",
+      "checkBody": "Make sure this is the person you want to send coins to. Transfers can't be undone.",
+      "level": "Level {level}",
+      "confirm": "Yes, this is the right person",
+      "disabled": "Enter the recipient's username to see their card.",
+      "found": "Player found"
+    },
+    "amount": {
+      "title": "How many coins?",
+      "to": "To {username}",
+      "change": "Change",
+      "label": "Number of coins",
+      "helperMin": "Minimum: {min} coins",
+      "helperWindow": "Left in the last 24 hours: {remaining} of {max} coins",
+      "helperSendable": "Can be sent now: {amount} coins",
+      "preview": "Fee: {fee} coins · Recipient receives: {received} coins",
+      "error": {
+        "required": "Enter an amount.",
+        "invalid": "Enter a whole number above zero.",
+        "belowMin": "The minimum is {min} coins.",
+        "aboveBalance": "More than your balance ({balance} coins).",
+        "notTransferable": "Only {transferable} coins can be sent; {bonus} welcome coins can't be sent until your first purchase or top-up.",
+        "limit": "You can send up to {remaining} more coins right now (limit: {max} coins in any 24 hours).",
+        "limitNext": "More becomes available from {time}."
+      },
+      "cta": "Continue",
+      "disabled": "Enter a valid amount.",
+      "tomanPreview": "Equals {amount} toman"
+    },
+    "review": {
+      "title": "Review and confirm",
+      "recipient": "Recipient",
+      "changeRecipient": "Change recipient",
+      "changeAmount": "Change amount",
+      "irreversible": "Transfers can't be undone.",
+      "safety": "Support will never ask you to send coins or share your password.",
+      "password": "Your account password",
+      "passwordHelper": "Enter your password to confirm this transfer.",
+      "cta": "Send {amount} coins",
+      "sending": "Sending…",
+      "disabled": "Enter your password.",
+      "recipientGone": "This recipient is no longer available. Nothing was taken from your balance.",
+      "amountToman": "Equals {amount} toman",
+      "linked": "This transfer can't be made, and nothing was taken from your balance. If you think this is a mistake, contact support."
+    },
+    "receipt": {
+      "title": "Sent",
+      "body": "{amount} coins sent to {username}.",
+      "received": "Recipient received: {amount} coins",
+      "newBalance": "New balance: {amount} coins",
+      "time": "Time: {time}",
+      "txId": "Transaction ID",
+      "copyTx": "Copy transaction ID"
+    },
+    "discard": {
+      "title": "Discard this transfer?",
+      "body": "Nothing has been sent or charged.",
+      "confirm": "Discard",
+      "keep": "Keep going"
+    }
   },
   "withdraw": {
-    "youReceive": "Paid to your bank account"
+    "youReceive": "Paid to your bank account",
+    "title": "Withdraw",
+    "unavailable": {
+      "bonus": {
+        "title": "You have nothing to withdraw yet",
+        "line": "Withdrawable now: {withdrawable} of {balance} coins",
+        "body": "Welcome coins become withdrawable after your first coin purchase or top-up by support."
+      },
+      "belowMin": {
+        "title": "Not enough coins to withdraw",
+        "body": "The minimum withdrawal is {min} coins. You can withdraw {amount}."
+      },
+      "onHoldNote": "Coins on hold for pending withdrawals aren't counted.",
+      "limit": {
+        "title": "You've reached the 24-hour withdrawal limit",
+        "body": "You can withdraw again from {time}. Cancelling a pending request frees its share of the limit."
+      },
+      "blocked": "Withdrawals aren't available for your account right now. Contact support.",
+      "help": "About withdrawals",
+      "blockedTitle": "Withdrawals are paused"
+    },
+    "hint": {
+      "title": "How withdrawals work",
+      "body": "We pay withdrawals by hand, within one working day of your request. You can cancel while a request is pending.",
+      "sms": "You'll get a text when it's paid.",
+      "dismiss": "Got it"
+    },
+    "bank": {
+      "title": "Where to pay",
+      "helper": "We'll pay to this account.",
+      "change": "Change",
+      "saveContinue": "Save and continue",
+      "cta": "Continue"
+    },
+    "amount": {
+      "title": "How many coins to withdraw?",
+      "label": "Number of coins",
+      "helperMin": "Minimum: {min} coins",
+      "helperWindow": "Left in the last 24 hours: {remaining} of {max} coins",
+      "helperWithdrawable": "Withdrawable now: {amount} coins",
+      "max": "Maximum ({amount})",
+      "preview": "Fee: {fee} coins · Paid to your bank: {toman} toman",
+      "error": {
+        "required": "Enter an amount.",
+        "invalid": "Enter a whole number above zero.",
+        "belowMin": "The minimum is {min} coins.",
+        "aboveBalance": "More than your balance ({balance} coins).",
+        "notWithdrawable": "Only {withdrawable} coins can be withdrawn.",
+        "notWithdrawableBonus": "Only {withdrawable} coins can be withdrawn; welcome coins can't be withdrawn until your first purchase or top-up.",
+        "limit": "You can withdraw up to {remaining} more coins right now (limit: {max} coins in any 24 hours).",
+        "limitNext": "More becomes available from {time}."
+      },
+      "cta": "Continue",
+      "disabled": "Enter a valid amount."
+    },
+    "review": {
+      "title": "Review your request",
+      "bank": "Paid to",
+      "rate": "At today's rate: 1 coin = {price} toman. This amount is fixed when you submit.",
+      "timing": "Paid within one working day of your request (Iranian working days). You'll see the exact expected date after you submit.",
+      "cancelNote": "You can cancel while it's pending.",
+      "notifySms": "You'll get a text when it's paid.",
+      "notifyApp": "You'll see when it's paid here in your wallet.",
+      "safety": "Support will never ask for your SMS code or password.",
+      "password": "Your account password",
+      "passwordHelper": "Enter your password to confirm this withdrawal.",
+      "ctaPassword": "Request withdrawal of {amount} coins",
+      "ctaSms": "Send confirmation code",
+      "sendingCode": "Sending code…",
+      "submitting": "Submitting…",
+      "disabled": "Enter your password.",
+      "smsOff": "Text messages aren't available right now. Confirm the withdrawal with your password instead.",
+      "modeChanged": "The way to confirm withdrawals has changed. Please confirm again.",
+      "expectedAfter": "Expected by {date}",
+      "timingRule": "Paid within one working day of your request (Iranian working days)."
+    },
+    "code": {
+      "title": "Enter the code",
+      "sentTo": "We sent a 5-digit code to {phone}.",
+      "nothingHeld": "Nothing is held until you enter the code.",
+      "cta": "Confirm withdrawal",
+      "back": "Back to review",
+      "used": "The code was used, but the request wasn't submitted. Fix the amount; you'll need a new code to confirm."
+    },
+    "discard": {
+      "title": "Discard this withdrawal?",
+      "body": "Nothing has been held or charged.",
+      "confirm": "Discard",
+      "keep": "Keep going"
+    }
   },
   "net": {
     "offline": "You're offline. We'll reconnect automatically.",
@@ -130,6 +316,33 @@
     "sms": {
       "unavailable": "We can't send texts right now. Please try again in a few minutes."
     },
+    "wallet": {
+      "insufficient": "Not enough coins.",
+      "idempotencyKeyRequired": "The request was incomplete. Please try again.",
+      "accountSuspended": "Not available while your account is suspended.",
+      "amountInvalid": "That amount isn't valid.",
+      "transferRecipientNotFound": "Recipient not found.",
+      "transferSelf": "You can't send coins to yourself.",
+      "transferBelowMin": "The amount is below the minimum transfer.",
+      "transferLimit": "This is over your 24-hour sending limit.",
+      "transferNotTransferable": "Welcome coins can't be sent yet.",
+      "noBankAccount": "Add your bank account first.",
+      "bankAccountLocked": "You can't change your bank account while a withdrawal is pending.",
+      "ibanInvalid": "That Sheba number isn't valid.",
+      "withdrawBelowMin": "The amount is below the minimum withdrawal.",
+      "withdrawLimit": "This is over your 24-hour withdrawal limit.",
+      "withdrawNotWithdrawable": "That many coins can't be withdrawn.",
+      "withdrawalNotPending": "This request is no longer pending.",
+      "topupAboveCap": "The amount is above the top-up cap.",
+      "passwordInvalid": "That password isn't right.",
+      "passwordLocked": "Too many wrong passwords. Try again later.",
+      "withdrawalClaimed": "Another admin is handling this request.",
+      "transferLinked": "Transfers between linked accounts aren't allowed.",
+      "withdrawUnderReview": "Your account is under review; withdrawals are paused."
+    },
+    "profile": {
+      "usernameCooldown": "You can't change your username again yet."
+    },
     "match": {
       "accountSuspended": "Your account is suspended; you can't start matches.",
       "actionInvalid": "That action isn't allowed right now.",
@@ -160,35 +373,8 @@
     "tournaments": {
       "refused": "You can't join or leave this tournament now."
     },
-    "wallet": {
-      "transferLinked": "Transfers between linked accounts aren't allowed.",
-      "withdrawUnderReview": "Your account is under review; withdrawals are paused.",
-      "accountSuspended": "Not available while your account is suspended.",
-      "amountInvalid": "That amount isn't valid.",
-      "bankAccountLocked": "You can't change your bank account while a withdrawal is pending.",
-      "ibanInvalid": "That Sheba number isn't valid.",
-      "idempotencyKeyRequired": "The request was incomplete. Please try again.",
-      "insufficient": "Not enough coins.",
-      "noBankAccount": "Add your bank account first.",
-      "passwordInvalid": "That password isn't right.",
-      "passwordLocked": "Too many wrong passwords. Try again later.",
-      "topupAboveCap": "The amount is above the top-up cap.",
-      "transferBelowMin": "The amount is below the minimum transfer.",
-      "transferLimit": "This is over your 24-hour sending limit.",
-      "transferNotTransferable": "Welcome coins can't be sent yet.",
-      "transferRecipientNotFound": "Recipient not found.",
-      "transferSelf": "You can't send coins to yourself.",
-      "withdrawBelowMin": "The amount is below the minimum withdrawal.",
-      "withdrawLimit": "This is over your 24-hour withdrawal limit.",
-      "withdrawNotWithdrawable": "That many coins can't be withdrawn.",
-      "withdrawalClaimed": "Another admin is handling this request.",
-      "withdrawalNotPending": "This request is no longer pending."
-    },
     "ws": {
       "badMessage": "The request was invalid."
-    },
-    "profile": {
-      "usernameCooldown": "You can't change your username again yet."
     }
   },
   "devGallery": {
@@ -221,7 +407,8 @@
       "sheets": "Bottom sheet",
       "cost": "Cost confirmation",
       "states": "Empty, error, and loading states",
-      "account": "Account and sign-in"
+      "account": "Account and sign-in",
+      "wallet": "Wallet"
     },
     "specimen": {
       "fa": "می‌خواهم امشب در تورنمنت‌های تخته‌نرد بازی کنم؛ جایزه ۱۲٬۵۰۰ سکه است. ۰۱۲۳۴۵۶۷۸۹",
@@ -488,7 +675,8 @@
       "group": {
         "activity": "Activity",
         "account": "Account",
-        "support": "Support and legal"
+        "support": "Support and legal",
+        "wallet": "Wallet"
       },
       "wallet": "Wallet",
       "matches": "Match history",
@@ -502,7 +690,9 @@
       "terms": "Terms of use",
       "privacy": "Privacy policy",
       "loadError": "Couldn't load your profile.",
-      "previewTitle": "Your public profile"
+      "previewTitle": "Your public profile",
+      "walletBalance": "Balance: {amount}",
+      "bankAccount": "Bank account"
     },
     "edit": {
       "title": "Edit profile",
@@ -525,7 +715,28 @@
       "rules": "You can change your username once every {days, plural, one {# day} other {# days}} for {cost} coins.",
       "later": "Username changes open when the coin wallet launches.",
       "change": "Change username",
-      "nextDate": "Next change available on {date}."
+      "nextDate": "Next change available on {date}.",
+      "sheet": {
+        "title": "New username",
+        "sameAsCurrent": "That's your current username.",
+        "continue": "Continue"
+      },
+      "confirm": {
+        "title": "Change username to {username}",
+        "fromTo": "From {old} to {new}",
+        "cooldown": "Your next change will be possible on {date}.",
+        "effects": "Your profile link changes, and your old username may become available to other players.",
+        "cta": "Pay {cost} coins and change",
+        "notCharged": "This username was just taken. Nothing was charged; choose another one.",
+        "old": "Current",
+        "new": "New",
+        "paying": "Paying…",
+        "changed": "The cost or rules changed. Please review again."
+      },
+      "done": "Your username is now {username}.",
+      "cooldownError": "Your next change is possible on {date}.",
+      "insufficientBody": "Changing your username costs {cost} coins.",
+      "unknown": "We couldn't confirm the result. Tap Check status; nothing is charged twice."
     }
   },
   "settings": {
@@ -624,6 +835,264 @@
     "avatar_11": "Tulip",
     "avatar_12": "Mountain",
     "fallback": "Avatar"
+  },
+  "wallet": {
+    "title": "Wallet",
+    "available": "Available",
+    "onHold": "On hold for withdrawals: {amount} coins",
+    "onHoldLink": "View requests",
+    "bonusLocked": {
+      "line": "{amount} welcome coins (can't be sent or withdrawn yet)",
+      "why": "Why?",
+      "explain": "You can spend welcome coins in games. They become sendable and withdrawable after your first coin purchase or top-up by support."
+    },
+    "movable": "Can be sent or withdrawn: {amount} coins",
+    "transferable": "Can be sent now: {amount} coins",
+    "withdrawable": "Withdrawable now: {amount} coins",
+    "actions": {
+      "getCoins": "Get coins",
+      "send": "Send coins",
+      "withdraw": "Withdraw",
+      "label": "Wallet actions"
+    },
+    "pending": {
+      "summary": "{count, plural, one {# pending withdrawal} other {# pending withdrawals}} · expected by {date}",
+      "one": "View pending request"
+    },
+    "links": {
+      "withdrawals": "Withdrawal requests",
+      "bankAccount": "Bank account",
+      "bankAccountValue": "{bank}, ending {last4}",
+      "bankAccountEmpty": "Not added yet"
+    },
+    "history": {
+      "title": "Transactions",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "empty": "No transactions yet.",
+      "more": "Show more",
+      "end": "That's all your transactions.",
+      "loadError": "Couldn't load transactions."
+    },
+    "loadError": "Couldn't load your wallet.",
+    "lastUpdated": "Last updated: {time}",
+    "amount": {
+      "in": "+{amount}",
+      "out": "−{amount}",
+      "a11yIn": "{amount} coins added",
+      "a11yOut": "{amount} coins deducted"
+    },
+    "row": {
+      "a11y": "{type}, {amount}, {time}"
+    },
+    "tx": {
+      "purchase": "Coin purchase",
+      "match_entry": "Match entry",
+      "match_payout": "Match winnings",
+      "match_refund": "Match entry refund",
+      "rake": "Platform fee",
+      "referral_commission": "Referral commission",
+      "prediction_stake": "Prediction stake",
+      "prediction_payout": "Prediction winnings",
+      "prediction_refund": "Prediction refund",
+      "tournament_entry": "Tournament entry",
+      "tournament_prize": "Tournament prize",
+      "tournament_refund": "Tournament entry refund",
+      "signup_bonus": "Welcome coins",
+      "level_reward": "Level reward",
+      "achievement_reward": "Achievement reward",
+      "shop_purchase": "Shop purchase",
+      "username_change": "Username change",
+      "admin_adjustment": "Balance correction by support",
+      "admin_topup": "Top-up by support",
+      "withdrawal_hold": "Withdrawal request",
+      "withdrawal_payout": "Withdrawal paid",
+      "withdrawal_refund": "Withdrawal returned",
+      "transfer": {
+        "out": "Sent to {username}",
+        "in": "Received from {username}",
+        "unknownParty": "Coin transfer"
+      },
+      "unknown": "Transaction"
+    },
+    "detail": {
+      "title": "Transaction details",
+      "type": "Type",
+      "amount": "Amount",
+      "date": "Date and time",
+      "counterparty": "Other player",
+      "reference": "Reference",
+      "copyReference": "Copy reference",
+      "copied": "Copied",
+      "open": {
+        "withdrawal": "View withdrawal request",
+        "profile": "View profile"
+      },
+      "note": {
+        "withdrawal_hold": "These coins are held until the request is paid or cancelled.",
+        "withdrawal_refund": "Coins from a cancelled or rejected withdrawal came back to your balance.",
+        "admin_topup": "Support added these coins to your account.",
+        "signup_bonus": "A welcome gift. It becomes sendable and withdrawable after your first purchase or top-up.",
+        "transfer": "Transfers can't be undone."
+      },
+      "panelEmpty": "Select a transaction to see its details.",
+      "rawType": "Type: {type}",
+      "added": "added",
+      "deducted": "deducted"
+    },
+    "notice": {
+      "transferIn": "{username} sent you {amount} coins.",
+      "topup": "{amount} coins were added to your wallet.",
+      "refund": "{amount} coins came back to your balance.",
+      "many": "{count, plural, one {# new transaction} other {# new transactions}}",
+      "view": "View"
+    },
+    "flow": {
+      "step": "Step {current} of {total}",
+      "close": "Close",
+      "checking": "Checking the status…"
+    },
+    "password": {
+      "wrong": "That password isn't right.",
+      "locked": "Too many wrong passwords. You can try again in {time}.",
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "backToWallet": "Back to wallet",
+    "tomanLine": "Equals {amount} toman",
+    "historyRegion": "Transactions and details"
+  },
+  "shop": {
+    "coins": {
+      "supportTopup": {
+        "title": "Get coins",
+        "status": "Buying coins online isn't available yet.",
+        "rate": "1 coin = {price} toman",
+        "how": "For now, support can add coins to your account. Contact support: <link>{channel}</link>",
+        "tell": "Tell support your username and how many coins you want.",
+        "username": "Your username: {username}",
+        "copyUsername": "Copy username",
+        "otherTitle": "Other ways",
+        "other": {
+          "transfer": "A friend can send you coins.",
+          "win": "Winning matches",
+          "level": "Level-up rewards"
+        },
+        "safety": "Support will never ask for your password or SMS code.",
+        "howTitle": "Get coins from support",
+        "copyChannel": "Copy support contact"
+      }
+    }
+  },
+  "withdrawals": {
+    "title": "Withdrawal requests",
+    "empty": "No withdrawal requests yet.",
+    "capped": "Showing your latest 100 requests.",
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "expectedBy": "Expected by {date}",
+    "requestedAt": "Requested {date}",
+    "detail": {
+      "title": "Withdrawal request",
+      "submitted": "Your request was submitted.",
+      "amount": "Amount",
+      "fee": "Fee",
+      "payout": "Paid to your bank",
+      "bank": "Bank account",
+      "timeline": {
+        "requested": "Requested",
+        "waiting": "Waiting for payment (expected by {date})",
+        "paid": "Paid",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled"
+      },
+      "bankRef": "Bank reference",
+      "copyRef": "Copy bank reference",
+      "reason": "Reason",
+      "returned": "{amount} coins went back to your balance.",
+      "late": "This is taking longer than usual. Contact support if you need help.",
+      "cancel": "Cancel request",
+      "decidedAt": "{date}",
+      "reference": "Request ID"
+    },
+    "notFound": "We couldn't find this withdrawal request.",
+    "backToList": "Back to requests",
+    "cancel": {
+      "title": "Cancel this withdrawal?",
+      "body": "{amount} coins go back to your balance.",
+      "confirm": "Cancel withdrawal",
+      "keep": "Keep request",
+      "cancelling": "Cancelling…",
+      "done": "Request cancelled. {amount} coins are back in your balance.",
+      "alreadyPaid": "This withdrawal was already paid.",
+      "alreadyRejected": "This withdrawal was already rejected.",
+      "alreadyCancelled": "This withdrawal was already cancelled."
+    },
+    "selectPrompt": "Select a request to see its details.",
+    "new": "New withdrawal",
+    "loadError": "Couldn't load withdrawal requests.",
+    "row": {
+      "a11y": "{amount}, {status}, {date}"
+    }
+  },
+  "bank": {
+    "title": "Bank account",
+    "intro": "Withdrawals are paid to this account. You can have one Sheba number.",
+    "empty": "No bank account yet. Add your Sheba number to withdraw.",
+    "add": "Add bank account",
+    "field": {
+      "label": "Sheba number (IBAN)",
+      "helper": "Enter the Sheba of your own bank account: 24 digits after IR.",
+      "prefix": "IR"
+    },
+    "error": {
+      "required": "Enter your Sheba number.",
+      "format": "A Sheba number has 24 digits after IR.",
+      "checksum": "This Sheba number isn't valid. Copy it again from your bank card or banking app.",
+      "bank": "We don't recognize the bank for this Sheba number."
+    },
+    "valid": {
+      "bank": "Bank: {bank}"
+    },
+    "save": "Save bank account",
+    "saving": "Saving…",
+    "saved": "Bank account saved.",
+    "card": {
+      "a11y": "{bank} account, Sheba ending {last4}",
+      "title": "Your account"
+    },
+    "actions": {
+      "change": "Change",
+      "remove": "Remove"
+    },
+    "change": {
+      "title": "Replace your bank account?",
+      "body": "Your new Sheba will replace {old}. Future withdrawals go to the new account.",
+      "confirm": "Replace"
+    },
+    "remove": {
+      "title": "Remove your bank account?",
+      "body": "You'll need to add a Sheba number again before your next withdrawal.",
+      "confirm": "Remove"
+    },
+    "removed": "Bank account removed.",
+    "locked": {
+      "body": "You can't change or remove your bank account while a withdrawal is pending.",
+      "view": "View pending request"
+    },
+    "formTitle": "New Sheba number",
+    "cancelEdit": "Cancel"
+  },
+  "session": {
+    "expired": {
+      "title": "Your session has ended",
+      "body": "Log in again to continue. What you entered (except passwords and codes) is kept.",
+      "cta": "Log in"
+    }
   },
   "push": {
     "yourTurn": {

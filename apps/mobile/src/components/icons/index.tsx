@@ -257,6 +257,125 @@ export const LockIcon = createIcon({
   ),
 });
 
+// ---- Wallet (wallet.md) -------------------------------------------------------------------------
+
+/** Wallet: the balance card and the account hub row. */
+export const WalletIcon = createIcon({
+  name: "Wallet",
+  body: (
+    <>
+      <path d="M4.5 7.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2h10" />
+      <path d="M20.5 11.5h-4a2 2 0 0 0 0 4h4" />
+      <Dot cx={16.5} cy={13.5} r={1} />
+    </>
+  ),
+});
+
+/** Paper plane: send coins. Points in the reading direction, so it mirrors in RTL (P§11). */
+export const SendIcon = createIcon({
+  name: "Send",
+  mirrorInRtl: true,
+  body: (
+    <>
+      <path d="M4 11.5L20 4l-5 16-3.2-6.8z" />
+      <path d="M11.8 13.2L20 4" />
+    </>
+  ),
+});
+
+/** Coin with a plus: get coins. */
+export const AddCoinsIcon = createIcon({
+  name: "AddCoins",
+  body: (
+    <>
+      <circle cx="10.5" cy="12" r="6.5" />
+      <path d="M10.5 9.5v5M8 12h5" />
+      <path d="M19.5 6v5M17 8.5h5" />
+    </>
+  ),
+});
+
+/** Bank building with columns: bank account and withdrawals. */
+export const BankIcon = createIcon({
+  name: "Bank",
+  body: (
+    <>
+      <path d="M3.5 9L12 4l8.5 5z" />
+      <path d="M5.5 9.5v7.5M9.8 9.5v7.5M14.2 9.5v7.5M18.5 9.5v7.5" />
+      <path d="M3.5 20h17" />
+    </>
+  ),
+});
+
+/** Arrow into a tray: withdraw to the bank. Vertical, never mirrored. */
+export const WithdrawIcon = createIcon({
+  name: "Withdraw",
+  body: (
+    <>
+      <path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5" />
+      <path d="M4.5 15v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V15" />
+    </>
+  ),
+});
+
+/** Coins added to the balance (ledger rows): arrow down into a line. Never mirrored. */
+export const CoinsInIcon = createIcon({
+  name: "CoinsIn",
+  body: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5v8M8.5 12l3.5 3.5 3.5-3.5" />
+    </>
+  ),
+});
+
+/** Coins deducted from the balance (ledger rows): arrow up. Never mirrored. */
+export const CoinsOutIcon = createIcon({
+  name: "CoinsOut",
+  body: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 16.5v-8M8.5 12L12 8.5l3.5 3.5" />
+    </>
+  ),
+});
+
+/** Gift box: welcome coins and rewards. */
+export const GiftIcon = createIcon({
+  name: "Gift",
+  body: (
+    <>
+      <rect x="4" y="9" width="16" height="4" rx="1" />
+      <path d="M5.5 13v6a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5v-6M12 9v11.5" />
+      <path d="M12 9c-1.5-3.5-5-4-5-1.8C7 8.6 9 9 12 9zM12 9c1.5-3.5 5-4 5-1.8C17 8.6 15 9 12 9z" />
+    </>
+  ),
+});
+
+/** Headset: support. */
+export const SupportIcon = createIcon({
+  name: "Support",
+  body: (
+    <>
+      <path d="M4.5 14v-2a7.5 7.5 0 0 1 15 0v2" />
+      <rect x="3.5" y="13.5" width="4" height="5.5" rx="1.5" />
+      <rect x="16.5" y="13.5" width="4" height="5.5" rx="1.5" />
+      <path d="M18.5 19c0 1-1 1.5-3.5 1.5h-1.5" />
+    </>
+  ),
+});
+
+/** Clock: expected dates and countdowns. Never mirrored (P§11). */
+export const ClockIcon = createIcon({
+  name: "Clock",
+  body: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+});
+
 // ---- Status ----------------------------------------------------------------------------------
 
 export const InfoIcon = createIcon({

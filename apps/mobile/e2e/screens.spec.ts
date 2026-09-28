@@ -332,8 +332,11 @@ for (const c of cases) {
       // The account language wins on load (auth.md §3.2), so the mocked account matches the variant.
       if (scenario.me) scenario.me = { ...scenario.me, lang: v.locale };
       await mockApi(page, scenario, base);
-      await page.goto(c.path, { waitUntil: "networkidle" });
+      // `load` + h1 + no skeleton rather than `networkidle`: without Nginx in front, prefetches of
+      // routes that are not built yet can keep the network busy (see wallet.spec.ts).
+      await page.goto(c.path, { waitUntil: "load" });
       await page.locator("h1").first().waitFor();
+      await expect(page.locator("main [aria-busy=true]")).toHaveCount(0);
       if (c.act) await c.act(page);
       await page.waitForTimeout(400);
 

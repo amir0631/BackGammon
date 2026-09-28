@@ -49,6 +49,8 @@ export interface TopBarProps {
   /** Back/close target. Use a href when the destination is known; otherwise `onNavigate`. */
   href?: string;
   onNavigate?: () => void;
+  /** Back/close unavailable (a coin request is in flight): stays focusable, does nothing. */
+  navDisabled?: boolean;
   /** Available coins. `undefined` hides the chip (guests, task flows); `null` shows it loading. */
   balance?: Amount | null;
   actions?: ReactNode;
@@ -64,6 +66,7 @@ export function TopBar({
   leading = "none",
   href,
   onNavigate,
+  navDisabled = false,
   balance,
   actions,
   titleComponent = "h1",
@@ -71,7 +74,11 @@ export function TopBar({
   const t = useTranslations("common");
 
   const navButton = (label: string, icon: ReactNode) =>
-    href ? (
+    navDisabled ? (
+      <IconButton aria-label={label} aria-disabled edge="start" sx={{ color: "text.disabled", cursor: "not-allowed" }}>
+        {icon}
+      </IconButton>
+    ) : href ? (
       <IconButton component={Link} href={href} aria-label={label} edge="start">
         {icon}
       </IconButton>
