@@ -67,6 +67,12 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
 
+  timers:
+    <<: *backend
+    command: ["python", "manage.py", "run_timers"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
   celery-beat:
     <<: *backend
     command: ["celery", "-A", "config", "beat", "-l", "info", "-s", "/tmp/celerybeat-schedule"]

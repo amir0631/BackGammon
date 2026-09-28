@@ -341,7 +341,7 @@ commission = floor(referee_entry * referral.pct / 100)    # default 1
 
 ### 10.3 WebSocket protocol
 
-Endpoint `/ws`. First message must be `auth` with the access token; otherwise close within 5 s.
+Endpoint `/ws`. First message must be `auth` with a token from `GET auth/ws-token` (60 s, bound to the session; the access token itself stays in its HttpOnly cookie); otherwise close within 5 s. The server answers `auth.ok`.
 
 Envelope (both directions):
 
@@ -373,6 +373,12 @@ Envelope (both directions):
 | S→C | `spectate.state` | full match state for a joining spectator, then the same event stream players receive |
 | S→C | `spectators.count` | current spectator count (sent to players and spectators, throttled to 1 per 5 s) |
 | C→S | `spectate.react` | `emoji_key` (spectator panel only; never delivered to players) |
+| S→C | `turn.moved` | player, move list, hits, position after, `auto` (`forced`, `timeout`, or none) |
+| S→C | `turn.passed` / `turn.timeout` | player (timeout: count and limit) |
+| S→C | `cube.update` | `offer`, `take`, or `drop`, cube value and owner |
+| S→C | `game.started` / `game.ended` | game number, Crawford flag, score / result and score |
+
+Payload types are generated from the pydantic models in `backend/realtime/protocol.py` into `packages/protocol/src/ws.ts` (`manage.py protocol_ts`); a contract test fails when they differ. An unanswered double is taken on timeout.
 
 Shared TypeScript types for every message live in `packages/protocol`; Python side mirrors them with pydantic models. Keep both in sync; add a contract test.
 

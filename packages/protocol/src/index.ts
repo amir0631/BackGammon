@@ -13,34 +13,8 @@ export interface Paginated<T> {
   next: string | null;
 }
 
-export type ClientMessageType =
-  | "auth"
-  | "queue.join"
-  | "queue.leave"
-  | "match.sync"
-  | "turn.roll"
-  | "turn.move"
-  | "cube.offer"
-  | "cube.take"
-  | "cube.drop"
-  | "react.send"
-  | "match.resign"
-  | "spectate.join"
-  | "spectate.leave"
-  | "spectate.react";
-
-export type ServerMessageType =
-  | "error"
-  | "match.found"
-  | "match.state"
-  | "turn.rolled"
-  | "react.recv"
-  | "opponent.disconnected"
-  | "opponent.back"
-  | "match.ended"
-  | "pool.update"
-  | "spectate.state"
-  | "spectators.count";
+// WebSocket message payloads are generated from the backend's pydantic models (§10.3 contract).
+export * from "./ws";
 
 /** WebSocket envelope, both directions (CLAUDE.md §10.3). */
 export interface Envelope<T extends string = string, P = unknown> {

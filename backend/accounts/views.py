@@ -190,6 +190,20 @@ class PasswordResetView(PublicView):
         return _signed_in(user, request)
 
 
+class WsTokenView(APIView):
+    """A short-lived token for the WebSocket `auth` message (CLAUDE.md §10.3). The access token itself
+    stays in its HttpOnly cookie, out of reach of page scripts."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request: Request) -> Response:
+        session = _current_session(request)
+        token = sessions.access_token(
+            _user(request).id, session.id, typ="ws", ttl=sessions.WS_TOKEN_TTL_SECONDS
+        )
+        return Response({"token": token, "expires_in": sessions.WS_TOKEN_TTL_SECONDS})
+
+
 class MeView(APIView):
     permission_classes = (IsAuthenticated,)
 
