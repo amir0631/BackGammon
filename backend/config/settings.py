@@ -132,7 +132,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
+# The host comes from `Host`, which Nginx sets. X-Forwarded-Host is client-controlled (Nginx passes it
+# through), so trusting it would let a request to `m.` pass the admin host check.
+USE_X_FORWARDED_HOST = False
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 

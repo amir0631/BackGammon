@@ -101,6 +101,15 @@ class TestAdminAuth:
         )
         assert res.status_code == 403 and res.json()["details"] == {"reason": "host"}
 
+    def test_forwarded_host_header_cannot_claim_the_admin_host(self):
+        make_admin()
+        res = APIClient(HTTP_HOST="m.localhost", HTTP_X_FORWARDED_HOST=HOST).post(
+            "/api/v1/admin/auth/login",
+            {"username": "boss", "password": PASSWORD, "totp": current_code()},
+            format="json",
+        )
+        assert res.status_code == 403 and res.json()["details"] == {"reason": "host"}
+
     def test_ip_allowlist(self, settings):
         make_admin()
         settings.ADMIN_IP_ALLOWLIST = ["10.0.0.0/8"]

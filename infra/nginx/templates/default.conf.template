@@ -35,6 +35,7 @@ server {
     server_name m.${BASE_DOMAIN};
     include /etc/nginx/snippets/security.conf;
 
+    location /api/v1/admin/ { return 404; }  # admin API only on admin. (CLAUDE.md §12.1)
     location /api/ { include /etc/nginx/snippets/proxy.conf; proxy_pass http://backend; }
     location /ws   { include /etc/nginx/snippets/websocket.conf; proxy_pass http://backend; }
     location /     { include /etc/nginx/snippets/proxy.conf; proxy_pass http://mobile; }
@@ -58,6 +59,7 @@ server {
     server_name app.${BASE_DOMAIN} ${BASE_DOMAIN} www.${BASE_DOMAIN};
     include /etc/nginx/snippets/security.conf;
 
+    location /api/v1/admin/ { return 404; }  # admin API only on admin. (CLAUDE.md §12.1)
     location /api/ { include /etc/nginx/snippets/proxy.conf; proxy_pass http://backend; }
     location /ws   { include /etc/nginx/snippets/websocket.conf; proxy_pass http://backend; }
     location /     { return 302 ${URL_SCHEME}://m.${BASE_DOMAIN}$port_suffix$request_uri; }
