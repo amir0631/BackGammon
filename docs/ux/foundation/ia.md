@@ -38,10 +38,11 @@ Applies to: `m.` in Phase 1. Every route here must also exist in `apps/desktop` 
 │       └── sheet: registration confirmation
 │
 ├── [Tab 4] Shop — /shop         themes (default segment)
+│   ├── /shop/avatars            avatar items
 │   ├── /shop/packs              emoji and phrase packs
 │   ├── /shop/coins              packages + custom amount | "top-up by support" state
 │   ├── /shop/items/[id]         item preview (3D preview for themes)
-│   └── /shop/payment/[id]       payment status after gateway return
+│   └── /shop/coins/result       payment status after gateway return (?payment=<id>)
 │
 ├── [Tab 5] Account — /me
 │   ├── /wallet                  balance, on-hold amount, history (also via the balance chip)
@@ -55,6 +56,7 @@ Applies to: `m.` in Phase 1. Every route here must also exist in `apps/desktop` 
 │   ├── /me/referral
 │   ├── /me/edit                 avatar, username change (costs coins)
 │   ├── /me/sessions             signed-in devices
+│   ├── /news, /news/[id]        announcements (news.md)
 │   ├── /profile/[username]      public profile (own or others)
 │   ├── /settings
 │   ├── /help, /help/[topic]
@@ -96,10 +98,11 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/tournaments` | Tournament list | Signed in | Tab 3 | `tournaments.md` |
 | `/tournaments/[id]` | Detail; `?tab=overview\|bracket` | Signed in | Tab 3 child | `tournaments.md` |
 | `/shop` | Themes | Signed in | Tab 4 | `shop.md` |
+| `/shop/avatars` | Avatar items | Signed in | Tab 4 | `shop.md` |
 | `/shop/packs` | Emoji and phrase packs | Signed in | Tab 4 | `shop.md` |
-| `/shop/coins` | Coin packages + custom amount, or the "top-up by support" state | Signed in | Tab 4 | `coins-purchase.md` |
+| `/shop/coins` | Coin packages + custom amount, or the "top-up by support" state | Signed in | Tab 4 | `shop.md` (CO-01, CO-02) |
 | `/shop/items/[id]` | Item preview | Signed in | Tab 4 child | `shop.md` |
-| `/shop/payment/[id]` | Payment status | Signed in | None | `coins-purchase.md` |
+| `/shop/coins/result?payment=<id>` | Payment status (the gateway callback redirects here; replaces the earlier `/shop/payment/[id]`) | Signed in | None | `shop.md` (CO-04) |
 | `/wallet` | Balance, on-hold amount, history, actions (Get coins, Transfer, Withdraw) | Signed in | Tab 5 child | `wallet.md` |
 | `/wallet/transfer` | Transfer: recipient → amount → review + password | Signed in | None (task flow) | `wallet.md` |
 | `/wallet/withdraw` | Withdraw: bank account → amount → review → SMS code → submitted | Signed in | None (task flow) | `wallet.md` |
@@ -112,6 +115,8 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `/me/predictions` | My predictions | Signed in | Tab 5 child | `predictions.md` |
 | `/me/referral` | Referral link and earnings | Signed in | Tab 5 child | `referral.md` |
 | `/me/sessions` | Signed-in devices | Signed in | Tab 5 child | `profile.md` |
+| `/news` | News list (announcements and banners) | Signed in | Tab 5 child | `news.md` |
+| `/news/[id]` | News item | Signed in | Tab 5 child | `news.md` |
 | `/profile/[username]` | Public profile | Signed in | Child of the origin tab | `profile.md` |
 | `/settings` | Settings | Signed in | Tab 5 child | `profile.md` (base), `settings.md` (step 17 items) |
 | `/help`, `/help/[topic]` | Help | Public | Tab 5 child (signed in) | `help-legal.md` |
@@ -131,6 +136,8 @@ All paths are identical on `m.` and `app.` (§11.0 rule 7). The routes named in 
 | `ref` | Any route | Referral code. Store it locally until signup and prefill it in `/signup/account`. |
 | `scope` | `/leaderboard` | Leaderboard scope |
 | `tab` | `/tournaments/[id]` | `overview` or `bracket` |
+| `segment` | `/tournaments` | `upcoming`, `mine`, `running`, or `finished` |
+| `payment` | `/shop/coins/result` | Payment id returned by the gateway callback |
 | `tier`, `variant`, `tournament`, `sort` | `/live` | Filters, mirroring `GET matches/live` |
 | `to` | `/wallet/transfer` | Prefilled recipient username (e.g., from a public profile). The amount is never prefilled. |
 
@@ -163,7 +170,7 @@ Nav behavior:
 - **Hidden on:**
   - Auth screens
   - `/match/[id]` and `/replay/[id]`
-  - Task flows: `/shop/payment/[id]`, `/wallet/transfer`, `/wallet/withdraw`
+  - Task flows: `/shop/coins/result`, `/wallet/transfer`, `/wallet/withdraw`
   - System screens
   - Whenever the on-screen keyboard is open
 - **Task flows** show a close (×) button instead of the nav. Closing mid-flow discards unsaved input after a confirm only if the user has typed something.
@@ -238,7 +245,7 @@ Everything else lives in sheets.
 | Auth step 2+ | Returns to the previous step; entered data is kept |
 | Transfer / withdraw step 2+ | Returns to the previous step; entered data is kept. Passwords and SMS codes are cleared. |
 | After a transfer or withdrawal is submitted | Goes to `/wallet` (or `/wallet/withdrawals/[id]`); never re-submits |
-| `/shop/payment/[id]` | Goes to `/shop/coins`; never re-submits a payment |
+| `/shop/coins/result` | Goes to `/shop/coins`; never re-submits a payment |
 | Tab root | Leaves the app (browser default); no "are you sure" dialog |
 
 ### 3.6 Secondary entry points

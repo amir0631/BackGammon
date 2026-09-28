@@ -96,3 +96,4 @@ export function groupMobileNumber(digits: string): string {
 export function isolate(value: string): string {
   return `\u2068${value}\u2069`;
 }
+export * from "./jalali";

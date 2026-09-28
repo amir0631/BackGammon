@@ -7,6 +7,8 @@ Related specs: `match.md` (board, player bars, dice, move history MA-04, reactio
 
 This spec merges the planned `predictions.md` into `live.md`: predictions exist only inside the spectator view, and "My predictions" is their history. Screen IDs follow screen-inventory.md §2.4.
 
+**Update:** `predictions.md` now owns PR-01 to PR-04. It keeps §3.4–§3.9 below as its base and adds the `review` blocked reason, estimate warnings when a winning pick would return less than the stake, winner-based results, and per-match grouping in My predictions. Where the two differ, `predictions.md` wins.
+
 **API (implemented; field names are the contract):**
 
 | Call | Response / notes used by this spec |

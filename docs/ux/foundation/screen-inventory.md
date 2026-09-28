@@ -25,11 +25,11 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 | `live.md` | Live list, filters, spectator view | 8 |
 | `history-replay.md` | Match history list, replay viewer, verify dice, unavailable states (403, not found, active, aborted, purged). Consolidates the planned `history.md` and `replay.md`. | 8 |
 | `leaderboard.md` | Leaderboards | 8 |
-| `coins-purchase.md` | Support top-up state, packages + custom amount, checkout confirmation, payment status | 9 (support state can ship with step 3) |
-| `shop.md` | Themes, packs, item preview, buy, equip | 10 |
+| `shop.md` | Themes, avatars, packs, item preview, buy, equip; coins page: support top-up state, packages + custom amount, checkout confirmation, payment status (the planned `coins-purchase.md` is merged here) | 9–10 |
 | `referral.md` | Referral link, earnings | 11 |
-| `predictions.md` | Prediction sheet and pool panel, my predictions | 12 |
-| `tournaments.md` | List, detail, bracket, registration, round waiting | 13 |
+| `predictions.md` | Prediction panel states and blocked reasons, confirmation, results, my predictions (owns PR-01 to PR-04; builds on live.md §3.4–§3.9) | 12 |
+| `tournaments.md` | List, detail, bracket, registration, leave, pre-start banner, match-ready dialog, round waiting, cancelled/refunded | 13 |
+| `news.md` | Announcement banner strip, news list, news item | 15 |
 | `settings.md` | Additions to `/settings` after step 2: notifications and install app (the base lives in `profile.md`) | 17 |
 | `help-legal.md` | Help topics, terms, privacy | 2 |
 | `system.md` | Offline, unsupported device, not found, update available, install banner and iOS guide, push permission sheet, global banners (account status is in `auth.md`) | 1, 6, 17 |
@@ -126,6 +126,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | TO-05 | Leave registration | Sheet | Sh | tournaments | refund amount |
 | TO-06 | Round ready / waiting between rounds | Banner + state on TO-02 | O | tournaments | no-show countdown (open question) |
 | TO-07 | Push permission explanation | Sheet | Sh | system | allow / not now / denied in browser |
+| TO-08 | Tournament match ready (join countdown) | Dialog | D | tournaments | countdown, not now → resume banner, in another match |
 
 ### 2.6 Shop and coins (Tab 4)
 
@@ -134,11 +135,12 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | SH-01 | Themes | `/shop` | S | shop | free, level-locked, purchasable, owned, equipped |
 | SH-02 | Emoji and phrase packs | `/shop/packs` | S | shop | as SH-01 |
 | SH-03 | Item preview (3D preview for themes) | `/shop/items/[id]` | S | shop | loading theme, preview failed |
-| SH-04 | Item purchase confirmation | Sheet | Sh | shop | in-flight, insufficient |
-| CO-01 | Coin packages + custom amount | `/shop/coins` | S | coins-purchase | gateway available; custom amount below min / above max / rounding note |
-| CO-02 | Support top-up state | `/shop/coins` | S | coins-purchase | current state (§7.9, §7.11); support channel placeholder |
-| CO-03 | Purchase confirmation (leaving to bank) | Sheet | Sh | coins-purchase | in-flight |
-| CO-04 | Payment status | `/shop/payment/[id]` | S | coins-purchase | returned, verifying, verified, failed, cancelled, unknown / check status |
+| SH-04 | Item purchase confirmation | Sheet | Sh | shop | in-flight, insufficient, bought → use now |
+| SH-05 | Avatars | `/shop/avatars` | S | shop | as SH-01 |
+| CO-01 | Coin packages + custom amount | `/shop/coins` | S | shop | gateway available; custom amount below min / above max / rounding note |
+| CO-02 | Support top-up state | `/shop/coins` | S | shop | current state (§7.9, §7.11); support channel placeholder |
+| CO-03 | Purchase confirmation (leaving to bank) | Sheet | Sh | shop | in-flight |
+| CO-04 | Payment status | `/shop/coins/result?payment=<id>` | S | shop | returned, verifying, verified, failed, cancelled, unknown / check status |
 
 ### 2.7 Wallet (Tab 5 children)
 
@@ -180,6 +182,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | RP-02 | Verify dice | Sheet / side panel on RP-01 | Sh | history-replay | running, verified, mismatch |
 | RP-03 | Replay unavailable | `/replay/[id]` (in place) | S | history-replay | private (403), not found, still active, aborted, purged, couldn't load |
 | RF-01 | Referral | `/me/referral` | S | referral | inactive until the referee's first purchase, earnings, empty |
+| RF-02 | Share fallback (no Web Share API) | Sheet | Sh | referral | copy link, copy code |
 | ST-01 | Settings | `/settings` | S | profile (base), settings (step 17 items) | language (fa / en), lite graphics, reduced animations (OS override), sound, vibration (unsupported), account items; later notifications, install |
 | HL-01 | Help index and topics | `/help`, `/help/[topic]` | S | help-legal | topics: coins and prices, fees, signup bonus, transfers, withdrawals, predictions, tournaments, replays and fair dice, variants, lite mode, account |
 | HL-02 | Terms / privacy | `/terms`, `/privacy` | S | help-legal | placeholder content (§18) |
@@ -194,7 +197,10 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | SY-04 | Not found | 404 | S | system | — |
 | SY-05 | Install banner (Android) / iOS guide | Banner + sheet | O / Sh | system | frequency rules (§11.5) |
 | SY-06 | New version available | Snackbar | O | system | never during a match or a money flow |
-| SY-07 | Announcement banner (admin content) | Global | O | system | dismissible |
+| SY-07 | Announcement banner (admin content): moved to NW-01 | Tab roots | O | news | dismissible |
+| NW-01 | Announcement banner strip | Tab roots | O | news | one at a time, dismissed, details / open, language fallback |
+| NW-02 | News list | `/news` | S | news | empty, new chips, offline cached |
+| NW-03 | News item | `/news/[id]` | S | news | not available, link action |
 | SY-08 | Session expired | Dialog → `/login?next=` | D | system | — |
 
 ### 2.10 Admin panel (`admin.`, desktop-first)
