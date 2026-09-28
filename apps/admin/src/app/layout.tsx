@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import type { ReactNode } from "react";
-import { direction, isLocale, defaultLocale } from "@bg/i18n";
+import { Suspense, type ReactNode } from "react";
+import { palette } from "@bg/design-tokens";
+import { defaultLocale, direction, isLocale } from "@bg/i18n";
+import { AdminProvider } from "@/lib/admin-context";
+import { fontVariables } from "@/theme/fonts";
 import { ThemeRegistry } from "@/theme/ThemeRegistry";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,8 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#14110f",
+  themeColor: palette.light.surface,
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -24,10 +26,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const messages = await getMessages();
 
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir={dir} className={fontVariables}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ThemeRegistry direction={dir}>{children}</ThemeRegistry>
+          <ThemeRegistry direction={dir} script={locale}>
+            <Suspense>
+              <AdminProvider>{children}</AdminProvider>
+            </Suspense>
+          </ThemeRegistry>
         </NextIntlClientProvider>
       </body>
     </html>

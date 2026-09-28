@@ -1,0 +1,298 @@
+{
+  "admin": {
+    "lang": {
+      "fa": "فارسی",
+      "en": "English"
+    },
+    "login": {
+      "title": "Sign in to the admin panel",
+      "username": "Username",
+      "password": "Password",
+      "totp": "6-digit authenticator code",
+      "totpHelp": "Codes change every 30 seconds. If codes keep failing, check that your phone's time is set automatically.",
+      "cta": "Sign in",
+      "signingIn": "Signing in…",
+      "help": "Access problems? Ask a superadmin.",
+      "disabled": "Fill in all three fields.",
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "denied": {
+      "ip": "Access from this network isn't allowed. Connect from an approved network or contact a superadmin.",
+      "host": "Open the admin panel at its own address."
+    },
+    "shell": {
+      "nav": {
+        "settings": "Settings",
+        "label": "Sections"
+      },
+      "signOut": "Sign out",
+      "env": {
+        "staging": "Staging",
+        "production": "Production",
+        "development": "Development"
+      },
+      "menu": "{name} menu"
+    },
+    "role": {
+      "superadmin": "Superadmin",
+      "finance": "Finance",
+      "support": "Support"
+    },
+    "sessionExpired": {
+      "body": "Your admin session has ended. Sign in again to continue. Unsaved changes were not saved.",
+      "cta": "Sign in"
+    },
+    "offline": "You're offline.",
+    "settings": {
+      "title": "Settings",
+      "intro": "Changes take effect immediately, without a redeploy. Every change is saved in the audit log.",
+      "readOnly": "You can view settings. Only a superadmin can change them.",
+      "search": "Search settings",
+      "searchHelp": "Search by key or by the Persian or English description.",
+      "onlyChanged": "Changed from default ({count})",
+      "groupIndex": "Groups",
+      "col": {
+        "setting": "Setting",
+        "current": "Current value",
+        "default": "Default",
+        "allowed": "Allowed",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "default": "Default",
+        "changed": "Changed"
+      },
+      "range": {
+        "between": "{min} to {max}",
+        "atLeast": "At least {min}",
+        "atMost": "At most {max}",
+        "any": "Any value"
+      },
+      "copyKey": "Copy key {key}",
+      "edit": "Edit {name}",
+      "reset": "Reset {name} to default",
+      "history": "History of {name}",
+      "saved": "Saved",
+      "savedToast": "Saved: {key} is now {value}.",
+      "empty": {
+        "search": "No settings match \"{q}\".",
+        "clear": "Clear search",
+        "noneChanged": "All settings use their default values."
+      },
+      "loadError": "Couldn't load settings.",
+      "lastLoaded": "Last loaded: {time}",
+      "unknown": "This setting no longer exists. The list was refreshed.",
+      "group": {
+        "game": "Game",
+        "table": "Tables",
+        "referral": "Referrals",
+        "predict": "Predictions",
+        "tournament": "Tournaments",
+        "bonus": "Bonuses",
+        "coin": "Coin",
+        "shop": "Shop",
+        "transfer": "Transfers",
+        "withdraw": "Withdrawals",
+        "xp": "XP",
+        "elo": "ELO rating",
+        "matchmaking": "Matchmaking",
+        "username": "Usernames",
+        "bot": "Bot",
+        "live": "Live",
+        "replay": "Replays",
+        "admin": "Admin",
+        "sms": "SMS",
+        "otp": "SMS codes (OTP)",
+        "auth": "Login security"
+      },
+      "value": {
+        "on": "On",
+        "off": "Off",
+        "seconds": "{n} s",
+        "humanized": "({duration})",
+        "coins": "{n} coins",
+        "toman": "{n} toman",
+        "rial": "{n} rial",
+        "days": "{n} days",
+        "xp": "{n} XP",
+        "points": "{n}-point",
+        "place": "Place {n}",
+        "total": "Total: {total}",
+        "rolling24h": "within any rolling 24 hours",
+        "count": "{n}"
+      },
+      "zero": {
+        "noDelay": "No delay",
+        "unlimited": "Unlimited",
+        "forever": "Keep forever",
+        "noCap": "No cap",
+        "noFee": "No fee",
+        "free": "Free",
+        "noCooldown": "No waiting period",
+        "noBonus": "No bonus",
+        "noAlert": "No alert",
+        "disabled": "Disabled"
+      },
+      "traditional": {
+        "single": "Single",
+        "gammon": "Gammon",
+        "backgammon": "Backgammon"
+      },
+      "choice": {
+        "referral": {
+          "base": {
+            "referee_entry": "Referred player's entry",
+            "pot": "Table pot"
+          }
+        }
+      },
+      "lastChanged": "Last changed by {admin}, {time}",
+      "shown": "{n} settings shown",
+      "skip": "Skip to settings",
+      "allGroups": "All groups",
+      "copied": "Key copied"
+    },
+    "edit": {
+      "step1": "Edit",
+      "step2": "Confirm change",
+      "current": "Current value",
+      "new": "New value",
+      "default": "Default",
+      "isDefault": "This is the default value.",
+      "review": "Review change",
+      "unchanged": "The value hasn't changed.",
+      "invalid": "Fix the value first.",
+      "error": {
+        "type": "This value has the wrong type.",
+        "min": "The value must be at least {min}.",
+        "max": "The value must be at most {max}.",
+        "choice": "Choose one of the allowed options.",
+        "check": "The value doesn't meet this setting's rule: {rule}"
+      },
+      "rule": {
+        "oddLengths": "Odd numbers only, at least one",
+        "ascendingUnique": "Ascending with no duplicates, at least one",
+        "sum100": "Must add up to exactly 100%",
+        "points": "All three values between 1 and 10",
+        "e164": "Starts with + and has 6–18 digits, e.g. +983000505",
+        "patternCode": "6–40 Latin letters or digits"
+      },
+      "list": {
+        "add": "Add",
+        "remove": "Remove {value}",
+        "duplicate": "This value is already in the list."
+      },
+      "split": {
+        "addPlace": "Add place"
+      },
+      "json": {
+        "parseError": "Invalid JSON (line {line}, column {column})."
+      },
+      "reason": "Reason for this change (saved in the audit log)",
+      "reasonRequired": "Enter a reason.",
+      "reasonCounter": "{count} of 500 characters",
+      "ackRequired": "Tick the confirmation above to continue.",
+      "back": "Back to edit",
+      "save": "Save change",
+      "saving": "Saving…",
+      "saveFailed": "Couldn't save. Check your connection and try again.",
+      "tryAgain": "Try again",
+      "conflict": "Changed by someone else while you were editing: now {value}.",
+      "warning": {
+        "title": "Consistency warning",
+        "minAboveMax": "{minName} ({min}) is higher than {maxName} ({max}).",
+        "notMultiple": "{name} ({value}) isn't a multiple of the coin price ({price}).",
+        "noEligibleTier": "No table tier reaches the prediction minimum ({min}); no match will have a prediction pool.",
+        "pointsOrder": "Gammon is lower than single, or backgammon is lower than gammon."
+      },
+      "conflictTitle": "Changed meanwhile",
+      "patternChecking": "Checking this code at IPPanel…",
+      "patternStatus": "This code at IPPanel"
+    },
+    "impact": {
+      "money": "Changes what players pay or receive. Players see the new value on their next confirmation screen.",
+      "rakeExample": "{entry}-coin table: winner receives {before} → {after}",
+      "coinPrice": "Changes every toman amount shown to players, new purchases, and new withdrawal requests. Pending withdrawals keep the rate from their request time.",
+      "coinPriceExample": "100 coins: {before} → {after} toman",
+      "signupBonus": "Applies to accounts created from now on.",
+      "rolling": "Limits count over any rolling 24 hours.",
+      "gameTimers": "Applies to new turns and new searches.",
+      "tiers": "Removing a tier removes it from the lobby.",
+      "predictOff": "New matches won't open prediction pools.",
+      "retention": "Replays older than {days} days will be permanently deleted, except those linked to an open fraud flag or payment dispute. This can't be undone.",
+      "retentionAck": "I understand old replays will be permanently deleted.",
+      "coinPriceAck": "I understand this changes every toman price.",
+      "topupNoCapAck": "I understand manual top-ups will have no cap.",
+      "patternAck": "I understand players won't receive these texts until this pattern is active.",
+      "fromNumber": "The sender line must be allowed for the SMS patterns at IPPanel, or texts will fail.",
+      "security": "Protects player accounts against guessing and SMS abuse.",
+      "alsoAdmin": "These values also apply to admin sign-in.",
+      "topupNoCap": "Removes the per-action cap on manual top-ups."
+    },
+    "reset": {
+      "title": "Reset \"{name}\" to default?",
+      "cta": "Reset to default"
+    },
+    "history": {
+      "title": "Change history",
+      "updated": "Changed",
+      "reset": "Reset to default",
+      "noReason": "No reason recorded",
+      "empty": "No recorded changes for this setting.",
+      "partial": "Showing changes among the latest 200 admin actions.",
+      "loadError": "Couldn't load history.",
+      "close": "Close"
+    },
+    "sms": {
+      "title": "SMS status",
+      "noAccess": "SMS status is visible to finance and superadmin roles.",
+      "testMode": "Test mode: texts are not sent; they're written to the server log.",
+      "notConfigured": "SMS isn't configured: the API key is missing on the server.",
+      "unreachable": "Couldn't reach IPPanel.",
+      "cause": {
+        "401": "The API key is invalid.",
+        "422": "IPPanel rejected the request.",
+        "other": "Network or provider error."
+      },
+      "otpDown": "Players can't receive verification codes: signup and password reset won't work.",
+      "lowCredit": "SMS credit is low.",
+      "ok": "SMS is working.",
+      "credit": "Credit",
+      "creditRial": "({rial} rial)",
+      "belowThreshold": "Below the alert level of {threshold} toman",
+      "patterns": "SMS patterns",
+      "pattern": {
+        "otp": "Verification code (OTP)",
+        "withdrawalPaid": "Withdrawal paid notice"
+      },
+      "status": {
+        "active": "Active",
+        "pending": "Pending approval at IPPanel",
+        "unknown": "Unknown",
+        "other": "Not active ({raw})"
+      },
+      "consequence": {
+        "otp": "Signup, password reset, and withdrawal codes won't be delivered.",
+        "withdrawalPaid": "Players won't get an SMS when a withdrawal is paid."
+      },
+      "sender": "Sender line",
+      "checkedAt": "Last checked: {time}",
+      "checkNow": "Check now",
+      "checking": "Checking…",
+      "noPatterns": "No SMS patterns configured.",
+      "newCodeStatus": "This code's status at IPPanel: {status}",
+      "gift": "Gift credit: {amount} toman"
+    }
+  },
+  "errors": {
+    "admin": {
+      "invalidCredentials": "Username, password, or code is incorrect.",
+      "locked": "Too many failed attempts. Try again in {time}.",
+      "unauthenticated": "Your session has ended. Sign in again.",
+      "forbidden": "You don't have permission to do this.",
+      "settingConflict": "Another admin changed this setting meanwhile."
+    }
+  }
+}
