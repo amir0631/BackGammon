@@ -10,6 +10,15 @@ def default_prefs() -> dict[str, bool]:
     return {"graphics_lite": False, "animations_reduced": False, "sound": True, "vibration": True}
 
 
+REFERRAL_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"  # no 0/O or 1/I: read aloud and typed by hand
+
+
+def new_referral_code() -> str:
+    import secrets
+
+    return "".join(secrets.choice(REFERRAL_ALPHABET) for _ in range(8))
+
+
 class UserManager(BaseUserManager["User"]):
     def create_user(self, phone: str, password: str | None = None, **extra: Any) -> "User":
         user = self.model(phone=phone, **extra)
@@ -52,6 +61,8 @@ class User(AbstractBaseUser):
     username_changed_at = models.DateTimeField(null=True, blank=True)
     # Equipped board and checker themes (item keys), set only through the equip endpoint.
     equipped = models.JSONField(default=dict, blank=True)
+    # Stable invite code (§7.4): survives username changes, so shared links keep working.
+    referral_code = models.CharField(max_length=12, unique=True, default=new_referral_code)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects: ClassVar[UserManager] = UserManager()

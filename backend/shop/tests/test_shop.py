@@ -84,6 +84,45 @@ class TestShop:
             and info["checker_theme"] == "classic"
         )
 
+    def test_price_change_after_confirming_is_refused(self):
+        user = make_user()
+        fund(user, 400)
+        c = client(user)
+        khatam = item("board_theme", "khatam")
+        Item.objects.filter(pk=khatam.pk).update(price_coins=350)  # an admin changed it meanwhile
+        res = c.post(
+            f"/api/v1/shop/items/{khatam.id}/buy",
+            {"expected_price": 300},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="p1",
+        )
+        assert res.status_code == 409 and res.json()["code"] == "SHOP_PRICE_CHANGED"
+        assert res.json()["details"]["price"] == 350 and Wallet.objects.get(user=user).balance == 400
+        ok = c.post(
+            f"/api/v1/shop/items/{khatam.id}/buy",
+            {"expected_price": 350},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="p2",
+        )
+        assert ok.json()["owned"] and Wallet.objects.get(user=user).balance == 50
+
+    def test_owned_shop_avatar_can_be_chosen_in_profile(self):
+        user = make_user()
+        c = client(user)
+        Item.objects.create(
+            kind="avatar",
+            key="shop_falcon",
+            name_i18n={"fa": "x", "en": "x"},
+            unlock="purchasable",
+            price_coins=10,
+        )
+        assert c.patch("/api/v1/me", {"avatar": "shop_falcon"}, format="json").status_code == 400
+        fund(user, 10)
+        buy(c, item("avatar", "shop_falcon").id)
+        assert (
+            c.patch("/api/v1/me", {"avatar": "shop_falcon"}, format="json").json()["avatar"] == "shop_falcon"
+        )
+
     def test_phrases(self):
         rows = {p["key"]: p["text"] for p in APIClient().get("/api/v1/phrases").json()["results"]}
         assert rows["good_game"] == {"fa": "بازی خوبی بود!", "en": "Good game!"}

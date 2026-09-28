@@ -293,8 +293,13 @@ export const api = {
       }),
     payment: (id: string, o?: Opts) => apiRequest<PaymentInfo>(`/payments/${encodeURIComponent(id)}`, o),
     items: (kind?: ItemKind, o?: Opts) => apiRequest<Paginated<ShopItem>>(`/shop/items${query({ kind })}`, o),
-    buy: (id: number, idempotencyKey: string) =>
-      apiRequest<ShopItem>(`/shop/items/${id}/buy`, { method: "POST", idempotencyKey }),
+    /** `expectedPrice`: the price the player confirmed; a changed price is refused with SHOP_PRICE_CHANGED. */
+    buy: (id: number, idempotencyKey: string, expectedPrice?: number) =>
+      apiRequest<ShopItem>(`/shop/items/${id}/buy`, {
+        method: "POST",
+        idempotencyKey,
+        body: expectedPrice === undefined ? undefined : { expected_price: expectedPrice },
+      }),
     equip: (id: number) => apiRequest<ShopItem>(`/me/items/${id}/equip`, { method: "POST" }),
     themes: (o?: Opts) =>
       apiRequest<Paginated<ShopItem> & { equipped: { board_theme: string; checker_theme: string } | null }>("/themes", o),

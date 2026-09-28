@@ -196,6 +196,7 @@ def start(tournament_id: int) -> bool:
 def _start_match(t: Tournament, slot: BracketSlot) -> None:
     from game.services import create_match, player_info
     from matchmaking.service import _notify
+    from realtime.live import join_deadline_ms
 
     a, b = slot.player_a, slot.player_b
     assert a is not None and b is not None
@@ -211,6 +212,8 @@ def _start_match(t: Tournament, slot: BracketSlot) -> None:
             "variant": t.variant,
             "length": t.length,
             "entry": 0,
+            "join_deadline": join_deadline_ms(match.rules),
+            "tournament": {"id": t.id, "name": t.name_i18n, "round": slot.round, "rounds": rounds(t)},
         }
         transaction.on_commit(functools.partial(_notify, player.id, "match.found", payload))
 

@@ -515,6 +515,8 @@ export interface Announcement {
   body: Bilingual;
   /** An in-app path, or "". */
   link: string;
+  published_at: string;
+  ends_at: string | null;
 }
 
 export interface AdminAnnouncement {
@@ -710,9 +712,15 @@ export interface LeaderboardRow {
 }
 
 export interface Leaderboard {
-  scope: "all" | "weekly" | "monthly";
+  scope: "all" | "weekly" | "monthly" | "predict";
   results: LeaderboardRow[];
-  me: { rank: number; value: number } | null;
+  /**
+   * The caller's place. On the predict board, `rank` and `value` are null until the player has
+   * `needed` settled predictions (`count` so far).
+   */
+  me: { rank: number | null; value: number | null; count?: number; needed?: number } | null;
+  /** weekly: Saturday to Saturday; monthly: the Jalali month; both in Tehran time. Null otherwise. */
+  period: { start: string; end: string } | null;
 }
 
 // ---- Shop items and content (CLAUDE.md §10.2 Shop, Content, §11.2) ----
@@ -742,8 +750,12 @@ export interface PhraseText {
 // ---- Referrals (CLAUDE.md §7.4) ----
 
 export interface ReferralSummary {
-  /** The referral code is the player's username. */
-  code: string | null;
+  /** Stable invite code; survives username changes. */
+  code: string;
+  /** The signup link carrying the code (`/signup?ref=`). */
+  link: string;
+  /** Commissions held for anti-fraud review, not yet in `earned`. */
+  held: number;
   referees: number;
   active_referees: number;
   earned: number;
@@ -757,6 +769,8 @@ export interface ReferralEarningRow {
   id: number;
   referee: string | null;
   amount: number;
+  /** held: waiting for anti-fraud review; cancelled: review found fraud (§12.2 referral_farm). */
+  status: "paid" | "held" | "cancelled";
   match_id: string;
   created_at: string;
 }
@@ -772,7 +786,8 @@ export interface OpenPool {
   open: boolean;
   max_stake_per_user: number;
   /** Why the caller may not predict here, or null. */
-  blocked: "player" | "linked" | "referral" | null;
+  /** review: the account is under anti-fraud review (§12.2 chip_dumping). */
+  blocked: "player" | "linked" | "referral" | "review" | null;
 }
 
 export interface PredictionRow {
@@ -782,6 +797,10 @@ export interface PredictionRow {
   amount: number;
   payout: number | null;
   pool_status: "open" | "closed" | "held" | "settled" | "refunded";
+  /** The side that won, once the match is over. */
+  winner_side: 0 | 1 | null;
+  /** Usernames of side 0 and side 1. */
+  players: (string | null)[];
   created_at: string;
 }
 
@@ -826,6 +845,9 @@ export interface PublicConfig {
   /** Spectators see the match this many seconds late (§20.4); show "Delayed by n s" when > 0. */
   spectator_delay_seconds: number;
   spectator_reactions_enabled: boolean;
+  /** A player who hasn't joined a found match forfeits after this many seconds. */
+  reconnect_grace_seconds: number;
+  predict_min_count_for_board: number;
   coin_price_toman: number;
   username_change: { cost: number; cooldown_days: number };
   allowed_lengths: number[];

@@ -66,6 +66,11 @@ def prediction_payload(p: Prediction) -> dict[str, Any]:
         "amount": p.amount,
         "payout": p.payout,
         "pool_status": p.pool.status,
+        "winner_side": p.pool.winner_side,
+        "players": [
+            p.pool.match.player_a.username if p.pool.match.player_a else None,
+            p.pool.match.player_b.username if p.pool.match.player_b else None,
+        ],
         "created_at": p.created_at.isoformat(),
     }
 
@@ -86,7 +91,11 @@ class MyPredictionsView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request: Request) -> Response:
-        qs = Prediction.objects.filter(user=_user(request)).select_related("pool").order_by("-id")
+        qs = (
+            Prediction.objects.filter(user=_user(request))
+            .select_related("pool__match__player_a", "pool__match__player_b")
+            .order_by("-id")
+        )
         cursor = request.query_params.get("cursor") or ""
         if cursor.isdigit():
             qs = qs.filter(id__lt=int(cursor))

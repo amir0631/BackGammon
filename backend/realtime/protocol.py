@@ -123,6 +123,13 @@ class Clock(_Model):
     server_now: int
 
 
+class TournamentContextOut(_Model):
+    id: int
+    name: dict[str, str]
+    round: int
+    rounds: int
+
+
 class MatchFoundOut(_Model):
     match_id: str
     you: int
@@ -131,6 +138,9 @@ class MatchFoundOut(_Model):
     variant: str
     length: int
     entry: int
+    # Epoch ms: a player who hasn't joined by then forfeits, or the match aborts before its first roll.
+    join_deadline: int
+    tournament: TournamentContextOut | None = None
 
 
 class GameResultOut(_Model):

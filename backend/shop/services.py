@@ -32,6 +32,12 @@ class ItemNotOwned(AppError):
     message_key = "errors.shop.itemNotOwned"
 
 
+class PriceChanged(AppError):
+    status_code = 409
+    code = "SHOP_PRICE_CHANGED"
+    message_key = "errors.shop.priceChanged"
+
+
 class ItemNotForSale(AppError):
     status_code = 409
     code = "ITEM_NOT_FOR_SALE"
@@ -102,16 +108,21 @@ def catalog(user: User | None, kind: str | None = None) -> list[dict[str, Any]]:
     return [item_payload(i, user, owned, equip) for i in items]
 
 
-def buy(user: User, item_id: int) -> dict[str, Any]:
+def buy(user: User, item_id: int, expected_price: int | None = None) -> dict[str, Any]:
+    """`expected_price`: the price the player confirmed; a different current price is refused with
+    PRICE_CHANGED instead of charged (§21.2: the cost shown is the cost paid)."""
     if user.status == User.Status.SUSPENDED:
         raise wallet_errors.AccountSuspended()
-    item = Item.objects.filter(id=item_id, active=True).first()
-    if item is None:
-        raise ItemUnavailable()
-    if item.unlock != Item.Unlock.PURCHASABLE:
-        raise ItemNotForSale(details={"unlock": item.unlock})
     with transaction.atomic():
-        if not UserItem.objects.filter(user=user, item=item).exists():
+        item = Item.objects.select_for_update().filter(id=item_id, active=True).first()
+        if item is None:
+            raise ItemUnavailable()
+        if item.unlock != Item.Unlock.PURCHASABLE:
+            raise ItemNotForSale(details={"unlock": item.unlock})
+        owned = UserItem.objects.filter(user=user, item=item).exists()
+        if not owned and expected_price is not None and expected_price != item.price_coins:
+            raise PriceChanged(details={"price": item.price_coins})
+        if not owned:
             ledger.ensure_wallet(user.id)
             # Keyed per player and item: an item is bought at most once, whatever the retries.
             ledger.post(

@@ -51,7 +51,13 @@ def join(user, t):
 
 @pytest.mark.django_db
 class TestTournament:
-    def test_full_bracket_pays_places(self, clock, published, django_capture_on_commit_callbacks):
+    def test_full_bracket_pays_places(
+        self, clock, published, django_capture_on_commit_callbacks, monkeypatch
+    ):
+        from matchmaking import service as mm
+
+        sent = []
+        monkeypatch.setattr(mm, "notifier", lambda uid, env: sent.append(env))
         t = new_tournament()
         users = players(4)
         for u in users:
@@ -59,6 +65,10 @@ class TestTournament:
         assert Wallet.objects.get(user=users[0]).balance == 400
         with django_capture_on_commit_callbacks(execute=True):
             assert services.start_due(t.starts_at + timedelta(seconds=1)) == [t.id]
+        found = [e["payload"] for e in sent if e["type"] == "match.found"]
+        assert len(found) == 4 and all(
+            f["tournament"] == {"id": t.id, "name": t.name_i18n, "round": 1, "rounds": 2} for f in found
+        )
         semis = list(Match.objects.filter(tournament_id=t.id))
         assert len(semis) == 2
         by_id = {u.id: u for u in users}

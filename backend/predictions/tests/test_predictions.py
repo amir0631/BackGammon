@@ -143,6 +143,29 @@ class TestPools:
         services.settle(m, 1)
         mine = c.get("/api/v1/me/predictions").json()["results"]
         assert mine[0]["payout"] == 45 and mine[0]["pool_status"] == "settled"
+        assert mine[0]["winner_side"] == 1 and mine[0]["players"] == [
+            m.player_a.username,
+            m.player_b.username,
+        ]
         board = services.accuracy_board(min_count=1)
         assert board[0]["value"] == 100 and board[-1]["value"] == 0
-        assert c.get("/api/v1/leaderboard", {"scope": "predict"}).status_code == 200
+        from settingsapp import registry
+
+        registry.set_value("predict.min_count_for_board", 1)
+        res = c.get("/api/v1/leaderboard", {"scope": "predict"}).json()
+        assert res["me"] == {"rank": 1, "value": 100, "count": 1}
+        registry.set_value("predict.min_count_for_board", 5)
+        res = c.get("/api/v1/leaderboard", {"scope": "predict"}).json()
+        assert res["me"] == {"rank": None, "value": None, "count": 1, "needed": 5}
+        weekly = c.get("/api/v1/leaderboard", {"scope": "weekly"}).json()
+        assert weekly["period"]["start"] < weekly["period"]["end"]
+
+    def test_a_win_that_pays_less_than_the_stake_still_counts_as_correct(self):
+        m = match()
+        services.open_pool(m)
+        big, small = bettor(), bettor()
+        services.place(big, str(m.id), 0, 900, "a")
+        services.place(small, str(m.id), 1, 10, "b")
+        services.settle(m, 1)  # small side wins the whole pool minus rake
+        board = {r["username"]: r for r in services.accuracy_board(min_count=1)}
+        assert board[small.username]["value"] == 100 and board[big.username]["value"] == 0

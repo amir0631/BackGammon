@@ -71,6 +71,8 @@ export interface MatchFoundOut {
   variant: string;
   length: number;
   entry: number;
+  join_deadline: number;
+  tournament: TournamentContextOut | null;
 }
 
 export interface MatchResignIn {
@@ -183,6 +185,13 @@ export interface SpectateReactRecvOut {
 
 export interface SpectatorsCountOut {
   count: number;
+}
+
+export interface TournamentContextOut {
+  id: number;
+  name: Record<string, string>;
+  round: number;
+  rounds: number;
 }
 
 export interface TurnMoveIn {

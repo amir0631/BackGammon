@@ -27,6 +27,10 @@ class ItemsView(APIView):
         return Response({"results": services.catalog(_user(request), kind), "next": None})
 
 
+class BuySerializer(serializers.Serializer[Any]):
+    expected_price = serializers.IntegerField(min_value=0, required=False)
+
+
 class BuyView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -34,7 +38,9 @@ class BuyView(APIView):
         idempotency_key(request)  # coin-moving write (§10.1); the purchase itself is keyed per item
         user = _user(request)
         assert user is not None
-        return Response(services.buy(user, item_id))
+        s = BuySerializer(data=request.data or {})
+        s.is_valid(raise_exception=True)
+        return Response(services.buy(user, item_id, s.validated_data.get("expected_price")))
 
 
 class EquipView(APIView):
@@ -102,7 +108,15 @@ class AnnouncementsView(APIView):
         return Response(
             {
                 "results": [
-                    {"id": a.id, "kind": a.kind, "title": a.title_i18n, "body": a.body_i18n, "link": a.link}
+                    {
+                        "id": a.id,
+                        "kind": a.kind,
+                        "title": a.title_i18n,
+                        "body": a.body_i18n,
+                        "link": a.link,
+                        "published_at": (a.starts_at or a.created_at).isoformat(),
+                        "ends_at": a.ends_at.isoformat() if a.ends_at else None,
+                    }
                     for a in rows
                 ],
                 "next": None,

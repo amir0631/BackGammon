@@ -157,6 +157,15 @@ class TestRegister:
         assert User.objects.get(username="Child_1").referrer_id == User.objects.get(username="Parent_1").id
         res = register(APIClient(), username="Child_2", phone="+989123333333", referrer="nobody_here")
         assert res.json()["code"] == "REFERRER_NOT_FOUND"
+        # The stable invite code works in any case, even after the referrer renames.
+        parent = User.objects.get(username="Parent_1")
+        User.objects.filter(pk=parent.pk).update(username="Renamed_1")
+        other_ip = APIClient(REMOTE_ADDR="10.0.0.9")  # the OTP limit is 3 per IP per 10 minutes (§12.1)
+        res = register(
+            other_ip, username="Child_3", phone="+989124444444", referrer=parent.referral_code.lower()
+        )
+        assert res.status_code == 201
+        assert User.objects.get(username="Child_3").referrer_id == parent.id
 
 
 @pytest.mark.django_db

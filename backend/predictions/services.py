@@ -8,7 +8,7 @@ or the match aborted or voided: every stake is refunded, no rake. Stakes go to e
 from typing import Any
 
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 
 from accounts.models import User
@@ -232,16 +232,35 @@ def release_hold(pool_id: int, approve: bool) -> PredictionPool:
         return pool
 
 
+def _accuracy_rows(need: int) -> list[dict[str, Any]]:
+    """A correct pick is the winning side, whatever the payout (a win may pay less than the stake)."""
+    rows = (
+        Prediction.objects.filter(pool__status=PredictionPool.Status.SETTLED)
+        .exclude(user__status="banned")
+        .values("user_id", "user__username", "user__avatar", "user__level")
+        .annotate(total=Count("id"), correct=Count("id", filter=Q(side=F("pool__winner_side"))))
+        .filter(total__gte=need)
+    )
+    return sorted(
+        (dict(r) for r in rows), key=lambda r: (-(r["correct"] / r["total"]), -r["total"], r["user_id"])
+    )
+
+
+def accuracy_me(user_id: int) -> dict[str, Any] | None:
+    """The player's own rank and accuracy on the prediction board, or their progress towards it."""
+    need = registry.get("predict.min_count_for_board")
+    scored = _accuracy_rows(need)
+    for i, r in enumerate(scored):
+        if r["user_id"] == user_id:
+            return {"rank": i + 1, "value": round(100 * r["correct"] / r["total"]), "count": r["total"]}
+    count = Prediction.objects.filter(user_id=user_id, pool__status=PredictionPool.Status.SETTLED).count()
+    return {"rank": None, "value": None, "count": count, "needed": need}
+
+
 def accuracy_board(min_count: int | None = None, limit: int = 50) -> list[dict[str, Any]]:
     """Prediction accuracy leaderboard (§8): settled predictions, at least predict.min_count_for_board."""
     need = registry.get("predict.min_count_for_board") if min_count is None else min_count
-    rows = (
-        Prediction.objects.filter(pool__status=PredictionPool.Status.SETTLED)
-        .values("user_id", "user__username", "user__avatar", "user__level")
-        .annotate(total=Count("id"), correct=Count("id", filter=Q(payout__gt=0)))
-        .filter(total__gte=need)
-    )
-    scored = sorted(rows, key=lambda r: (-(r["correct"] / r["total"]), -r["total"], r["user_id"]))[:limit]
+    scored = _accuracy_rows(need)[:limit]
     return [
         {
             "rank": i + 1,

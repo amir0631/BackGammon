@@ -214,6 +214,7 @@ def _start(key: str, a_id: int, b_id: int, waits: dict[int, float] | None = None
                 "variant": variant,
                 "length": length,
                 "entry": entry,
+                "join_deadline": live.join_deadline_ms(match.rules),
             },
         )
     return str(match.id)

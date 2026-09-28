@@ -875,6 +875,11 @@ def _payout(live: Live, pot: int, rake_pct: int) -> int:
     return pot - pot * rake_pct // 100
 
 
+def join_deadline_ms(rules: dict[str, Any]) -> int:
+    """When a player who never joins is out (the grace every human side starts with, §5.4)."""
+    return int((now() + float(rules["reconnect_grace_seconds"])) * 1000)
+
+
 def rules_payload(live: Live) -> dict[str, Any]:
     rules = live.settings
     if live.variant == "traditional":

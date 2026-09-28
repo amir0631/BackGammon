@@ -368,7 +368,8 @@
     "shop": {
       "itemNotForSale": "This item isn't for sale.",
       "itemNotOwned": "You don't own this item.",
-      "itemUnavailable": "This item isn't available."
+      "itemUnavailable": "This item isn't available.",
+      "priceChanged": "The price changed. Check the new price and confirm again."
     },
     "tournaments": {
       "refused": "You can't join or leave this tournament now."

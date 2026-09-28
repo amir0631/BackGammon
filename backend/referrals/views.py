@@ -11,7 +11,7 @@ PAGE = 30
 
 
 class ReferralView(APIView):
-    """GET me/referral: the player's code (their username) and totals (§10.2 Referral)."""
+    """GET me/referral: the player's invite code and link, and totals (§10.2 Referral)."""
 
     permission_classes = (IsAuthenticated,)
 
@@ -38,6 +38,7 @@ class EarningsView(APIView):
                         "id": e.id,
                         "referee": e.referee.username,
                         "amount": e.amount,
+                        "status": e.status,  # paid, held (anti-fraud review), or cancelled
                         "match_id": str(e.match_id),
                         "created_at": e.created_at.isoformat(),
                     }

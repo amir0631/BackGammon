@@ -6,7 +6,7 @@ Leaderboards live in Redis sorted sets, updated after each rated match and rebui
 """
 
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from django.db import transaction
@@ -14,6 +14,7 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from accounts.models import User
+from ranking import periods
 from ranking.models import EloHistory, XpHistory
 from settingsapp import registry
 
@@ -72,8 +73,8 @@ def grant_xp(user: User, amount: int, reason: str, match: Any = None) -> int:
 
 
 def _period_keys(when: datetime) -> tuple[str, str]:
-    iso = when.isocalendar()
-    return f"lb:week:{iso.year}-{iso.week:02d}", f"lb:month:{when:%Y-%m}"
+    """Iranian week (from Saturday) and Jalali month, in Tehran time (ranking/periods.py)."""
+    return periods.week(when).key, periods.month(when).key
 
 
 def _leaderboard_update(rows: list[tuple[int, int, int]]) -> None:
@@ -96,8 +97,7 @@ def rebuild_leaderboards() -> None:
 
     now = timezone.now()
     week, month = _period_keys(now)
-    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    week_start, month_start = periods.week(now).start, periods.month(now).start
     rated = User.objects.filter(elo_history__isnull=False).distinct().exclude(status=User.Status.BANNED)
     pipe = r().pipeline()
     pipe.delete(LB_ALL, week, month)
@@ -137,4 +137,7 @@ def leaderboard(scope: str, limit: int = 50, me: User | None = None) -> dict[str
         score = r().zscore(key, str(me.id))
         if rank is not None and score is not None:
             mine = {"rank": int(rank) + 1, "value": int(score)}
-    return {"scope": scope, "results": rows, "me": mine}
+    now = timezone.now()
+    span = {"weekly": periods.week(now), "monthly": periods.month(now)}.get(scope)
+    period = {"start": span.start.isoformat(), "end": span.end.isoformat()} if span else None
+    return {"scope": scope, "results": rows, "me": mine, "period": period}

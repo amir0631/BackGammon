@@ -34,6 +34,9 @@ class TestQueue:
         found = [env for _, env in notes if env["type"] == "match.found"]
         assert len(found) == 2 and {e["payload"]["you"] for e in found} == {0, 1}
         assert "phone" not in str(found)
+        # The join deadline is the grace every side starts with (§5.2, §5.4); not a tournament match.
+        assert all(e["payload"]["join_deadline"] == int((clock.t + 90) * 1000) for e in found)
+        assert all(e["payload"]["tournament"] is None for e in found)
         match = Match.objects.get()
         assert match.entry == 100 and {match.player_a_id, match.player_b_id} == {a.id, b.id}
         assert [Wallet.objects.get(user=u).balance for u in (a, b)] == [400, 400]

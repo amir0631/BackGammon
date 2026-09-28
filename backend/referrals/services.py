@@ -83,8 +83,15 @@ def summary(user: User) -> dict[str, Any]:
     total = ReferralEarning.objects.filter(referrer=user, status=ReferralEarning.Status.PAID).aggregate(
         s=Sum("amount"), n=Count("id")
     )
+    held = ReferralEarning.objects.filter(referrer=user, status=ReferralEarning.Status.HELD).aggregate(
+        s=Sum("amount")
+    )
+    from django.conf import settings
+
     return {
-        "code": user.username,
+        "code": user.referral_code,
+        "link": f"{settings.URL_SCHEME}://m.{settings.BASE_DOMAIN}/signup?ref={user.referral_code}",
+        "held": held["s"] or 0,
         "referees": referees.count(),
         "active_referees": sum(1 for r in referees if active(r)),
         "earned": total["s"] or 0,

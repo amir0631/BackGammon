@@ -100,8 +100,10 @@ class RegisterView(PublicView):
         validate_password(data["password"])
         referrer = None
         if data.get("referrer"):
-            referrer = (
-                User.objects.annotate(u=Lower("username")).filter(u=data["referrer"].strip().lower()).first()
+            ref = data["referrer"].strip()
+            # The stable invite code (§7.4), or a username typed by hand.
+            referrer = User.objects.filter(referral_code=ref.upper()).first() or (
+                User.objects.annotate(u=Lower("username")).filter(u=ref.lower()).first()
             )
             if referrer is None:
                 raise errors.ReferrerNotFound()
@@ -214,6 +216,14 @@ class WsTokenView(APIView):
         return Response({"token": token, "expires_in": sessions.WS_TOKEN_TTL_SECONDS})
 
 
+def _owns_avatar(user: User, key: str) -> bool:
+    from shop.models import Item
+    from shop.services import owns
+
+    item = Item.objects.filter(kind=Item.Kind.AVATAR, key=key, active=True).first()
+    return item is not None and owns(user, item)
+
+
 class MeView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -228,6 +238,8 @@ class MeView(APIView):
             user.lang = data["lang"]
             fields.append("lang")
         if "avatar" in data:
+            if data["avatar"] not in AVATARS and not _owns_avatar(user, data["avatar"]):
+                raise errors.AvatarInvalid()
             user.avatar = data["avatar"]
             fields.append("avatar")
         if "prefs" in data:

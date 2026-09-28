@@ -49,6 +49,9 @@ def public_config(request: Request) -> Response:
             "predictions_enabled": bool(registry.get("predict.enabled")),
             "spectating_enabled": registry.get("live.max_spectators_per_match") > 0,
             "spectator_delay_seconds": registry.get("live.spectator_delay_seconds"),
+            # A player who hasn't joined a found match (or a tournament match) forfeits after this.
+            "reconnect_grace_seconds": registry.get("game.reconnect_grace_seconds"),
+            "predict_min_count_for_board": registry.get("predict.min_count_for_board"),
             "spectator_reactions_enabled": bool(registry.get("live.spectator_reactions_enabled")),
             "coin_price_toman": registry.get("coin.price_toman"),
             "username_change": {
