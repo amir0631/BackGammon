@@ -54,6 +54,8 @@ def public_config(request: Request) -> Response:
             "predict_min_count_for_board": registry.get("predict.min_count_for_board"),
             "spectator_reactions_enabled": bool(registry.get("live.spectator_reactions_enabled")),
             "coin_price_toman": registry.get("coin.price_toman"),
+            # Shown wherever players are told to contact support (top-ups while the gateway is off).
+            "support_contact": registry.get("support.contact") or f"support@{settings.BASE_DOMAIN}",
             "username_change": {
                 "cost": registry.get("username.change_cost"),
                 "cooldown_days": registry.get("username.change_cooldown_days"),

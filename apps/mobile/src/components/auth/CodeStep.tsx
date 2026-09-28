@@ -23,6 +23,7 @@ import { useFormat } from "@/lib/useFormat";
 import { useOnline } from "@/lib/useOnline";
 import { visuallyHidden } from "@/theme/layout";
 import { AuthScreen } from "./AuthScreen";
+import { useSupportContact } from "@/lib/config";
 
 // SMS code step shared by signup (AU-03) and password reset (AU-08), auth.md §3.1 step 4, §6.3.
 // - The single code input auto-submits on the 5th digit; "Verify" stays for keyboard users.
@@ -75,6 +76,7 @@ export function CodeStep<T extends Flow>({
   onVerified,
 }: CodeStepProps<T>) {
   const t = useTranslations();
+  const supportContact = useSupportContact(t("support.contact.fallback"));
   const f = useFormat();
   const router = useRouter();
   const online = useOnline();
@@ -328,7 +330,7 @@ export function CodeStep<T extends Flow>({
             <li>{t("auth.verify.help.checkNumber", { phone: phoneText })}</li>
             <li>{t("auth.verify.help.wait")}</li>
             <li>{t("auth.verify.help.blocked")}</li>
-            <li>{t("auth.verify.help.support", { channel: isolate(t("support.contact.channel")) })}</li>
+            <li>{t("auth.verify.help.support", { channel: isolate(supportContact) })}</li>
           </Typography>
         </Collapse>
       </Stack>

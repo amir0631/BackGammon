@@ -849,6 +849,8 @@ export interface PublicConfig {
   reconnect_grace_seconds: number;
   predict_min_count_for_board: number;
   coin_price_toman: number;
+  /** Email, phone number, or URL for support (setting support.contact; defaults to support@ the domain). */
+  support_contact: string;
   username_change: { cost: number; cooldown_days: number };
   allowed_lengths: number[];
   tiers: number[];

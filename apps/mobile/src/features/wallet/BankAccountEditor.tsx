@@ -5,7 +5,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "@bg/api-client";
+import { api, bankCode, groupIban, ibanProblem, type IbanProblem, maskedIbanGroups } from "@bg/api-client";
 import { isolate } from "@bg/i18n";
 import type { BankAccountInfo, BankInfo, Withdrawal } from "@bg/protocol";
 import { Banner } from "@/components/feedback/Banner";
@@ -21,7 +21,6 @@ import { useSession } from "@/lib/session";
 import { useOnline } from "@/lib/useOnline";
 import { useWallet } from "@/lib/wallet";
 import { detailString } from "./shared";
-import { bankCode, groupIban, ibanProblem, maskedIbanGroups, type IbanProblem } from "./validation";
 
 // Bank account (Sheba) management shared by WD-08 `/wallet/bank-accounts` and withdrawal step 1
 // (wallet.md §3.5). One account per user; saving when one exists replaces it after a confirmation

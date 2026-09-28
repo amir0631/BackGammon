@@ -9,6 +9,7 @@ import { iconSize } from "@bg/design-tokens";
 import { isolate } from "@bg/i18n";
 import { ErrorIcon } from "@/components/icons";
 import { AuthPanel } from "./AuthScreen";
+import { useSupportContact } from "@/lib/config";
 
 // AU-14 Banned panel (auth.md §4): shown on login or password reset when the server answers
 // AUTH_BANNED (only after the password or code matched). A role="alert" region inside the page,
@@ -16,6 +17,7 @@ import { AuthPanel } from "./AuthScreen";
 
 export function BannedPanel({ onBack }: { onBack: () => void }) {
   const t = useTranslations();
+  const supportContact = useSupportContact(t("support.contact.fallback"));
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export function BannedPanel({ onBack }: { onBack: () => void }) {
         <Typography>{t("account.banned.body")}</Typography>
         <Typography color="text.secondary">{t("account.banned.withdrawals")}</Typography>
         <Typography color="text.secondary">
-          {t("account.banned.support", { channel: isolate(t("support.contact.channel")) })}
+          {t("account.banned.support", { channel: isolate(supportContact) })}
         </Typography>
         <Button variant="outlined" size="large" fullWidth onClick={onBack}>
           {t("common.back")}

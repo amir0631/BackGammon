@@ -12,7 +12,7 @@ import { radii } from "@bg/design-tokens";
 import type { BankAccountInfo, Lang } from "@bg/protocol";
 import { FieldError, FieldSuccess } from "@/components/forms/FieldText";
 import { BankIcon } from "@/components/icons";
-import { groupIban, ibanLast4, maskedIbanGroups, type IbanProblem } from "@/features/wallet/validation";
+import { groupIban, ibanLast4, maskedIbanGroups, type IbanProblem } from "@bg/api-client";
 import { tokensOf } from "@/theme/theme";
 
 // Bank account (Sheba) building blocks (wallet.md §3.5, WD-08, WD-02).

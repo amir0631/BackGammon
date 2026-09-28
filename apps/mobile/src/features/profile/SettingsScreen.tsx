@@ -13,7 +13,7 @@ import { LanguageOptions, useChooseLanguage } from "@/components/i18n/LanguageCo
 import { DevicesIcon, LockIcon } from "@/components/icons";
 import { InfoRow, NavGroup, NavRow } from "@/components/lists/NavList";
 import { DetailColumns } from "@/components/profile/AccountLayout";
-import { maskPhone } from "@/lib/phone";
+import { maskPhone } from "@bg/i18n";
 import { queuePendingPrefs, readPendingPrefs, useSession } from "@/lib/session";
 import { useFormat } from "@/lib/useFormat";
 import { useOnline } from "@/lib/useOnline";

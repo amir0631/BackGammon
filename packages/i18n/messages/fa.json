@@ -459,7 +459,7 @@
   },
   "support": {
     "contact": {
-      "channel": "support@x3d.ir"
+      "fallback": "پشتیبانی"
     }
   },
   "auth": {

@@ -11,7 +11,7 @@ import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
-import { api } from "@bg/api-client";
+import { api, passwordRules, usernameProblem, type UsernameProblem } from "@bg/api-client";
 import { iconSize } from "@bg/design-tokens";
 import { groupMobileNumber } from "@bg/i18n";
 import type { UsernameAvailability } from "@bg/protocol";
@@ -29,7 +29,6 @@ import { storageKeys, writeJson } from "@/lib/storage";
 import { useCountdown } from "@/lib/useCountdown";
 import { useFormat } from "@/lib/useFormat";
 import { useOnline } from "@/lib/useOnline";
-import { passwordRules, usernameProblem, type UsernameProblem } from "./validation";
 
 // AU-04 Signup: account details `/signup/account` (auth.md §3.1 step 5, §4).
 // Username (LTR, format check after the first blur, live availability check), password with the

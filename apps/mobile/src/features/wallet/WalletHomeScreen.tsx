@@ -13,7 +13,7 @@ import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useRef, useState, type ComponentType } from "react";
-import { api } from "@bg/api-client";
+import { api, ibanLast4 } from "@bg/api-client";
 import { isolate } from "@bg/i18n";
 import { iconSize, layout, radii } from "@bg/design-tokens";
 import type { BankAccountInfo, LedgerRow, Withdrawal } from "@bg/protocol";
@@ -34,7 +34,6 @@ import { useWallet } from "@/lib/wallet";
 import { gutterStyles } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
 import { useWalletFormat } from "./shared";
-import { ibanLast4 } from "./validation";
 
 // WA-01 Wallet `/wallet` (wallet.md §3.1–§3.3, §4 WA-01, WA-02, WA-04).
 // - Server values only: the page computes nothing but the toman equivalent (§9 AC 1).

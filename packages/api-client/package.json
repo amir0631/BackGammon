@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@bg/i18n": "workspace:*",
     "@bg/protocol": "workspace:*"
   },
   "devDependencies": {

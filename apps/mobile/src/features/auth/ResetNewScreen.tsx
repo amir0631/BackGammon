@@ -4,7 +4,7 @@ import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
-import { api } from "@bg/api-client";
+import { api, passwordRules } from "@bg/api-client";
 import { iconSize } from "@bg/design-tokens";
 import { AuthScreen } from "@/components/auth/AuthScreen";
 import { BannedPanel } from "@/components/auth/BannedPanel";
@@ -18,7 +18,6 @@ import { toApiError, useErrorText, type ErrorText } from "@/lib/apiErrors";
 import { hasToken, resetFlow, type ResetFlow } from "@/lib/flows";
 import { useCompleteSignIn } from "@/lib/session";
 import { useOnline } from "@/lib/useOnline";
-import { passwordRules } from "./validation";
 
 // AU-09 Reset: new password `/password/reset/new` (auth.md §3.3 step 3). Success signs the user in
 // here and signs out every other device (§12.1), with a snackbar saying so. A banned account gets

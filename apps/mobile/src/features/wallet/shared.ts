@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { isolate } from "@bg/i18n";
 import { readJson, removeKey, writeJson } from "@/lib/storage";
 import { useFormat } from "@/lib/useFormat";
-import type { AmountProblem } from "./validation";
+import type { AmountProblem } from "@bg/api-client";
 
 // Formatting and small state helpers shared by the wallet screens (wallet.md §5 timing rules, §7).
 
@@ -31,10 +31,7 @@ export function useWalletFormat() {
   };
 }
 
-/** Today's date in Asia/Tehran as `YYYY-MM-DD` (withdrawal "late" note, wallet.md §3.7). */
-export function tehranToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-}
+export { tehranToday } from "@bg/i18n";
 
 /**
  * Field text for an amount problem (wallet.md §3.4 step 2.3, §3.6 step 3.4). No message links to

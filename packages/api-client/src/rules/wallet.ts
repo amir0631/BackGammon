@@ -1,6 +1,6 @@
 import { toLatinDigits } from "@bg/i18n";
 
-// Client-side checks for instant feedback on the wallet flows (wallet.md §3.4–§3.6). They mirror
+// Wallet input rules for instant feedback, shared by both apps (CLAUDE.md §2 rule 14; wallet.md §3.4–§3.6). They mirror
 // the server rules (backend/wallet/services.py, backend/wallet/iban.py); the server re-validates
 // everything and its coded errors are shown the same way. No value here is ever sent as a result:
 // balances, fees, and limits come from `GET wallet`.
@@ -107,14 +107,4 @@ export function maskedIbanGroups(masked: string): string[] {
 
 export function ibanLast4(masked: string): string {
   return masked.slice(-4);
-}
-
-// ---- Phone ------------------------------------------------------------------------------------------
-
-/** `0912•••••89` from the account's own phone (P§18); never another user's. */
-export function maskPhone(phone: string): string {
-  let d = toLatinDigits(phone).replace(/[^0-9]/g, "");
-  if (d.startsWith("98")) d = `0${d.slice(2)}`;
-  if (d.length < 7) return d;
-  return `${d.slice(0, 4)}${"•".repeat(d.length - 6)}${d.slice(-2)}`;
 }

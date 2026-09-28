@@ -7,7 +7,7 @@ import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, newIdempotencyKey } from "@bg/api-client";
+import { amountProblem, type AmountProblem, api, cleanUsername, feeFor, newIdempotencyKey, parseAmount } from "@bg/api-client";
 import { isolate } from "@bg/i18n";
 import type { PublicUser, TransferResult, WalletSummary } from "@bg/protocol";
 import { Banner } from "@/components/feedback/Banner";
@@ -43,7 +43,6 @@ import {
   useAmountErrorText,
   useWalletFormat,
 } from "./shared";
-import { amountProblem, cleanUsername, feeFor, parseAmount, type AmountProblem } from "./validation";
 
 // Transfer `/wallet/transfer` (wallet.md §3.4, TR-00 … TR-05; CLAUDE.md §7.13).
 // - TR-00 replaces step 1 when nothing can be sent (suspended, welcome coins only, below the

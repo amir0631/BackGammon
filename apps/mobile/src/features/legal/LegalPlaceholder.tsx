@@ -10,12 +10,14 @@ import { OfflineBanner } from "@/components/feedback/StatusBanners";
 import { AppShell } from "@/components/shell/AppShell";
 import { TopBar } from "@/components/shell/TopBar";
 import { gutterStyles } from "@/theme/layout";
+import { useSupportContact } from "@/lib/config";
 
 // Terms and Privacy placeholders (CLAUDE.md §18: placeholder pages with i18n keys; the real copy
 // comes with help-legal.md). Public, no nav; back returns to wherever the link was opened from, so
 // a signup in progress keeps its entries.
 export function LegalPlaceholder({ titleKey }: { titleKey: "legal.terms.title" | "legal.privacy.title" }) {
   const t = useTranslations();
+  const supportContact = useSupportContact(t("support.contact.fallback"));
   const router = useRouter();
   return (
     <AppShell
@@ -30,7 +32,7 @@ export function LegalPlaceholder({ titleKey }: { titleKey: "legal.terms.title" |
       banner={<OfflineBanner />}
     >
       <Box sx={{ ...gutterStyles, py: 3, maxWidth: layout.readableMaxWidth, width: "100%", marginInline: "auto" }}>
-        <Typography>{t("legal.placeholder", { channel: isolate(t("support.contact.channel")) })}</Typography>
+        <Typography>{t("legal.placeholder", { channel: isolate(supportContact) })}</Typography>
       </Box>
     </AppShell>
   );

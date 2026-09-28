@@ -523,6 +523,15 @@ _DEFS: list[SettingDef] = [
         1,
         100000,
     ),
+    SettingDef(
+        "support.contact",
+        "str",
+        "",
+        _d(
+            "راه تماس با پشتیبانی (ایمیل، شماره یا نشانی؛ خالی: support@دامنه)",
+            "Support contact (email, phone, or URL; empty: support@ the site domain)",
+        ),
+    ),
     # OTP and login protection (CLAUDE.md §12.1)
     SettingDef("otp.ttl_seconds", "int", 120, _d("اعتبار کد تأیید (ثانیه)", "OTP validity (s)"), 30, 900),
     SettingDef(

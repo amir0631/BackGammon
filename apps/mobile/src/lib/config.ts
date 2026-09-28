@@ -41,3 +41,11 @@ export function usePublicConfig(): PublicConfig | null {
   }, []);
   return config;
 }
+
+/**
+ * How to reach support (GET config `support_contact`), or the localized word for support while the
+ * config loads. Never a hardcoded address (CLAUDE.md §1: the domain comes from BASE_DOMAIN).
+ */
+export function useSupportContact(fallback: string): string {
+  return usePublicConfig()?.support_contact ?? fallback;
+}

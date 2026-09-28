@@ -97,3 +97,30 @@ export function isolate(value: string): string {
   return `\u2068${value}\u2069`;
 }
 export * from "./jalali";
+
+// ---------------------------------------------------------------------------------------------
+// The owner's own phone number (patterns.md §18). The API returns `+989…`; the UI shows `09…`.
+// Never used for other users (CLAUDE.md §2 rule 11).
+// ---------------------------------------------------------------------------------------------
+
+/** `+989123456789` → `09123456789` (Latin digits). Other forms are returned digits-only. */
+export function nationalPhone(value: string): string {
+  const digits = toLatinDigits(value).replace(/[^0-9]/g, "");
+  if (digits.startsWith("98") && digits.length === 12) return `0${digits.slice(2)}`;
+  return digits;
+}
+
+/**
+ * `09123456789` → `0912•••••89` (first 4 and last 2 digits). `mask` is the hiding character: pick one
+ * that can't be read as a digit in the display script (in Persian, "•" looks like the zero "۰").
+ */
+export function maskPhone(value: string, mask = "•"): string {
+  const national = nationalPhone(value);
+  if (national.length < 7) return mask.repeat(national.length);
+  return `${national.slice(0, 4)}${mask.repeat(national.length - 6)}${national.slice(-2)}`;
+}
+
+/** Today's date in Asia/Tehran as `YYYY-MM-DD` (report days and working-day deadlines). */
+export function tehranToday(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}

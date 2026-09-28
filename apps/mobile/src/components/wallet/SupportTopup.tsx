@@ -12,6 +12,7 @@ import { useFormat } from "@/lib/useFormat";
 import { tokensOf } from "@/theme/theme";
 import { CopyButton } from "./CopyButton";
 import { InfoLine } from "./InfoLine";
+import { useSupportContact } from "@/lib/config";
 
 // "Get coins" while online purchase is unavailable (wallet.md §3.3, WA-04; journeys.md J3a;
 // CLAUDE.md §7.9, §7.11). Shared with the step-9 coins page (CO-02) so the wording stays one.
@@ -58,7 +59,7 @@ export function SupportTopupContent({ username, coinPriceToman }: SupportTopupCo
   const t = useTranslations("shop.coins.supportTopup");
   const tSupport = useTranslations("support.contact");
   const f = useFormat();
-  const channel = tSupport("channel");
+  const channel = useSupportContact(tSupport("fallback"));
   const href = channelHref(channel);
 
   return (

@@ -17,7 +17,7 @@ import { Avatar } from "@/components/profile/Avatar";
 import { DetailColumns } from "@/components/profile/AccountLayout";
 import { AvatarPicker, AvatarPickerSkeleton } from "@/components/profile/AvatarPicker";
 import { PublicProfileView, Username } from "@/components/profile/ProfileViews";
-import { maskPhone } from "@/lib/phone";
+import { maskPhone } from "@bg/i18n";
 import { useSession } from "@/lib/session";
 import { readJson, removeKey, storageKeys } from "@/lib/storage";
 import { useFormat } from "@/lib/useFormat";

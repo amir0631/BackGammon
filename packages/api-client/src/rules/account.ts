@@ -1,4 +1,4 @@
-// Client-side format checks for instant feedback (auth.md §4 AU-04). The server stays the judge:
+// Account input rules for instant feedback, shared by both apps (CLAUDE.md §2 rule 14; auth.md §4 AU-04). The server stays the judge:
 // it re-validates everything and its errors are shown the same way.
 
 export type UsernameProblem = "required" | "length" | "start" | "chars";

@@ -10,6 +10,7 @@ import { isolate } from "@bg/i18n";
 import { ActionButton } from "@/components/forms/ActionButton";
 import { InfoIcon } from "@/components/icons";
 import { AuthPanel } from "./AuthScreen";
+import { useSupportContact } from "@/lib/config";
 
 // AU-07U "Reset unavailable" (auth.md §3.5.3): replaces the AU-07 form in place when the server
 // answers 503 SMS_UNAVAILABLE. Neutral info styling (not the user's fault), identical for every
@@ -27,6 +28,7 @@ export interface ResetUnavailablePanelProps {
 
 export function ResetUnavailablePanel({ signedIn, onBack, onRetry, retrying, offlineReason }: ResetUnavailablePanelProps) {
   const t = useTranslations();
+  const supportContact = useSupportContact(t("support.contact.fallback"));
   const headingRef = useRef<HTMLHeadingElement>(null);
   const headingId = useId();
 
@@ -51,7 +53,7 @@ export function ResetUnavailablePanel({ signedIn, onBack, onRetry, retrying, off
         <Typography>{t("auth.reset.unavailable.body")}</Typography>
         {!signedIn && <Typography color="text.secondary">{t("auth.reset.unavailable.remember")}</Typography>}
         <Typography color="text.secondary">
-          {t("auth.reset.unavailable.support", { channel: isolate(t("support.contact.channel")) })}
+          {t("auth.reset.unavailable.support", { channel: isolate(supportContact) })}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ display: "flex", gap: 0.75, alignItems: "flex-start" }}>
           <InfoIcon sx={{ fontSize: iconSize.sm, flex: "none", mt: 0.25 }} />

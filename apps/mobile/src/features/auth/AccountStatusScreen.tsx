@@ -18,6 +18,7 @@ import { useRequireUser } from "@/lib/session";
 import { storageKeys, writeJson } from "@/lib/storage";
 import { gutterStyles, mqMdUp } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
+import { useSupportContact } from "@/lib/config";
 
 // AU-13 Account suspended `/account/status` (auth.md §4). Plain and non-accusing: until when, what
 // still works, what doesn't, and support. Shown once per sign-in; the banner links back here.
@@ -54,6 +55,7 @@ const List = styled("ul")(({ theme }) => ({
 
 export function AccountStatusScreen({ next }: { next: string | null }) {
   const t = useTranslations();
+  const supportContact = useSupportContact(t("support.contact.fallback"));
   const router = useRouter();
   const { me } = useRequireUser();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -113,7 +115,7 @@ export function AccountStatusScreen({ next }: { next: string | null }) {
                 </List>
               </section>
               <Typography color="text.secondary">
-                {t("account.suspended.support", { channel: isolate(t("support.contact.channel")) })}
+                {t("account.suspended.support", { channel: isolate(supportContact) })}
               </Typography>
               <Button variant="contained" size="large" fullWidth onClick={() => router.replace(to)}>
                 {t("account.suspended.continue")}

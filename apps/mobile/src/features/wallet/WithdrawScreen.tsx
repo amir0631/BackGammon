@@ -6,8 +6,16 @@ import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { api, newIdempotencyKey } from "@bg/api-client";
-import { isolate } from "@bg/i18n";
+import {
+  amountProblem,
+  api,
+  feeFor,
+  newIdempotencyKey,
+  parseAmount,
+  type AmountProblem,
+  type AmountRules,
+} from "@bg/api-client";
+import { isolate, maskPhone } from "@bg/i18n";
 import type { WalletSummary } from "@bg/protocol";
 import { Banner } from "@/components/feedback/Banner";
 import { ConfirmDialog } from "@/components/feedback/ConfirmDialog";
@@ -43,7 +51,6 @@ import {
   useAmountErrorText,
   useWalletFormat,
 } from "./shared";
-import { amountProblem, feeFor, maskPhone, parseAmount, type AmountProblem, type AmountRules } from "./validation";
 
 // Withdraw `/wallet/withdraw` (wallet.md §3.6, WD-01 … WD-05, WD-10; CLAUDE.md §7.12).
 // - WD-01 replaces step 1 when nothing can be withdrawn (welcome coins only, below the minimum,
