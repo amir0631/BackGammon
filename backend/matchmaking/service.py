@@ -175,6 +175,9 @@ def _start(key: str, a_id: int, b_id: int) -> str | None:
         with transaction.atomic():
             match = create_match(a, b, variant, length, entry=entry)
             wallet.escrow_match_entries(match.id, [a.id, b.id], entry)
+            from predictions.services import open_pool
+
+            open_pool(match)  # random pairing: eligible for a prediction pool (§7.5)
     except WalletInsufficient:
         logger.warning("entry escrow failed for %s", key)
         for user in (a, b):

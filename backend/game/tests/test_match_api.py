@@ -103,7 +103,8 @@ class TestSettlement:
         assert [r["username"] for r in board["results"]] and board["me"]["rank"] in (1, 2)
         weekly = client(a).get("/api/v1/leaderboard", {"scope": "weekly"}).json()
         assert sorted(r["value"] for r in weekly["results"]) == [-20, 20]
-        assert client(a).get("/api/v1/leaderboard", {"scope": "predict"}).status_code == 400
+        assert client(a).get("/api/v1/leaderboard", {"scope": "predict"}).json()["scope"] == "predict"
+        assert client(a).get("/api/v1/leaderboard", {"scope": "yearly"}).status_code == 400
 
 
 @pytest.mark.django_db

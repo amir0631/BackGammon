@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "payments",
     "shop",
     "referrals",
+    "predictions",
 ]
 
 MIDDLEWARE = [

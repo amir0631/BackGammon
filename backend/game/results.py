@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from game.models import Match
+from predictions import services as predictions
 from ranking import services as ranking
 from referrals import services as referrals
 from settingsapp import registry
@@ -26,6 +27,7 @@ def finish(live: "Live") -> dict[str, Any]:
     if live.roll_n == 0:
         # Ended before the first roll (a player never came): full refund, unrated (§7.3).
         wallet.refund_match(match.id, humans, match.entry)
+        predictions.settle(match, None)
         match.status = Match.Status.ABORTED
         match.end_reason = f"aborted:{e.end_reason or ''}"
         match.ended_at = now
@@ -54,6 +56,7 @@ def finish(live: "Live") -> dict[str, Any]:
             match.id, winner.id, match.entry, int(match.rules.get("table_rake_pct", 0))
         )
         referrals.pay_commissions(match, [a, b], settlement["rake"])  # from the rake (§7.4)
+    predictions.settle(match, e.winner)
     elo = ranking.rate_match(match, a, b, e.winner)
     per_match, per_win = registry.get("xp.per_match"), registry.get("xp.per_win")
     xp = {

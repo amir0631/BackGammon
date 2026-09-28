@@ -15,7 +15,11 @@ class LeaderboardView(APIView):
 
     def get(self, request: Request) -> Response:
         scope = request.query_params.get("scope") or "all"
+        if scope == "predict":
+            from predictions.services import accuracy_board
+
+            return Response({"scope": "predict", "results": accuracy_board(), "me": None})
         if scope not in {"all", "weekly", "monthly"}:
-            raise ValidationError({"scope": ["all, weekly, or monthly"]})
+            raise ValidationError({"scope": ["all, weekly, monthly, or predict"]})
         me = request.user if isinstance(request.user, User) else None
         return Response(leaderboard(scope, me=me))

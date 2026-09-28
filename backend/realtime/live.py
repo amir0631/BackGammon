@@ -625,6 +625,10 @@ def _record_move(
 def opening(live: Live) -> None:
     seed = seeds.decrypt(live.seed_encrypted)
     n = live.roll_n
+    if n == 0:
+        from predictions.services import close as close_pool
+
+        close_pool(live.match_id)  # predictions close at the first roll (§7.5)
     live.roll_n += 1
     die_a, die_b = fair.roll(seed, live.match_id, n)
     starter = live.engine.opening_roll(die_a, die_b)

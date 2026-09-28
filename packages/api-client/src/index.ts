@@ -20,6 +20,8 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   AdminWithdrawal,
+  OpenPool,
+  PredictionRow,
   ReferralSummary,
   ReferralEarningRow,
   ItemKind,
@@ -226,13 +228,20 @@ export const api = {
       apiRequest<Me>("/me/username", { method: "POST", body: { username }, idempotencyKey }),
   },
 
+  predictions: {
+    open: (o?: Opts) => apiRequest<Paginated<OpenPool>>("/predictions/open", o),
+    place: (matchId: string, side: 0 | 1, amount: number, idempotencyKey: string) =>
+      apiRequest<PredictionRow>("/predictions", { method: "POST", body: { match_id: matchId, side, amount }, idempotencyKey }),
+    mine: (cursor?: string, o?: Opts) => apiRequest<Paginated<PredictionRow>>(`/me/predictions${query({ cursor })}`, o),
+  },
+
   referral: {
     get: (o?: Opts) => apiRequest<ReferralSummary>("/me/referral", o),
     earnings: (cursor?: string, o?: Opts) =>
       apiRequest<Paginated<ReferralEarningRow>>(`/me/referral/earnings${query({ cursor })}`, o),
   },
 
-  leaderboard: (scope: "all" | "weekly" | "monthly", o?: Opts) =>
+  leaderboard: (scope: "all" | "weekly" | "monthly" | "predict", o?: Opts) =>
     apiRequest<Leaderboard>(`/leaderboard${query({ scope })}`, o),
 
   matches: {

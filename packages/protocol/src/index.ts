@@ -476,3 +476,27 @@ export interface ReferralEarningRow {
   match_id: string;
   created_at: string;
 }
+
+// ---- Predictions (CLAUDE.md §7.5) ----
+
+export interface OpenPool {
+  match_id: string;
+  players: [string | null, string | null];
+  entry: number;
+  total_a: number;
+  total_b: number;
+  open: boolean;
+  max_stake_per_user: number;
+  /** Why the caller may not predict here, or null. */
+  blocked: "player" | "linked" | "referral" | null;
+}
+
+export interface PredictionRow {
+  id: number;
+  match_id: string;
+  side: 0 | 1;
+  amount: number;
+  payout: number | null;
+  pool_status: "open" | "closed" | "held" | "settled" | "refunded";
+  created_at: string;
+}
