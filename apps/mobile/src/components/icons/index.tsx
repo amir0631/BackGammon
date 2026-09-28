@@ -165,6 +165,98 @@ export const EyeOffIcon = createIcon({
   ),
 });
 
+/** Pencil: edit. Never mirrored (a tool, not a direction). */
+export const EditIcon = createIcon({
+  name: "Edit",
+  body: (
+    <>
+      <path d="M4.5 19.5l1-4.5L15.8 4.7a1.8 1.8 0 0 1 2.5 0l1 1a1.8 1.8 0 0 1 0 2.5L9 18.5z" />
+      <path d="M13.5 7l3.5 3.5" />
+    </>
+  ),
+});
+
+/** Two overlapping sheets: copy to clipboard. */
+export const CopyIcon = createIcon({
+  name: "Copy",
+  body: (
+    <>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+      <path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" />
+    </>
+  ),
+});
+
+/** Door with an arrow leaving it: log out. Mirrors in RTL (the arrow points outward, end side). */
+export const LogoutIcon = createIcon({
+  name: "Logout",
+  mirrorInRtl: true,
+  body: (
+    <>
+      <path d="M13.5 4.5h-6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h6" />
+      <path d="M11 12h9.5M17 8.5l3.5 3.5-3.5 3.5" />
+    </>
+  ),
+});
+
+/** Globe: language. Never mirrored. */
+export const GlobeIcon = createIcon({
+  name: "Globe",
+  body: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.3 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.3-3.5-8.5s1.1-6.1 3.5-8.5z" />
+    </>
+  ),
+});
+
+/** Gear with eight teeth (a nod to the khatam star): settings. */
+export const SettingsIcon = createIcon({
+  name: "Settings",
+  body: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3.5l1.6 2.4 2.8-.6.6 2.8 2.4 1.6-1.6 2.3 1.6 2.3-2.4 1.6-.6 2.8-2.8-.6L12 20.5l-1.6-2.4-2.8.6-.6-2.8-2.4-1.6L6.2 12 4.6 9.7 7 8.1l.6-2.8 2.8.6z" />
+    </>
+  ),
+});
+
+/** Phone in front of a laptop: signed-in devices. */
+export const DevicesIcon = createIcon({
+  name: "Devices",
+  body: (
+    <>
+      <path d="M4.5 15.5V6.5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v2" />
+      <path d="M2.5 18.5h9" />
+      <rect x="14" y="10.5" width="7" height="10" rx="1.5" />
+      <path d="M17 18h1" />
+    </>
+  ),
+});
+
+/** Page with lines: terms and other documents. */
+export const DocumentIcon = createIcon({
+  name: "Document",
+  body: (
+    <>
+      <path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z" />
+      <path d="M14 3.5v5h5M8.5 12.5h7M8.5 16h5" />
+    </>
+  ),
+});
+
+/** Padlock: password and privacy. */
+export const LockIcon = createIcon({
+  name: "Lock",
+  body: (
+    <>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+      <Dot cx={12} cy={15.5} r={1.3} />
+    </>
+  ),
+});
+
 // ---- Status ----------------------------------------------------------------------------------
 
 export const InfoIcon = createIcon({

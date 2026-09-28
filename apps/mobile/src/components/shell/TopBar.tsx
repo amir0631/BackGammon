@@ -52,9 +52,22 @@ export interface TopBarProps {
   /** Available coins. `undefined` hides the chip (guests, task flows); `null` shows it loading. */
   balance?: Amount | null;
   actions?: ReactNode;
+  /**
+   * Element for the title. Default `h1`. Screens whose heading lives in the content (auth steps,
+   * where the step title is the focus target) pass `p` so the page keeps a single h1.
+   */
+  titleComponent?: "h1" | "p";
 }
 
-export function TopBar({ title, leading = "none", href, onNavigate, balance, actions }: TopBarProps) {
+export function TopBar({
+  title,
+  leading = "none",
+  href,
+  onNavigate,
+  balance,
+  actions,
+  titleComponent = "h1",
+}: TopBarProps) {
   const t = useTranslations("common");
 
   const navButton = (label: string, icon: ReactNode) =>
@@ -76,7 +89,7 @@ export function TopBar({ title, leading = "none", href, onNavigate, balance, act
         {leading === "close" && navButton(t("close"), <CloseIcon />)}
         <Typography
           variant="h4"
-          component="h1"
+          component={titleComponent}
           // Below ~8 title-ems of room (xs, or large text) the balance chip wraps to its own line
           // instead of squeezing the title into one word per line.
           sx={{ flex: "1 1 8em", minWidth: 0, overflowWrap: "anywhere" }}

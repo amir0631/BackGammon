@@ -8,7 +8,7 @@ import Typography from "@mui/material/Typography";
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { iconSize } from "@bg/design-tokens";
-import { EyeIcon, EyeOffIcon, PendingIcon, SuccessIcon } from "@/components/icons";
+import { EyeIcon, EyeOffIcon, InfoIcon, PendingIcon, SuccessIcon } from "@/components/icons";
 import { visuallyHidden } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
 
@@ -17,7 +17,8 @@ import { tokensOf } from "@/theme/theme";
 
 export interface PasswordRequirement {
   label: string;
-  met: boolean;
+  /** null: the client cannot check it (e.g. "not a common password"); the server decides on submit. */
+  met: boolean | null;
 }
 
 export type PasswordFieldProps = Omit<TextFieldProps, "type"> & {
@@ -43,10 +44,16 @@ const Requirements = styled("ul")(({ theme }) => ({
   "& li[data-met='true']": { color: tokensOf(theme).success },
 }));
 
-export function PasswordField({ autoComplete, requirements, label, slotProps, ...rest }: PasswordFieldProps) {
+export function PasswordField({ autoComplete, requirements, label, slotProps, id, helperText, ...rest }: PasswordFieldProps) {
   const t = useTranslations("forms.password");
   const [visible, setVisible] = useState(false);
   const reqId = useId();
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  // MUI links the helper text itself; with a requirement list both must stay described.
+  const describedBy =
+    [helperText ? `${fieldId}-helper-text` : null, requirements?.length ? reqId : null].filter(Boolean).join(" ") ||
+    undefined;
 
   const input = typeof slotProps?.input === "object" ? slotProps.input : {};
   const htmlInput = typeof slotProps?.htmlInput === "object" ? slotProps.htmlInput : {};
@@ -55,6 +62,8 @@ export function PasswordField({ autoComplete, requirements, label, slotProps, ..
     <div>
       <TextField
         {...rest}
+        id={fieldId}
+        helperText={helperText}
         type={visible ? "text" : "password"}
         label={label ?? t("label")}
         autoComplete={autoComplete}
@@ -64,7 +73,7 @@ export function PasswordField({ autoComplete, requirements, label, slotProps, ..
             dir: "auto",
             spellCheck: false,
             autoCapitalize: "none",
-            "aria-describedby": requirements?.length ? reqId : undefined,
+            "aria-describedby": describedBy,
             ...htmlInput,
           },
           input: {
@@ -93,14 +102,18 @@ export function PasswordField({ autoComplete, requirements, label, slotProps, ..
           </Typography>
           <Requirements>
             {requirements.map((r) => (
-              <li key={r.label} data-met={r.met}>
-                {r.met ? (
+              <li key={r.label} data-met={r.met === true}>
+                {r.met === true ? (
                   <SuccessIcon sx={{ fontSize: iconSize.sm, flex: "none" }} />
+                ) : r.met === null ? (
+                  <InfoIcon sx={{ fontSize: iconSize.sm, flex: "none" }} />
                 ) : (
                   <PendingIcon sx={{ fontSize: iconSize.sm, flex: "none" }} />
                 )}
                 <span>{r.label}</span>{" "}
-                <span style={visuallyHidden}>{r.met ? t("met") : t("notMet")}</span>
+                <span style={visuallyHidden}>
+                  {r.met === null ? t("checkedOnSubmit") : r.met ? t("met") : t("notMet")}
+                </span>
               </li>
             ))}
           </Requirements>

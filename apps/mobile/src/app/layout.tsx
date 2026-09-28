@@ -7,6 +7,7 @@ import { defaultColorMode, palette } from "@bg/design-tokens";
 import { direction, isLocale, defaultLocale } from "@bg/i18n";
 import { fontVariables } from "@/theme/fonts";
 import { ThemeRegistry } from "@/theme/ThemeRegistry";
+import { AppProviders } from "./AppProviders";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("app");
@@ -34,7 +35,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <InitColorSchemeScript attribute="data" defaultMode={defaultColorMode} modeStorageKey="bg-color-mode" />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeRegistry direction={dir} script={locale}>
-            {children}
+            <AppProviders>{children}</AppProviders>
           </ThemeRegistry>
         </NextIntlClientProvider>
       </body>

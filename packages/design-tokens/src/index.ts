@@ -382,6 +382,8 @@ export const layout = {
   navIndicator: { width: 56, height: 32 },
   /** Drag handle drawn at the top of a bottom sheet (the whole header is the drag zone). */
   sheetHandle: { width: 36, height: 4 },
+  /** Grouped list rows (account hub, settings): minimum height; rows grow with text. */
+  listRowMinHeight: 56,
   /** OTP boxes: max width and height in rem (they shrink to fit narrow containers). */
   otpBox: { maxWidthRem: 3.5, heightRem: 3.5 },
   sidePanelWidth: 320,
@@ -554,6 +556,60 @@ export const boardDefaultTheme = {
   legalMove: "#56c2b8",
   selection: "#ffd684",
 } as const;
+
+// ---------------------------------------------------------------------------------------------
+// Preset avatars (CLAUDE.md §1). The API returns keys only (`avatar_01` … `avatar_12`); the art
+// ships with the frontends. Each avatar is an original flat geometric motif on a colored ground.
+// Art colors are scheme-independent (the avatar is an image, like a photo), and the motif keeps
+// ≥ 3:1 against its ground so the shape reads at small sizes (tested).
+// ---------------------------------------------------------------------------------------------
+
+export const avatarMotifs = [
+  "star",
+  "cypress",
+  "paisley",
+  "pomegranate",
+  "moon",
+  "sun",
+  "die",
+  "crown",
+  "bird",
+  "fish",
+  "tulip",
+  "mountain",
+] as const;
+export type AvatarMotif = (typeof avatarMotifs)[number];
+
+export interface AvatarArt {
+  motif: AvatarMotif;
+  /** Disc background. */
+  ground: string;
+  /** Main shape. */
+  ink: string;
+  /** Small secondary detail. */
+  accent: string;
+}
+
+export const avatarArt: Record<string, AvatarArt> = {
+  avatar_01: { motif: "star", ground: "#4a2c1b", ink: "#e9b949", accent: "#56c2b8" },
+  avatar_02: { motif: "cypress", ground: "#123f3b", ink: "#8fd6c9", accent: "#e9b949" },
+  avatar_03: { motif: "paisley", ground: "#6b1f2a", ink: "#f3ddb0", accent: "#e9b949" },
+  avatar_04: { motif: "pomegranate", ground: "#f3e6cf", ink: "#9b2335", accent: "#3d6b35" },
+  avatar_05: { motif: "moon", ground: "#1b2340", ink: "#f2e3b3", accent: "#8fb3e0" },
+  avatar_06: { motif: "sun", ground: "#e8a93a", ink: "#4a2508", accent: "#fff1c9" },
+  avatar_07: { motif: "die", ground: "#2a201b", ink: "#f2ebdc", accent: "#c9a46a" },
+  avatar_08: { motif: "crown", ground: "#3b1f4a", ink: "#e9b949", accent: "#d7b5e8" },
+  avatar_09: { motif: "bird", ground: "#dcebe2", ink: "#1f5a4f", accent: "#b5542c" },
+  avatar_10: { motif: "fish", ground: "#0e3a5c", ink: "#9fd4f0", accent: "#e9b949" },
+  avatar_11: { motif: "tulip", ground: "#f6e7e1", ink: "#a3283a", accent: "#3d6b35" },
+  avatar_12: { motif: "mountain", ground: "#2e3b2c", ink: "#e8dcc0", accent: "#9fc79a" },
+};
+
+/** Art for an unknown key (a newer server avatar this build does not ship yet). */
+export const avatarFallbackArt: AvatarArt = { motif: "star", ground: "#3a322c", ink: "#c4b8a9", accent: "#c4b8a9" };
+
+/** Avatar sizes in px: list rows, pickers (≥ 56, profile.md AC-02), headers. */
+export const avatarSize = { sm: 40, md: 56, lg: 96 } as const;
 
 // ---------------------------------------------------------------------------------------------
 // Contrast helpers (WCAG 2.x relative luminance). Pure functions; used by tests and tooling.

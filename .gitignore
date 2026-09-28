@@ -45,3 +45,6 @@ Thumbs.db
 
 # graphify
 graphify-out/
+
+# local redis snapshots
+dump.rdb

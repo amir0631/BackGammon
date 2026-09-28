@@ -17,7 +17,9 @@
     "skipToContent": "Skip to main content",
     "stillWorking": "Still working…",
     "checkStatus": "Check status",
-    "errorCode": "Reference: {code}"
+    "errorCode": "Reference: {code}",
+    "copy": "Copy",
+    "lastUpdated": "Last updated: {time}"
   },
   "nav": {
     "label": "Main navigation",
@@ -56,7 +58,8 @@
     "youReceive": "Paid to your bank account"
   },
   "net": {
-    "offline": "You're offline. We'll reconnect automatically."
+    "offline": "You're offline. We'll reconnect automatically.",
+    "offlineAction": "You're offline. Try again when you're connected."
   },
   "forms": {
     "phone": {
@@ -69,7 +72,8 @@
       "hide": "Hide password",
       "requirementsTitle": "Your password needs:",
       "met": "done",
-      "notMet": "not yet"
+      "notMet": "not yet",
+      "checkedOnSubmit": "checked when you continue"
     },
     "otp": {
       "label": "SMS code",
@@ -96,6 +100,34 @@
     "settings": {
       "invalid": "The setting value is not valid.",
       "unknown": "Unknown setting."
+    },
+    "csrf": "This page's security check expired. Reload the page and try again.",
+    "auth": {
+      "phoneInvalid": "Enter an Iranian mobile number starting with 09.",
+      "phoneTaken": "This number is already registered.",
+      "otpRateLimited": "Too many code requests. Try again in {time}.",
+      "otpInvalid": "That code isn't right. {attempts, plural, one {# try left.} other {# tries left.}}",
+      "otpExpired": "This code has expired. Get a new code.",
+      "verificationInvalid": "Your number verification has expired. Please try again.",
+      "usernameInvalid": "This username isn't valid. See the rules below the field.",
+      "usernameInvalidReason": {
+        "format": "Use 3–20 English letters, numbers, or _, starting with a letter.",
+        "reserved": "This username is reserved. Try another one.",
+        "profanity": "This username isn't allowed. Try another one."
+      },
+      "usernameTaken": "This username is taken.",
+      "passwordWeak": "This password is too easy to guess. Choose a stronger one.",
+      "ageNotConfirmed": "Please confirm your age to create an account.",
+      "referrerNotFound": "No player with this username. Fix it or clear it.",
+      "invalidCredentials": "The mobile number or password is incorrect.",
+      "locked": "Too many failed attempts. You can try again in {time}.",
+      "banned": "You can't sign in to this account.",
+      "sessionInvalid": "Your session has ended. Please log in again.",
+      "avatarInvalid": "This avatar isn't available. Pick another one.",
+      "smsUnavailable": "We can't send text messages right now."
+    },
+    "sms": {
+      "unavailable": "We can't send texts right now. Please try again in a few minutes."
     }
   },
   "devGallery": {
@@ -127,7 +159,8 @@
       "banners": "Banners and toasts",
       "sheets": "Bottom sheet",
       "cost": "Cost confirmation",
-      "states": "Empty, error, and loading states"
+      "states": "Empty, error, and loading states",
+      "account": "Account and sign-in"
     },
     "specimen": {
       "fa": "می‌خواهم امشب در تورنمنت‌های تخته‌نرد بازی کنم؛ جایزه ۱۲٬۵۰۰ سکه است. ۰۱۲۳۴۵۶۷۸۹",
@@ -174,5 +207,361 @@
       "progressLabel": "Loading the game",
       "progressDetail": "{size} remaining"
     }
+  },
+  "support": {
+    "contact": {
+      "channel": "support@x3d.ir"
+    }
+  },
+  "auth": {
+    "lang": {
+      "button": "Language: {language}",
+      "sheetTitle": "Choose language"
+    },
+    "welcome": {
+      "signup": "Create account",
+      "login": "Log in",
+      "ageNote": "For ages 18 and over"
+    },
+    "links": {
+      "terms": "Terms of use",
+      "privacy": "Privacy policy"
+    },
+    "step": "Step {current} of {total}",
+    "phone": {
+      "label": "Mobile number",
+      "helper": "Iranian mobile number, e.g. 0912 345 6789",
+      "error": {
+        "invalid": "Enter an Iranian mobile number starting with 09.",
+        "required": "Enter your mobile number."
+      }
+    },
+    "signup": {
+      "title": "Create account",
+      "smsNote": "We'll text a 5-digit code to this number.",
+      "ageLabel": "I am 18 or older.",
+      "ageError": "You must be 18 or older to create an account.",
+      "terms": "I have read and accept the <terms>Terms of use</terms> and <privacy>Privacy policy</privacy>.",
+      "termsError": "Accept the Terms of use and Privacy policy to continue.",
+      "cta": "Get code",
+      "sending": "Please wait…",
+      "disabled": {
+        "phone": "Enter a valid mobile number.",
+        "checks": "Tick both boxes to continue."
+      },
+      "haveAccount": "Already have an account? <login>Log in</login>",
+      "loginWithNumber": "Log in with this number",
+      "haveCode": "I already have a code",
+      "phoneNote": "You'll log in with this number. Make sure it's correct.",
+      "ctaNeutral": "Continue"
+    },
+    "verify": {
+      "title": "Enter the code",
+      "sentTo": "We sent a 5-digit code to {phone}.",
+      "codeLabel": "5-digit verification code",
+      "expiresIn": "Code expires in {time}",
+      "expired": "This code has expired. Get a new code.",
+      "noAttempts": "No tries left for this code. Get a new code.",
+      "newCode": "Get a new code",
+      "resend": "Resend code",
+      "resendIn": "Resend in {time}",
+      "resent": "A new code was sent.",
+      "changeNumber": "Change number",
+      "cta": "Verify",
+      "verifying": "Checking the code…",
+      "neverShare": "Never share this code with anyone, including support.",
+      "waitingOnline": "We'll check the code as soon as you're back online.",
+      "help": {
+        "title": "Didn't get the code?",
+        "checkNumber": "Check the number: {phone}",
+        "wait": "A text can take up to a minute to arrive.",
+        "blocked": "If you block unknown senders, check your blocked or spam messages.",
+        "support": "Still nothing? Contact support: {channel}"
+      }
+    },
+    "account": {
+      "title": "Set up your account",
+      "cta": "Create account",
+      "creating": "Creating account…",
+      "phoneLine": "Mobile number: {phone}",
+      "phoneCheck": "You'll log in with this number. Check that it's correct.",
+      "changePhone": "Change",
+      "changePhoneLabel": "Change mobile number"
+    },
+    "username": {
+      "label": "Username",
+      "helper": "3–20 characters: English letters, numbers, or _, starting with a letter. Other players see this name.",
+      "costNote": "Changing it later costs {cost} coins.",
+      "latinHint": "Usernames use English letters.",
+      "checking": "Checking this username…",
+      "available": "This username is available.",
+      "error": {
+        "required": "Choose a username.",
+        "length": "Use 3 to 20 characters.",
+        "chars": "Use only English letters, numbers, and _.",
+        "start": "Start with an English letter."
+      }
+    },
+    "password": {
+      "label": "Password",
+      "newLabel": "New password",
+      "error": {
+        "required": "Enter your password."
+      },
+      "rules": {
+        "length": "Have at least 8 characters",
+        "notDigits": "Not be only numbers",
+        "notCommon": "Not be a common password"
+      }
+    },
+    "referrer": {
+      "label": "Referrer's username (optional)",
+      "helper": "If a friend invited you, enter their username. This can't be changed later.",
+      "clear": "Clear referrer"
+    },
+    "verification": {
+      "expired": "Your number verification has expired. Get a new code; what you entered is kept.",
+      "expiredNoSms": "This signup session has expired. Tap Continue to try again; what you entered is kept.",
+      "sendNew": "Send a new code",
+      "renew": "Continue"
+    },
+    "avatar": {
+      "title": "Pick an avatar",
+      "helper": "You can change it anytime in your profile.",
+      "accountCreated": "Your account is ready.",
+      "cta": "Continue",
+      "saving": "Saving…",
+      "disabled": "Pick an avatar or skip.",
+      "skip": "Skip for now",
+      "loadError": "Couldn't load avatars.",
+      "saveError": "Couldn't save your avatar. You can change it later in your profile."
+    },
+    "login": {
+      "title": "Log in",
+      "cta": "Log in",
+      "loggingIn": "Logging in…",
+      "forgot": "Forgot password?",
+      "noAccount": "New here? <signup>Create account</signup>",
+      "lockedReset": "Reset password",
+      "lockEnded": "You can try logging in again now."
+    },
+    "reset": {
+      "title": "Reset password",
+      "intro": "Enter your account's mobile number and we'll text you a code.",
+      "cta": "Get code",
+      "sending": "Sending code…",
+      "backToLogin": "Back to log in",
+      "sentTo": "If an account exists for {phone}, we've texted it a 5-digit code.",
+      "noAccount": "No account? <signup>Create one</signup>",
+      "unavailable": {
+        "title": "Password reset is unavailable right now",
+        "body": "We can't send verification codes by text at the moment, so passwords can't be reset in the app.",
+        "remember": "If you remember your password, you can log in as usual.",
+        "support": "Can't log in? Contact support: {channel}",
+        "safety": "Support will never ask for your password."
+      },
+      "new": {
+        "title": "New password",
+        "note": "After you change it, you'll be signed in here and signed out on all other devices.",
+        "cta": "Save password and log in",
+        "saving": "Saving…"
+      },
+      "done": "Password changed. Other devices were signed out."
+    },
+    "logout": {
+      "item": "Log out",
+      "title": "Log out?",
+      "body": "You'll need your mobile number and password to log back in.",
+      "matchNote": "You have a match in progress. Logging out doesn't resign it, but your turn timer keeps running.",
+      "confirm": "Log out",
+      "loggingOut": "Logging out…",
+      "failed": "Couldn't log out. Check your connection and try again.",
+      "done": "You've logged out."
+    },
+    "stepNoTotal": "Step {current}"
+  },
+  "account": {
+    "suspended": {
+      "title": "Your account is suspended",
+      "until": "Until {date} ({relative})",
+      "indefinite": "Until further notice",
+      "reason": "Reason: {reason}",
+      "canTitle": "You can still:",
+      "can": {
+        "live": "Watch live matches",
+        "history": "See your match history and replays",
+        "predictions": "See your predictions",
+        "withdraw": "Request a withdrawal of your coins",
+        "profile": "Edit your avatar and settings"
+      },
+      "cannotTitle": "Not available while suspended:",
+      "cannot": {
+        "play": "Playing matches (tables, matchmaking, bot)",
+        "predict": "Making predictions",
+        "tournaments": "Entering tournaments",
+        "buy": "Buying coins or items",
+        "transfer": "Sending coins"
+      },
+      "support": "Questions? Contact support: {channel}",
+      "continue": "Continue",
+      "banner": "Account suspended until {date}. Some actions are unavailable.",
+      "bannerIndefinite": "Your account is suspended. Some actions are unavailable.",
+      "details": "Details",
+      "actionBlocked": "Not available while your account is suspended."
+    },
+    "banned": {
+      "title": "This account has been closed",
+      "body": "You can't sign in to this account.",
+      "withdrawals": "If you had a pending withdrawal, it is on hold until our team reviews it.",
+      "support": "To follow up, contact support: {channel}"
+    }
+  },
+  "profile": {
+    "hub": {
+      "title": "Account",
+      "editProfile": "Edit profile",
+      "viewProfile": "View public profile",
+      "level": "Level {level}",
+      "elo": "ELO {elo}",
+      "noUsername": "No username yet",
+      "group": {
+        "activity": "Activity",
+        "account": "Account",
+        "support": "Support and legal"
+      },
+      "wallet": "Wallet",
+      "matches": "Match history",
+      "predictions": "My predictions",
+      "referral": "Invite friends",
+      "leaderboard": "Leaderboard",
+      "sessions": "Signed-in devices",
+      "settings": "Settings",
+      "help": "Help",
+      "install": "Install app",
+      "terms": "Terms of use",
+      "privacy": "Privacy policy",
+      "loadError": "Couldn't load your profile.",
+      "previewTitle": "Your public profile"
+    },
+    "edit": {
+      "title": "Edit profile",
+      "avatarTitle": "Avatar",
+      "avatarSelected": "selected",
+      "pickHint": "Pick an avatar that others will see.",
+      "save": "Save avatar",
+      "saving": "Saving…",
+      "unsaved": "Unsaved change",
+      "saved": "Avatar updated.",
+      "saveError": "Couldn't save your avatar. Try again.",
+      "noAvatars": "No avatars available right now.",
+      "phone": "Mobile number: {phone}",
+      "phonePrivate": "Your number is never shown to other players."
+    },
+    "username": {
+      "title": "Username",
+      "copy": "Copy username",
+      "copied": "Username copied.",
+      "rules": "You can change your username once every {days, plural, one {# day} other {# days}} for {cost} coins.",
+      "later": "Username changes open when the coin wallet launches.",
+      "change": "Change username",
+      "nextDate": "Next change available on {date}."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": {
+      "title": "Language",
+      "offline": "Connect to the internet to change the language."
+    },
+    "game": {
+      "title": "Game"
+    },
+    "lite": {
+      "label": "Lite graphics",
+      "desc": "Dice appear without the physics throw, and shadows are simpler. Good for older phones and saving battery."
+    },
+    "reduced": {
+      "label": "Reduced animations",
+      "desc": "Shortens checker and screen animations.",
+      "osOn": "Your device's reduce-motion setting is on, so animations are always reduced."
+    },
+    "sound": {
+      "label": "Sound",
+      "desc": "Dice, checker, and your-turn sounds"
+    },
+    "vibration": {
+      "label": "Vibration",
+      "desc": "Vibrate on your turn and for timer warnings",
+      "unsupported": "This device or browser doesn't support vibration."
+    },
+    "savedLocally": "Saved on this device. We'll sync it when you're back online.",
+    "saveFailed": "Couldn't save this setting.",
+    "account": {
+      "title": "Account",
+      "phone": "Mobile number",
+      "changePassword": "Change password"
+    }
+  },
+  "sessions": {
+    "title": "Signed-in devices",
+    "intro": "Devices where you're signed in to your account",
+    "thisDevice": "This device",
+    "device": "{browser} on {os}",
+    "lastActive": "Last active: {time}",
+    "signedIn": "Signed in: {date}",
+    "unknownDevice": "Unknown device",
+    "signOutOthers": "Sign out other devices",
+    "signingOut": "Signing out…",
+    "noOthers": "No other devices are signed in.",
+    "safety": "Don't recognize a device? Sign out other devices, then <link>change your password</link>.",
+    "dialog": {
+      "title": "Sign out of all other devices?",
+      "body": "You'll stay signed in on this device. Anyone using your account elsewhere will need your password to sign in again.",
+      "confirm": "Sign out other devices",
+      "failed": "Couldn't sign out the other devices. Try again."
+    },
+    "done": "{count, plural, one {Signed out of # other device.} other {Signed out of # other devices.}}",
+    "loadError": "Couldn't load your devices."
+  },
+  "publicProfile": {
+    "self": "This is how other players see you.",
+    "memberSince": "Member since {date}",
+    "level": "Level",
+    "elo": "ELO",
+    "stats": {
+      "matches": "Matches",
+      "wins": "Wins",
+      "winRate": "Win rate"
+    },
+    "sendCoins": "Send coins",
+    "notFound": "No player with this username.",
+    "loadError": "Couldn't load this profile."
+  },
+  "legal": {
+    "terms": {
+      "title": "Terms of use"
+    },
+    "privacy": {
+      "title": "Privacy policy"
+    },
+    "placeholder": "The full text of this page will be published soon. For questions, contact support: {channel}"
+  },
+  "play": {
+    "placeholder": "The game lobby will be here soon."
+  },
+  "avatars": {
+    "avatar_01": "Khatam star",
+    "avatar_02": "Cypress",
+    "avatar_03": "Paisley",
+    "avatar_04": "Pomegranate",
+    "avatar_05": "Moon",
+    "avatar_06": "Sun",
+    "avatar_07": "Die",
+    "avatar_08": "Crown",
+    "avatar_09": "Bird",
+    "avatar_10": "Fish",
+    "avatar_11": "Tulip",
+    "avatar_12": "Mountain",
+    "fallback": "Avatar"
   }
 }

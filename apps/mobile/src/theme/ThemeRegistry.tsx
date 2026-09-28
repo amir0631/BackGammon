@@ -1,14 +1,12 @@
 "use client";
 
-import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
-import rtlPlugin from "@mui/stylis-plugin-rtl";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { prefixer } from "stylis";
 import { defaultColorMode, type Script } from "@bg/design-tokens";
 import { ToastProvider } from "@/components/feedback/Toast";
 import { MotionProvider, usePrefersReducedMotion } from "./motion";
+import { EmotionRegistry } from "./EmotionRegistry";
 import { createAppTheme } from "./theme";
 
 export interface ThemeRegistryProps {
@@ -30,18 +28,16 @@ export function ThemeRegistry({ direction, script, reducedMotionSetting = false,
     [direction, script, reducedMotion],
   );
 
-  // Separate Emotion caches per direction so RTL-flipped styles never leak into LTR.
-  const cacheOptions =
-    direction === "rtl" ? { key: "muirtl", stylisPlugins: [prefixer, rtlPlugin] } : { key: "mui" };
-
+  // Separate Emotion caches per direction so RTL-flipped styles never leak into LTR; both stay
+  // alive so a runtime language switch keeps the React tree.
   return (
-    <AppRouterCacheProvider options={cacheOptions}>
+    <EmotionRegistry direction={direction}>
       <ThemeProvider theme={theme} defaultMode={defaultColorMode} modeStorageKey="bg-color-mode">
         <CssBaseline enableColorScheme />
         <MotionProvider reduced={reducedMotion} setting={setting} setSetting={setSetting}>
           <ToastProvider>{children}</ToastProvider>
         </MotionProvider>
       </ThemeProvider>
-    </AppRouterCacheProvider>
+    </EmotionRegistry>
   );
 }

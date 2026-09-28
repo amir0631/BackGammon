@@ -103,7 +103,14 @@ export function Banner({ severity = "info", title, children, action, onClose }: 
         </div>
         {action &&
           (action.href ? (
-            <Button className="banner-action" variant="outlined" size="small" component={NextLink} href={action.href}>
+            <Button
+              className="banner-action"
+              variant="outlined"
+              size="small"
+              component={NextLink}
+              href={action.href}
+              onClick={action.onClick}
+            >
               {action.label}
             </Button>
           ) : (

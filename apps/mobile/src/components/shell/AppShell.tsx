@@ -38,6 +38,9 @@ const Column = styled("div")({
 const Main = styled("main")({
   flex: "1 1 auto",
   minWidth: 0,
+  // A flex column so a screen can fill the remaining height (sticky footers, centered cards).
+  display: "flex",
+  flexDirection: "column",
   "&:focus": { outline: "none" },
 });
 
