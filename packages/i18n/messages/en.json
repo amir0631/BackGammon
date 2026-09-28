@@ -128,6 +128,42 @@
     },
     "sms": {
       "unavailable": "We can't send texts right now. Please try again in a few minutes."
+    },
+    "match": {
+      "accountSuspended": "Your account is suspended; you can't start matches.",
+      "actionInvalid": "That action isn't allowed right now.",
+      "inProgress": "You already have a match in progress.",
+      "lengthNotAllowed": "That match length isn't available.",
+      "notAPlayer": "You aren't a player in this match.",
+      "notAttached": "Open the match first.",
+      "notFound": "Match not found.",
+      "reactionRejected": "That reaction can't be sent now."
+    },
+    "payments": {
+      "amountInvalid": "Choose a whole number of coins within the allowed range.",
+      "disabled": "Online payment isn't available yet. Support can top up your wallet.",
+      "gatewayUnavailable": "The payment gateway is unavailable. Try again later."
+    },
+    "predictions": {
+      "refused": "You can't place this prediction."
+    },
+    "queue": {
+      "invalid": "That table isn't available."
+    },
+    "shop": {
+      "itemNotForSale": "This item isn't for sale.",
+      "itemNotOwned": "You don't own this item.",
+      "itemUnavailable": "This item isn't available."
+    },
+    "tournaments": {
+      "refused": "You can't join or leave this tournament now."
+    },
+    "wallet": {
+      "transferLinked": "Transfers between linked accounts aren't allowed.",
+      "withdrawUnderReview": "Your account is under review; withdrawals are paused."
+    },
+    "ws": {
+      "badMessage": "The request was invalid."
     }
   },
   "devGallery": {

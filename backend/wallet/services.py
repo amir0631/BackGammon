@@ -207,6 +207,13 @@ def transfer(sender: User, username: str, amount: Any, password: str, idempotenc
         raise errors.TransferRecipientNotFound()
     if recipient.id == sender.id:
         raise errors.TransferSelf()
+    from antifraud.links import link_reasons
+    from antifraud.rules import Rule, flag
+
+    if reasons := link_reasons(sender.id, recipient.id):
+        # §7.13: transfers between accounts anti-fraud links are refused and flagged.
+        flag(Rule.LINKED_TRANSFER, sender, recipient, evidence={"reason": reasons, "amount": amount})
+        raise errors.TransferLinked()
     minimum = registry.get("transfer.min_coins")
     if amount < minimum:
         raise errors.TransferBelowMin(details={"min": minimum})
@@ -278,6 +285,10 @@ def check_withdrawal(user: User, amount: Any, balance: int | None = None) -> int
     """Every withdrawal rule except the confirmation. The view calls it before using the SMS code or
     password (so a refused amount does not burn a code); the service repeats it under the lock."""
     value = _positive_int(amount)
+    from antifraud.rules import has_open_flag
+
+    if has_open_flag(user.id):
+        raise errors.WithdrawUnderReview()  # §7.12: an open anti-fraud flag blocks withdrawals
     if not BankAccount.objects.filter(user=user).exists():
         raise errors.NoBankAccount()
     minimum = registry.get("withdraw.min_coins")

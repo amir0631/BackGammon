@@ -1,7 +1,11 @@
 // Typed REST client (CLAUDE.md §10.1). Frontends call same-origin `/api/v1` paths; Nginx
 // proxies them to the backend, so no CORS. Auth lives in HttpOnly cookies.
 import type {
+  AccountLinkGraph,
   AdminAuditEntry,
+  FraudDecision,
+  FraudFlag,
+  FraudFlagFilter,
   AdminMe,
   AdminSetting,
   ApiError,
@@ -128,6 +132,35 @@ function refreshSession(baseUrl = ""): Promise<ApiError | null> {
 
 const NO_REFRESH_PATHS = ["/auth/refresh", "/auth/login", "/auth/logout"];
 
+const DEVICE_KEY = "bg.device";
+let deviceId: string | null | undefined;
+
+/** The override for tests and non-browser callers; browsers get one automatically. */
+export function setDeviceId(id: string | null): void {
+  deviceId = id;
+}
+
+/**
+ * A random id kept in this browser, sent as X-Device-Id on player requests so anti-fraud can link
+ * accounts that share a device (CLAUDE.md §12.2). Null where there is no storage.
+ */
+function currentDeviceId(): string | null {
+  if (deviceId !== undefined) return deviceId;
+  deviceId = null;
+  try {
+    const stored = globalThis.localStorage?.getItem(DEVICE_KEY);
+    if (stored) {
+      deviceId = stored;
+    } else if (globalThis.localStorage && globalThis.crypto?.randomUUID) {
+      deviceId = globalThis.crypto.randomUUID();
+      globalThis.localStorage.setItem(DEVICE_KEY, deviceId);
+    }
+  } catch {
+    // Storage blocked (private mode, settings): no device id.
+  }
+  return deviceId;
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -138,6 +171,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (token) headers["X-CSRFToken"] = token;
   }
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
+  const device = path.startsWith("/admin/") ? null : currentDeviceId();
+  if (device) headers["X-Device-Id"] = device;
 
   let response: Response;
   try {
@@ -380,6 +415,11 @@ export const api = {
       apiRequest<{ code: string; status: string }>(`/admin/sms/patterns/${encodeURIComponent(code)}`, o),
     audit: (filter: { target_type?: string; target_id?: string } = {}, o?: Opts) =>
       apiRequest<Paginated<AdminAuditEntry>>(`/admin/audit?${new URLSearchParams(filter).toString()}`, o),
+    fraudFlags: (filter: FraudFlagFilter = {}, o?: Opts) =>
+      apiRequest<Paginated<FraudFlag>>(`/admin/fraud/flags${query(filter)}`, o),
+    decideFlag: (id: number, decision: FraudDecision) =>
+      apiRequest<FraudFlag>(`/admin/fraud/flags/${id}/decide`, { method: "POST", body: decision }),
+    userLinks: (id: number, o?: Opts) => apiRequest<AccountLinkGraph>(`/admin/users/${id}/links`, o),
   },
 };
 

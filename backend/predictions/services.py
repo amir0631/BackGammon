@@ -65,6 +65,10 @@ def blocked(user: User, match: Any) -> str | None:
     """Why this user may not predict on this match (§7.5), or None."""
     if user.id in (match.player_a_id, match.player_b_id):
         return "player"
+    from antifraud.rules import has_open_flag
+
+    if has_open_flag(user.id, ["chip_dumping"]):
+        return "review"  # §12.2: flagged chip dumpers are blocked from prediction pools
     for player_id in (match.player_a_id, match.player_b_id):
         if player_id is None:
             continue

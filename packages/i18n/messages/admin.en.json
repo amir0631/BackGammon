@@ -292,7 +292,8 @@
       "locked": "Too many failed attempts. Try again in {time}.",
       "unauthenticated": "Your session has ended. Sign in again.",
       "forbidden": "You don't have permission to do this.",
-      "settingConflict": "Another admin changed this setting meanwhile."
+      "settingConflict": "Another admin changed this setting meanwhile.",
+      "flagDecided": "This flag has already been decided."
     }
   }
 }

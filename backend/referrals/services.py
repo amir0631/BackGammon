@@ -14,7 +14,7 @@ from django.db.models import Count, Sum
 from django.utils import timezone
 
 from accounts.models import User
-from antifraud.links import are_linked
+from antifraud.links import link_reasons
 from referrals.models import ReferralEarning
 from settingsapp import registry
 from wallet import ledger
@@ -48,20 +48,28 @@ def pay_commissions(match: Any, players: list[User], rake: int) -> list[dict[str
         referrer_id = referee.referrer_id
         assert referrer_id is not None
         referrer = User.objects.filter(pk=referrer_id).exclude(status=User.Status.BANNED).first()
-        if referrer is None or are_linked(referrer.id, referee.id):
+        if referrer is None:
             continue
         base = match.entry * 2 if base_kind == "pot" else match.entry
         amount = min(base * pct // 100, remaining)
         if amount <= 0:
             continue
-        ledger.ensure_wallet(referrer.id)
-        ledger.post(
-            TxType.REFERRAL_COMMISSION,
-            [(ledger.PLATFORM_RAKE, -amount), (ledger.user_account(referrer.id), amount)],
-            idempotency_key=f"referral:{match.id}:{referee.id}",
-            ref_type="match",
-            ref_id=match.id,
-        )
+        if reasons := link_reasons(referrer.id, referee.id):
+            # referral_farm (§12.2): hold the commission until the review decides.
+            earning = ReferralEarning.objects.create(
+                referrer=referrer,
+                referee=referee,
+                match=match,
+                amount=amount,
+                base=base,
+                status=ReferralEarning.Status.HELD,
+            )
+            from antifraud.rules import Rule, flag
+
+            evidence = {"reason": reasons, "earning": earning.id, "amount": amount}
+            flag(Rule.REFERRAL_FARM, referrer, referee, match, evidence=evidence)
+            continue
+        _pay(referrer.id, referee.id, match.id, amount)
         ReferralEarning.objects.create(
             referrer=referrer, referee=referee, match=match, amount=amount, base=base
         )
@@ -72,7 +80,9 @@ def pay_commissions(match: Any, players: list[User], rake: int) -> list[dict[str
 
 def summary(user: User) -> dict[str, Any]:
     referees = User.objects.filter(referrer=user)
-    total = ReferralEarning.objects.filter(referrer=user).aggregate(s=Sum("amount"), n=Count("id"))
+    total = ReferralEarning.objects.filter(referrer=user, status=ReferralEarning.Status.PAID).aggregate(
+        s=Sum("amount"), n=Count("id")
+    )
     return {
         "code": user.username,
         "referees": referees.count(),
@@ -83,3 +93,28 @@ def summary(user: User) -> dict[str, Any]:
         "base": registry.get("referral.base"),
         "duration_days": registry.get("referral.duration_days"),
     }
+
+
+def _pay(referrer_id: int, referee_id: int, match_id: Any, amount: int) -> None:
+    ledger.ensure_wallet(referrer_id)
+    ledger.post(
+        TxType.REFERRAL_COMMISSION,
+        [(ledger.PLATFORM_RAKE, -amount), (ledger.user_account(referrer_id), amount)],
+        idempotency_key=f"referral:{match_id}:{referee_id}",
+        ref_type="match",
+        ref_id=match_id,
+    )
+
+
+def release_held(earning_id: int, pay: bool) -> ReferralEarning:
+    """The review's decision on a held commission: pay it from the rake, or cancel it."""
+    earning = ReferralEarning.objects.select_for_update().get(pk=earning_id)
+    if earning.status != ReferralEarning.Status.HELD:
+        return earning
+    if pay:
+        _pay(earning.referrer_id, earning.referee_id, earning.match_id, earning.amount)
+        earning.status = ReferralEarning.Status.PAID
+    else:
+        earning.status = ReferralEarning.Status.CANCELLED
+    earning.save(update_fields=["status"])
+    return earning

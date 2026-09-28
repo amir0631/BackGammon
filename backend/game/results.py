@@ -3,6 +3,7 @@ and XP, all in the live session's transaction, before match.ended is emitted."""
 
 from typing import TYPE_CHECKING, Any
 
+from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import User
@@ -56,7 +57,11 @@ def finish(live: "Live") -> dict[str, Any]:
             match.id, winner.id, match.entry, int(match.rules.get("table_rake_pct", 0))
         )
         referrals.pay_commissions(match, [a, b], settlement["rake"])  # from the rake (§7.4)
+    from antifraud.rules import check_pool
+
+    check_pool(match, e.winner)  # may hold the pool (prediction_collusion) before it settles
     predictions.settle(match, e.winner)
+    transaction.on_commit(lambda: _after_match(str(match.id)))
     if match.tournament_id is not None:
         from tournaments.services import on_match_end
 
@@ -70,3 +75,9 @@ def finish(live: "Live") -> dict[str, Any]:
     ranking.grant_xp(a, xp["a"], "match", match)
     ranking.grant_xp(b, xp["b"], "match", match)
     return {"aborted": False, "elo": elo, "xp": xp, "settlement": settlement}
+
+
+def _after_match(match_id: str) -> None:
+    from antifraud.tasks import check_finished_match
+
+    check_finished_match.delay(match_id)

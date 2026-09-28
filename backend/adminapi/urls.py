@@ -1,6 +1,6 @@
 from django.urls import path
 
-from adminapi import tournament_views, views, wallet_views
+from adminapi import fraud_views, tournament_views, views, wallet_views
 
 urlpatterns = [
     path("auth/login", views.LoginView.as_view()),
@@ -19,6 +19,9 @@ urlpatterns = [
     path("users/<int:user_id>/wallet/topup", wallet_views.TopupView.as_view()),
     path("users/<int:user_id>/wallet/adjust", wallet_views.AdjustView.as_view()),
     path("matches/<str:match_id>/replay", wallet_views.MatchReplayAdminView.as_view()),
+    path("fraud/flags", fraud_views.FlagsView.as_view()),
+    path("fraud/flags/<int:flag_id>/decide", fraud_views.FlagDecideView.as_view()),
+    path("users/<int:user_id>/links", fraud_views.UserLinksView.as_view()),
     path("tournaments", tournament_views.AdminTournamentsView.as_view()),
     path("tournaments/<int:tournament_id>/cancel", tournament_views.AdminTournamentCancelView.as_view()),
     path("withdrawals", wallet_views.WithdrawalsAdminView.as_view()),

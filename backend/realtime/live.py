@@ -124,7 +124,7 @@ class Live:
     spectators_sent_at: float = 0.0
     tournament_id: int | None = None
     # Not stored: work for the end of the current session.
-    outbox: list[tuple[dict[str, Any], str, bool]] = field(default_factory=list)
+    outbox: list[tuple[dict[str, Any], str]] = field(default_factory=list)
     new_timers: list[tuple[str, float]] = field(default_factory=list)
 
     _STORED = (
@@ -194,8 +194,7 @@ def _commit(live: Live) -> None:
                 payload=env["payload"],
                 server_ts=timezone.now(),
             )
-            for env, actor, spectators_only in live.outbox
-            if not spectators_only  # §15: spectator-only events are not recorded
+            for env, actor in live.outbox
         )
 
 
@@ -203,7 +202,7 @@ def _save(live: Live) -> None:
     pipe = r().pipeline()
     pipe.set(_key(live.match_id, "state"), live.to_json())
     if live.outbox:
-        pipe.rpush(_key(live.match_id, "events"), *(json.dumps(env) for env, _a, _s in live.outbox))
+        pipe.rpush(_key(live.match_id, "events"), *(json.dumps(env) for env, _a in live.outbox))
         pipe.ltrim(_key(live.match_id, "events"), -EVENT_LOG_KEEP, -1)
     for member, due in live.new_timers:
         pipe.zadd(TIMERS_KEY, {member: due})
@@ -214,17 +213,8 @@ def _save(live: Live) -> None:
 
 
 def _publish(live: Live) -> None:
-    batch: list[dict[str, Any]] = []
-    for env, _actor, spectators_only in live.outbox:
-        if spectators_only:
-            if batch:
-                publisher(live.match_id, batch, False)
-                batch = []
-            publisher(live.match_id, [env], True)
-        else:
-            batch.append(env)
-    if batch:
-        publisher(live.match_id, batch, False)
+    if live.outbox:
+        publisher(live.match_id, [env for env, _actor in live.outbox], False)
 
 
 @contextmanager
@@ -246,13 +236,19 @@ def session(match_id: str) -> Iterator[Live]:
             pass
 
 
-def emit(
-    live: Live, type_: str, payload: dict[str, Any], side: int | None = None, spectators_only: bool = False
-) -> None:
+def emit(live: Live, type_: str, payload: dict[str, Any], side: int | None = None) -> None:
+    """A match event: numbered in the match sequence, recorded (§20.1), sent to players and spectators."""
     body = protocol.SERVER_MESSAGES[type_].model_validate(payload).model_dump(mode="json")
     live.seq += 1
     env = {"type": type_, "match_id": live.match_id, "seq": live.seq, "payload": body}
-    live.outbox.append((env, _actor(side), spectators_only))
+    live.outbox.append((env, _actor(side)))
+
+
+def publish_to_spectators(match_id: str, type_: str, payload: dict[str, Any]) -> None:
+    """A spectator-only event (§20.4): outside the match sequence (seq 0) and the match record, and
+    sent without the match lock, so spectator activity never delays or gaps the players' stream."""
+    body = protocol.SERVER_MESSAGES[type_].model_validate(payload).model_dump(mode="json")
+    publisher(match_id, [{"type": type_, "match_id": match_id, "seq": 0, "payload": body}], True)
 
 
 def events_since(match_id: str, last_seq: int) -> list[dict[str, Any]] | None:

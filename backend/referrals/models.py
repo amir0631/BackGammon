@@ -12,8 +12,15 @@ class ReferralEarning(models.Model):
     )
     referee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     match = models.ForeignKey("game.Match", on_delete=models.PROTECT, related_name="+")
+
+    class Status(models.TextChoices):
+        PAID = "paid"
+        HELD = "held"  # referral_farm: waiting for the anti-fraud review (§12.2)
+        CANCELLED = "cancelled"
+
     amount = models.BigIntegerField()
     base = models.BigIntegerField()
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PAID)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

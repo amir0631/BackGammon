@@ -446,6 +446,61 @@ _DEFS: list[SettingDef] = [
         0,
         None,
     ),
+    # Anti-fraud thresholds (CLAUDE.md §12.2: all thresholds are settings)
+    SettingDef(
+        "antifraud.link_window_days",
+        "int",
+        30,
+        _d("پنجرهٔ پیوند حساب‌ها (روز)", "Account link window (days)"),
+        1,
+        365,
+    ),
+    SettingDef(
+        "antifraud.chip_min_matches",
+        "int",
+        5,
+        _d("حداقل بازی برای بررسی واگذاری", "Matches before a chip-dumping check"),
+        2,
+        100,
+    ),
+    SettingDef(
+        "antifraud.chip_one_sided_pct", "int", 90, _d("درصد برد یک‌طرفه", "One-sided win share (%)"), 50, 100
+    ),
+    SettingDef(
+        "antifraud.chip_window_days",
+        "int",
+        7,
+        _d("پنجرهٔ بررسی واگذاری (روز)", "Chip-dumping window (days)"),
+        1,
+        90,
+    ),
+    SettingDef(
+        "antifraud.early_resign_moves", "int", 4, _d("تسلیم زودهنگام (حرکت)", "Early resign (moves)"), 0, 50
+    ),
+    SettingDef(
+        "antifraud.collusion_stake_pct",
+        "int",
+        50,
+        _d("سهم پیش‌بینی مشکوک از استخر (٪)", "Suspicious prediction share of pool (%)"),
+        1,
+        100,
+    ),
+    SettingDef(
+        "antifraud.engine_agreement_pct",
+        "int",
+        90,
+        _d("هم‌خوانی مشکوک با موتور (٪)", "Suspicious engine agreement (%)"),
+        50,
+        100,
+    ),
+    SettingDef(
+        "antifraud.engine_min_moves",
+        "int",
+        60,
+        _d("حداقل حرکت برای بررسی موتور", "Moves before an engine check"),
+        10,
+        1000,
+    ),
     # OTP and login protection (CLAUDE.md §12.1)
     SettingDef("otp.ttl_seconds", "int", 120, _d("اعتبار کد تأیید (ثانیه)", "OTP validity (s)"), 30, 900),
     SettingDef(

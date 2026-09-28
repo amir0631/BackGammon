@@ -151,6 +151,18 @@ def test_players_play_and_spectator_watches(clock):
             {"type": "react.send", "match_id": mid, "seq": 0, "payload": {"emoji_key": "clap"}}
         )
         assert (await until(cw, "react.recv"))["payload"]["key"] == "clap"
+        # Spectator reactions reach spectators outside the match sequence (no gap for players).
+        before = (await database_sync_to_async(live.load)(mid)).seq
+        await cw.send_json_to(
+            {"type": "spectate.react", "match_id": mid, "seq": 0, "payload": {"emoji_key": "fire"}}
+        )
+        got = await until(cw, "spectate.react")
+        assert got["seq"] == 0 and got["payload"] == {"key": "fire"}
+        assert (await database_sync_to_async(live.load)(mid)).seq == before
+        await cw.send_json_to(
+            {"type": "spectate.react", "match_id": mid, "seq": 0, "payload": {"emoji_key": "fire"}}
+        )
+        assert (await until(cw, "error"))["payload"]["details"] == {"reason": "rate"}
         # Unknown message types are rejected without closing.
         await ca.send_json_to({"type": "hack", "seq": 0, "payload": {}})
         assert (await until(ca, "error"))["payload"]["code"] == "BAD_MESSAGE"

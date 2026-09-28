@@ -5,6 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from channels.db import database_sync_to_async
+from django.core.cache import cache
 
 from realtime import live, reactions
 from settingsapp import registry
@@ -51,8 +52,9 @@ def _react(match_id: str, key: str, user_id: int) -> None:
         raise live.ReactionRejected(details={"reason": "disabled"})
     if not reactions.allowed("emoji", key):
         raise live.ReactionRejected(details={"reason": "unknown"})
-    with live.session(match_id) as state:
-        live.emit(state, "spectate.react", {"key": key}, spectators_only=True)
+    if not cache.add(f"spectate:react:{user_id}", 1, timeout=reactions.RATE_SECONDS):
+        raise live.ReactionRejected(details={"reason": "rate"})
+    live.publish_to_spectators(match_id, "spectate.react", {"key": key})
 
 
 async def handle(consumer: "GameConsumer", type_: str, match_id: str | None, payload: dict[str, Any]) -> None:

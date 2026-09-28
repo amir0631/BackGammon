@@ -322,6 +322,54 @@ export interface AdminBalanceChange {
   created: boolean;
 }
 
+// ---- Admin: anti-fraud review (CLAUDE.md §12.2, §13 Anti-fraud) ----
+
+export type FraudRule =
+  | "chip_dumping" | "multi_account" | "referral_farm" | "prediction_collusion" | "engine_assist"
+  | "linked_transfer";
+export type FraudFlagStatus = "open" | "dismissed" | "confirmed";
+
+export interface FraudFlagUser {
+  id: number;
+  username: string | null;
+  status: UserStatus;
+}
+
+export interface FraudFlag {
+  id: number;
+  rule: FraudRule;
+  user: FraudFlagUser;
+  /** The linked account, for pair rules. */
+  other: FraudFlagUser | null;
+  /** Opens the admin replay (§20.3). */
+  match_id: string | null;
+  evidence: Record<string, unknown>;
+  status: FraudFlagStatus;
+  created_at: string;
+  decided_by: string | null;
+  decision_reason: string | null;
+  decided_at: string | null;
+}
+
+export interface FraudFlagFilter {
+  status?: FraudFlagStatus;
+  rule?: FraudRule;
+  user_id?: number;
+  cursor?: string;
+}
+
+/** dismiss: no fraud, held money is released; confirm: held pool stakes refunded, held commission cancelled. */
+export interface FraudDecision {
+  decision: "dismiss" | "confirm";
+  reason: string;
+  action?: "none" | "suspend" | "ban";
+}
+
+export interface AccountLinkGraph {
+  nodes: { id: number; username: string | null }[];
+  edges: { from: number; to: number; reason: "device" | "ip" | "referrer" | "referee" }[];
+}
+
 // ---- Shop: coin purchase (CLAUDE.md §7.7, §7.11) ----
 
 export interface CoinPackageInfo {
