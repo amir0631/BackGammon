@@ -155,3 +155,33 @@ def test_parallel_transfers_do_not_double_spend_or_deadlock():
     assert all(b >= 0 for b in balances)
     assert sum(balances) == 500
     assert invariants.check() == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_opposite_transfers_through_the_service_do_not_deadlock():
+    """A→B and B→A at once: the service must lock wallets in the ledger's order (§7.1)."""
+    a, b = make_user(), make_user()
+    fund(a, 1000)
+    fund(b, 1000)
+    errors: list[str] = []
+    start = threading.Barrier(20)
+
+    def worker(i: int) -> None:
+        sender, recipient = (a, b) if i % 2 else (b, a)
+        try:
+            start.wait()
+            services.transfer(sender, str(recipient.username), 10, "S3cure-pass!", f"opp{i}")
+        except Exception as exc:
+            errors.append(repr(exc))
+        finally:
+            connections.close_all()
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+    assert not any(t.is_alive() for t in threads), "deadlock or hang"
+    assert errors == []
+    assert sorted(Wallet.objects.filter(user__in=[a, b]).values_list("balance", flat=True)) == [1000, 1000]
+    assert invariants.check() == []

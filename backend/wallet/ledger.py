@@ -7,6 +7,7 @@ order (so concurrent settlements cannot deadlock) and kept equal to the ledger s
 
 import uuid
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from django.db import connection, transaction
@@ -82,10 +83,7 @@ def post(
             return Posted(existing, created=False)
 
         user_ids = sorted(uid for a in merged if (uid := _user_id(a)) is not None)
-        wallets = {
-            w.user_id: w
-            for w in Wallet.objects.select_for_update().filter(user_id__in=user_ids).order_by("user_id")
-        }
+        wallets = lock_wallets(user_ids)
         for uid in user_ids:
             wallet = wallets.get(uid)
             if wallet is None:
@@ -112,6 +110,18 @@ def post(
                 balance=F("balance") + merged[user_account(uid)], version=F("version") + 1
             )
         return Posted(tx_id, created=True)
+
+
+def lock_wallets(user_ids: Iterable[int]) -> dict[int, Wallet]:
+    """Row-lock wallets in ascending user id: the one order every caller must use (§7.1).
+
+    A service that locks wallets before calling `post` (to check a limit under the lock) must lock
+    all of them here, or two opposite transfers can deadlock.
+    """
+    ids = sorted(set(user_ids))
+    return {
+        w.user_id: w for w in Wallet.objects.select_for_update().filter(user_id__in=ids).order_by("user_id")
+    }
 
 
 def ensure_wallet(user_id: int) -> Wallet:

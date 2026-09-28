@@ -173,11 +173,13 @@ def transfer(sender: User, username: str, amount: Any, password: str, idempotenc
     if amount < minimum:
         raise errors.TransferBelowMin(details={"min": minimum})
     fee = amount * registry.get("transfer.fee_pct") // 100
+    ledger.ensure_wallet(sender.id)
     ledger.ensure_wallet(recipient.id)
 
     with transaction.atomic():
-        # Lock the sender first so two concurrent transfers cannot both pass the rolling limit.
-        Wallet.objects.select_for_update().get(user_id=sender.id)
+        # Lock both wallets before the rolling-limit check, so two concurrent transfers cannot both
+        # pass it, and in the ledger's order, so A→B and B→A at once cannot deadlock.
+        ledger.lock_wallets([sender.id, recipient.id])
         window = transfer_window(sender)
         if amount > window.remaining:
             raise errors.TransferLimit(
