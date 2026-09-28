@@ -25,8 +25,8 @@ def _import_all() -> None:
             importlib.import_module(info.name)
 
 
-def _subclasses(cls: type) -> set[type]:
-    out = set()
+def _subclasses(cls: type[AppError]) -> set[type[AppError]]:
+    out: set[type[AppError]] = set()
     for sub in cls.__subclasses__():
         out |= {sub, *_subclasses(sub)}
     return out
@@ -42,7 +42,7 @@ def used_keys() -> set[str]:
     return keys
 
 
-def _has(tree: dict, key: str) -> bool:
+def _has(tree: dict[str, object], key: str) -> bool:
     node: object = tree
     for part in key.split("."):
         if not isinstance(node, dict) or part not in node:
