@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "referrals",
     "predictions",
     "tournaments",
+    "reports",
 ]
 
 MIDDLEWARE = [
@@ -104,6 +105,7 @@ CELERY_BEAT_SCHEDULE = {
     "leaderboards-nightly": {"task": "ranking.tasks.rebuild_leaderboards_nightly", "schedule": 86400.0},
     "payments-reconcile-nightly": {"task": "payments.tasks.reconcile_yesterday", "schedule": 86400.0},
     "payments-expire": {"task": "payments.tasks.expire_stale_payments", "schedule": 900.0},
+    "dice-test-weekly": {"task": "reports.tasks.weekly_dice_test", "schedule": 7 * 86400.0},
 }
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]

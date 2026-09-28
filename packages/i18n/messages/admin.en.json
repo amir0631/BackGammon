@@ -293,7 +293,10 @@
       "unauthenticated": "Your session has ended. Sign in again.",
       "forbidden": "You don't have permission to do this.",
       "settingConflict": "Another admin changed this setting meanwhile.",
-      "flagDecided": "This flag has already been decided."
+      "flagDecided": "This flag has already been decided.",
+      "reportRange": "Choose a valid date range (at most one year).",
+      "exists": "An admin with this username already exists.",
+      "lastSuperadmin": "The last active superadmin can't be demoted or disabled."
     }
   }
 }

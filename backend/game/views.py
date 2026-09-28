@@ -206,60 +206,74 @@ class MatchReplayView(APIView):
         return Response(replay_payload(match))
 
 
+def live_rows(params: Any) -> list[dict[str, Any]]:
+    """Human-vs-human matches in progress (§20.4), filtered by ?tier=&variant=&tournament= and sorted
+    by ?sort=spectators|pool|elo, tournament matches first; 100 at most."""
+    from predictions.models import PredictionPool
+    from realtime import live
+
+    rows = []
+    for match_id in live.r().smembers(live.LIVE_SET):
+        try:
+            state = live.load(match_id)
+        except live.MatchNotFound:
+            live.r().srem(live.LIVE_SET, match_id)
+            continue
+        if state.status != "active":
+            continue
+        rows.append(
+            {
+                "match_id": match_id,
+                "variant": state.variant,
+                "length": state.length,
+                "entry": state.entry,
+                "tier_id": state.entry,
+                "players": [
+                    {
+                        "username": p["username"],
+                        "avatar": p["avatar"],
+                        "elo": p["elo"],
+                        "level": p["level"],
+                    }
+                    for p in state.players
+                ],
+                "score": list(state.engine.score),
+                "game_no": state.engine.game_no,
+                "spectators": state.spectators,
+                "pool": 0,
+                "avg_elo": sum(p["elo"] for p in state.players) // 2,
+                "tournament_id": state.tournament_id,
+            }
+        )
+    pools = {
+        str(match_id): total_a + total_b
+        for match_id, total_a, total_b in PredictionPool.objects.filter(
+            match_id__in=[r["match_id"] for r in rows]
+        ).values_list("match_id", "total_a", "total_b")
+    }
+    for row in rows:
+        row["pool"] = pools.get(row["match_id"], 0)
+    if (tier := params.get("tier") or "").isdigit():
+        rows = [r for r in rows if r["entry"] == int(tier)]
+    if variant := params.get("variant"):
+        rows = [r for r in rows if r["variant"] == variant]
+    if (tournament := params.get("tournament") or "").isdigit():
+        rows = [r for r in rows if r["tournament_id"] == int(tournament)]
+    # Tournament matches first (§20.4: highlighted), then the chosen sort.
+    sort = {"spectators": "spectators", "pool": "pool", "elo": "avg_elo"}.get(
+        params.get("sort") or "", "spectators"
+    )
+    rows.sort(key=lambda r: (r["tournament_id"] is None, -r[sort], r["match_id"]))
+    return rows[:100]
+
+
 class LiveMatchesView(APIView):
-    """Human-vs-human matches in progress (§20.4). ?tier=&variant=&sort=spectators|pool|elo"""
+    """Human-vs-human matches in progress (§20.4). ?tier=&variant=&tournament=&sort=spectators|pool|elo"""
 
     permission_classes = (IsAuthenticated,)
 
     def get(self, request: Request) -> Response:
-        from realtime import live
-
-        rows = []
-        for match_id in live.r().smembers(live.LIVE_SET):
-            try:
-                state = live.load(match_id)
-            except live.MatchNotFound:
-                live.r().srem(live.LIVE_SET, match_id)
-                continue
-            if state.status != "active":
-                continue
-            rows.append(
-                {
-                    "match_id": match_id,
-                    "variant": state.variant,
-                    "length": state.length,
-                    "entry": state.entry,
-                    "tier_id": state.entry,
-                    "players": [
-                        {
-                            "username": p["username"],
-                            "avatar": p["avatar"],
-                            "elo": p["elo"],
-                            "level": p["level"],
-                        }
-                        for p in state.players
-                    ],
-                    "score": list(state.engine.score),
-                    "game_no": state.engine.game_no,
-                    "spectators": state.spectators,
-                    "pool": 0,
-                    "avg_elo": sum(p["elo"] for p in state.players) // 2,
-                    "tournament_id": state.tournament_id,
-                }
-            )
-        p = request.query_params
-        if (tier := p.get("tier") or "").isdigit():
-            rows = [r for r in rows if r["entry"] == int(tier)]
-        if variant := p.get("variant"):
-            rows = [r for r in rows if r["variant"] == variant]
-        if (tournament := p.get("tournament") or "").isdigit():
-            rows = [r for r in rows if r["tournament_id"] == int(tournament)]
-        # Tournament matches first (§20.4: highlighted), then the chosen sort.
-        sort = {"spectators": "spectators", "pool": "pool", "elo": "avg_elo"}.get(
-            p.get("sort") or "", "spectators"
-        )
-        rows.sort(key=lambda r: (r["tournament_id"] is None, -r[sort], r["match_id"]))
-        return Response({"results": rows[:100], "next": None})
+        return Response({"results": live_rows(request.query_params), "next": None})
 
 
 class TiersView(APIView):

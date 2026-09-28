@@ -60,3 +60,23 @@ class Payment(models.Model):
 
     def __str__(self) -> str:
         return f"payment:{self.id}:{self.status}"
+
+
+class ReconciliationRun(models.Model):
+    """The nightly comparison of verified payments with the gateway's report (§7.7, §13)."""
+
+    day = models.DateField()
+    gateway = models.CharField(max_length=20)
+    verified_count = models.PositiveIntegerField(default=0)
+    verified_rial = models.BigIntegerField(default=0)
+    problems = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "payment_reconciliation"
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(fields=["day", "gateway"], name="reconcile_once_per_day")
+        ]
+
+    def __str__(self) -> str:
+        return f"reconcile:{self.day}:{self.gateway}"

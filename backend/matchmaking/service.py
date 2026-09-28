@@ -140,7 +140,7 @@ def try_pair(key: str) -> list[str]:
                 window = _window(now - min(joined_a, joined_b))
                 if abs(infos[a]["elo"] - infos[b]["elo"]) > window or are_linked(a, b):
                     continue
-                match_id = _start(key, a, b)
+                match_id = _start(key, a, b, {a: now - joined_a, b: now - joined_b})
                 if match_id is not None:
                     taken |= {a, b}
                     created.append(match_id)
@@ -153,7 +153,7 @@ def try_pair(key: str) -> list[str]:
     return created
 
 
-def _start(key: str, a_id: int, b_id: int) -> str | None:
+def _start(key: str, a_id: int, b_id: int, waits: dict[int, float] | None = None) -> str | None:
     _, entry_s, variant, length_s = key.split(":")[1:]
     entry, length = int(entry_s), int(length_s)
     users = {u.id: u for u in User.objects.filter(id__in=[a_id, b_id])}
@@ -178,6 +178,13 @@ def _start(key: str, a_id: int, b_id: int) -> str | None:
             from predictions.services import open_pool
 
             open_pool(match)  # random pairing: eligible for a prediction pool (§7.5)
+            if waits:
+                from reports.models import QueueWait
+
+                QueueWait.objects.bulk_create(
+                    QueueWait(match=match, user_id=uid, seconds=max(0, int(wait)))
+                    for uid, wait in waits.items()
+                )
     except WalletInsufficient:
         logger.warning("entry escrow failed for %s", key)
         for user in (a, b):

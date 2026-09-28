@@ -9,4 +9,6 @@ urlpatterns = [
     path("me/username", views.UsernameView.as_view()),
     path("themes", views.ThemesView.as_view()),
     path("phrases", views.PhrasesView.as_view()),
+    path("announcements", views.AnnouncementsView.as_view()),
+    path("content/texts", views.TextsView.as_view()),
 ]

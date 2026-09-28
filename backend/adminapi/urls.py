@@ -1,6 +1,14 @@
 from django.urls import path
 
-from adminapi import fraud_views, tournament_views, views, wallet_views
+from adminapi import (
+    access_views,
+    content_views,
+    fraud_views,
+    report_views,
+    tournament_views,
+    views,
+    wallet_views,
+)
 
 urlpatterns = [
     path("auth/login", views.LoginView.as_view()),
@@ -24,6 +32,28 @@ urlpatterns = [
     path("users/<int:user_id>/links", fraud_views.UserLinksView.as_view()),
     path("tournaments", tournament_views.AdminTournamentsView.as_view()),
     path("tournaments/<int:tournament_id>/cancel", tournament_views.AdminTournamentCancelView.as_view()),
+    path("dashboard", report_views.DashboardView.as_view()),
+    path("reports/financial", report_views.FinancialReportView.as_view()),
+    path("reports/games", report_views.GameReportView.as_view()),
+    path("reports/users", report_views.UserReportView.as_view()),
+    path("reports/dice/run", report_views.DiceTestRunView.as_view()),
+    path("matches", report_views.MatchSearchView.as_view()),
+    path("matches/live", report_views.LiveMatchesAdminView.as_view()),
+    path("shop/packages", content_views.packages[0]),
+    path("shop/packages/<int:pk>", content_views.packages[1]),
+    path("shop/items", content_views.items[0]),
+    path("shop/items/<int:pk>", content_views.items[1]),
+    path("content/phrases", content_views.phrases[0]),
+    path("content/phrases/<int:pk>", content_views.phrases[1]),
+    path("content/announcements", content_views.announcements[0]),
+    path("content/announcements/<int:pk>", content_views.announcements[1]),
+    path("content/texts", content_views.texts[0]),
+    path("content/texts/<int:pk>", content_views.texts[1]),
+    path("predictions/pools", content_views.PoolsView.as_view()),
+    path("predictions/pools/<int:pool_id>/decide", content_views.PoolDecideView.as_view()),
+    path("admins", access_views.AdminsView.as_view()),
+    path("admins/<int:admin_id>", access_views.AdminDetailView.as_view()),
+    path("admins/<int:admin_id>/reset", access_views.AdminResetView.as_view()),
     path("withdrawals", wallet_views.WithdrawalsAdminView.as_view()),
     path("withdrawals/<int:withdrawal_id>", wallet_views.WithdrawalDetailAdminView.as_view()),
     path("withdrawals/<int:withdrawal_id>/claim", wallet_views.WithdrawalClaimView.as_view()),

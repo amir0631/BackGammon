@@ -2,6 +2,24 @@
 // proxies them to the backend, so no CORS. Auth lives in HttpOnly cookies.
 import type {
   AccountLinkGraph,
+  AdminAccount,
+  AdminAnnouncement,
+  AdminCoinPackage,
+  AdminCredentials,
+  AdminDashboard,
+  AdminItem,
+  AdminMatchSearchRow,
+  AdminPhrase,
+  AdminPool,
+  AdminRole,
+  AdminTextOverride,
+  Announcement,
+  DiceTestResult,
+  FinancialReport,
+  GameReport,
+  ReportRange,
+  TextOverrides,
+  UserReport,
   AdminAuditEntry,
   FraudDecision,
   FraudFlag,
@@ -225,6 +243,18 @@ export function query(params: object): string {
   return entries.length ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()}` : "";
 }
 
+/** List, create, read, update, and delete for an admin catalog (writes are audited server-side). */
+function crud<T extends { id: number }>(base: string) {
+  return {
+    list: (o?: Opts) => apiRequest<Paginated<T>>(base, o),
+    get: (id: number, o?: Opts) => apiRequest<T>(`${base}/${id}`, o),
+    create: (row: Omit<T, "id" | "updated_at">) => apiRequest<T>(base, { method: "POST", body: row }),
+    update: (id: number, change: Partial<Omit<T, "id">>) => apiRequest<T>(`${base}/${id}`, { method: "PATCH", body: change }),
+    /** Deletes announcements and text overrides; deactivates packages, items, and phrases. */
+    remove: (id: number) => apiRequest<void>(`${base}/${id}`, { method: "DELETE" }),
+  };
+}
+
 export const api = {
   health: (o?: Opts) => apiRequest<HealthResponse>("/health", o),
   config: (o?: Opts) => apiRequest<PublicConfig>("/config", o),
@@ -352,6 +382,8 @@ export const api = {
 
   content: {
     avatars: (o?: Opts) => apiRequest<Paginated<{ key: string }>>("/avatars", o),
+    announcements: (o?: Opts) => apiRequest<Paginated<Announcement>>("/announcements", o),
+    texts: (o?: Opts) => apiRequest<TextOverrides>("/content/texts", o),
   },
 
   admin: {
@@ -420,6 +452,44 @@ export const api = {
     decideFlag: (id: number, decision: FraudDecision) =>
       apiRequest<FraudFlag>(`/admin/fraud/flags/${id}/decide`, { method: "POST", body: decision }),
     userLinks: (id: number, o?: Opts) => apiRequest<AccountLinkGraph>(`/admin/users/${id}/links`, o),
+
+    dashboard: (o?: Opts) => apiRequest<AdminDashboard>("/admin/dashboard", o),
+    financialReport: (range: ReportRange = {}, o?: Opts) =>
+      apiRequest<FinancialReport>(`/admin/reports/financial${query(range)}`, o),
+    gameReport: (range: ReportRange = {}, o?: Opts) => apiRequest<GameReport>(`/admin/reports/games${query(range)}`, o),
+    userReport: (range: ReportRange = {}, o?: Opts) => apiRequest<UserReport>(`/admin/reports/users${query(range)}`, o),
+    /** A download link for a report as CSV. */
+    reportCsvUrl: (report: "financial" | "games" | "users", range: ReportRange = {}) =>
+      `${API_PREFIX}/admin/reports/${report}${query({ ...range, export: "csv" })}`,
+    runDiceTest: () => apiRequest<DiceTestResult>("/admin/reports/dice/run", { method: "POST" }),
+    matches: (filter: { q?: string; user_id?: number; status?: string; from?: string; to?: string; cursor?: string } = {}, o?: Opts) =>
+      apiRequest<Paginated<AdminMatchSearchRow>>(`/admin/matches${query(filter)}`, o),
+    liveMatches: (o?: Opts) => apiRequest<Paginated<LiveMatchRow>>("/admin/matches/live", o),
+
+    packages: crud<AdminCoinPackage>("/admin/shop/packages"),
+    items: crud<AdminItem>("/admin/shop/items"),
+    phrases: crud<AdminPhrase>("/admin/content/phrases"),
+    announcements: crud<AdminAnnouncement>("/admin/content/announcements"),
+    texts: crud<AdminTextOverride>("/admin/content/texts"),
+
+    pools: (status: AdminPool["status"] = "held", o?: Opts) =>
+      apiRequest<Paginated<AdminPool>>(`/admin/predictions/pools${query({ status })}`, o),
+    decidePool: (id: number, approve: boolean, reason: string) =>
+      apiRequest<AdminPool>(`/admin/predictions/pools/${id}/decide`, { method: "POST", body: { approve, reason } }),
+
+    admins: (o?: Opts) => apiRequest<Paginated<AdminAccount>>("/admin/admins", o),
+    createAdmin: (username: string, role: AdminRole) =>
+      apiRequest<AdminAccount & { credentials: AdminCredentials }>("/admin/admins", {
+        method: "POST",
+        body: { username, role },
+      }),
+    updateAdmin: (id: number, change: { role?: AdminRole; is_active?: boolean; reason: string }) =>
+      apiRequest<AdminAccount>(`/admin/admins/${id}`, { method: "PATCH", body: change }),
+    resetAdmin: (id: number, reason: string) =>
+      apiRequest<AdminAccount & { credentials: AdminCredentials }>(`/admin/admins/${id}/reset`, {
+        method: "POST",
+        body: { reason },
+      }),
   },
 };
 

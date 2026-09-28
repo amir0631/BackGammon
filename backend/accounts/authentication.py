@@ -58,6 +58,9 @@ class CookieJWTAuthentication(BaseAuthentication):
         )
         if session is None or not session.user.is_active:
             raise errors.SessionInvalid()
+        from reports.activity import touch
+
+        touch(session.user.id)
         if device := request.headers.get("X-Device-Id"):
             from accounts.sessions import client_ip
             from antifraud.rules import record_device

@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from accounts.models import User
 from accounts.serializers import me_payload
 from shop import services
-from shop.models import Item, Phrase
+from shop.models import Announcement, Item, Phrase, TextOverride
 from wallet.views import idempotency_key
 
 
@@ -84,3 +84,41 @@ class UsernameView(APIView):
         user = _user(request)
         assert user is not None
         return Response(me_payload(services.change_username(user, s.validated_data["username"])))
+
+
+class AnnouncementsView(APIView):
+    """Announcements and banners currently showing (§13 Content)."""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request: Request) -> Response:
+        from django.db.models import Q
+        from django.utils import timezone
+
+        now = timezone.now()
+        rows = Announcement.objects.filter(active=True).filter(
+            Q(starts_at__isnull=True) | Q(starts_at__lte=now), Q(ends_at__isnull=True) | Q(ends_at__gt=now)
+        )
+        return Response(
+            {
+                "results": [
+                    {"id": a.id, "kind": a.kind, "title": a.title_i18n, "body": a.body_i18n, "link": a.link}
+                    for a in rows
+                ],
+                "next": None,
+            }
+        )
+
+
+class TextsView(APIView):
+    """Admin overrides of catalog strings, per locale: {"fa": {key: text}, "en": {...}}."""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request: Request) -> Response:
+        out: dict[str, dict[str, str]] = {"fa": {}, "en": {}}
+        for key, text in TextOverride.objects.values_list("key", "text_i18n"):
+            for lang in out:
+                if value := (text or {}).get(lang):
+                    out[lang][key] = value
+        return Response(out)

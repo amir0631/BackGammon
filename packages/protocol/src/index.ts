@@ -370,6 +370,206 @@ export interface AccountLinkGraph {
   edges: { from: number; to: number; reason: "device" | "ip" | "referrer" | "referee" }[];
 }
 
+// ---- Admin: dashboard and reports (CLAUDE.md §13, §6.5) ----
+
+export type Variant = "standard_cube" | "standard_nocube" | "traditional";
+
+export interface DiceTestResult {
+  period_start: string;
+  period_end: string;
+  dice: number;
+  /** Faces 1..6. */
+  counts: number[];
+  chi_square: number;
+  p_value: number;
+  created_at: string;
+}
+
+export interface AdminDashboard {
+  online_users: number;
+  live_matches: number;
+  today: { sales_rial: number; payments: number; topup_coins: number; rake_coins: number; signups: number };
+  open_fraud_flags: number;
+  pending_withdrawals: number;
+  dice_test: DiceTestResult | null;
+}
+
+/** ISO dates (Tehran days), inclusive; the panel converts Jalali input. At most 366 days. */
+export interface ReportRange {
+  from?: string;
+  to?: string;
+}
+
+export interface FinancialRow {
+  day: string;
+  sales_rial: number;
+  payments: number;
+  purchased_coins: number;
+  topup_coins: number;
+  rewards_coins: number;
+  sinks_coins: number;
+  rake_table: number;
+  rake_prediction: number;
+  rake_tournament: number;
+  /** Transfer and withdrawal fees. */
+  rake_fees: number;
+  referral_paid: number;
+  withdrawn_coins: number;
+  adjustments_coins: number;
+}
+
+export interface FinancialReport {
+  from: string;
+  to: string;
+  rows: FinancialRow[];
+  totals: Omit<FinancialRow, "day">;
+  by_package: { coins: number; payments: number; rial: number }[];
+  balances: { users: number; escrow: number };
+  reconciliation: { day: string; gateway: string; verified: number; verified_rial: number; problems: string[] }[];
+}
+
+export interface GameReport {
+  from: string;
+  to: string;
+  rows: { day: string; matches: number; bot_matches: number }[];
+  by_table: { variant: Variant; entry: number; bot: boolean; matches: number; aborted: number }[];
+  human_matches: number;
+  avg_duration_seconds: number | null;
+  resign_rate_pct: number;
+  timeout_forfeit_rate_pct: number;
+  disconnect_rate_pct: number;
+  disconnect_forfeit_rate_pct: number;
+  end_reasons: Record<string, number>;
+  queue_wait: { avg_seconds: number; samples: number };
+  dice_tests: DiceTestResult[];
+}
+
+export interface UserReport {
+  from: string;
+  to: string;
+  rows: { day: string; signups: number; dau: number; mau: number }[];
+  signups: number;
+  /** Null until day N of the period's signups has happened. */
+  retention_pct: { d1: number | null; d7: number | null; d30: number | null };
+  purchase_conversion_pct: number;
+  paying_users: number;
+  revenue_rial: number;
+  arppu_rial: number;
+}
+
+export interface AdminMatchSearchRow {
+  id: string;
+  variant: Variant;
+  length: number;
+  entry: number;
+  status: "active" | "finished" | "aborted" | "voided";
+  players: { id: number | null; username: string | null }[];
+  is_bot: boolean;
+  bot_level: string | null;
+  score: number[];
+  winner_side: number | null;
+  end_reason: string | null;
+  tournament_id: number | null;
+  started_at: string | null;
+  ended_at: string | null;
+}
+
+// ---- Admin: shop, content, predictions, access (CLAUDE.md §13) ----
+
+/** Translatable admin content: both languages are required. */
+export type Bilingual = Record<Lang, string>;
+
+export interface AdminCoinPackage {
+  id: number;
+  coins: number;
+  name_i18n: Bilingual;
+  active: boolean;
+  sort: number;
+}
+
+export interface AdminItem {
+  id: number;
+  kind: ItemKind;
+  key: string;
+  name_i18n: Bilingual;
+  unlock: "free" | "level_locked" | "purchasable";
+  price_coins: number;
+  unlock_level: number;
+  data: Record<string, unknown>;
+  active: boolean;
+  sort: number;
+  is_default: boolean;
+}
+
+export interface AdminPhrase {
+  id: number;
+  key: string;
+  text_i18n: Bilingual;
+  active: boolean;
+}
+
+export interface Announcement {
+  id: number;
+  kind: "banner" | "announcement";
+  title: Bilingual;
+  body: Bilingual;
+  /** An in-app path, or "". */
+  link: string;
+}
+
+export interface AdminAnnouncement {
+  id: number;
+  kind: "banner" | "announcement";
+  title_i18n: Bilingual;
+  body_i18n: Bilingual;
+  link: string;
+  active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  sort: number;
+}
+
+export interface AdminTextOverride {
+  id: number;
+  /** A catalog key, e.g. "home.title". */
+  key: string;
+  text_i18n: Bilingual;
+  updated_at: string;
+}
+
+/** GET content/texts: admin overrides applied over the bundled catalogs. */
+export type TextOverrides = Record<Lang, Record<string, string>>;
+
+export interface AdminPool {
+  id: number;
+  match_id: string;
+  players: (string | null)[];
+  status: "open" | "closed" | "held" | "settled" | "refunded";
+  total_a: number;
+  total_b: number;
+  rake_pct: number;
+  winner_side: number | null;
+  hold_reason: string | null;
+  opened_at: string;
+  settled_at: string | null;
+}
+
+export interface AdminAccount {
+  id: number;
+  username: string;
+  role: AdminRole;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
+
+/** Shown once after creating an admin or resetting their credentials. */
+export interface AdminCredentials {
+  password: string;
+  totp_secret: string;
+  totp_uri: string;
+}
+
 // ---- Shop: coin purchase (CLAUDE.md §7.7, §7.11) ----
 
 export interface CoinPackageInfo {

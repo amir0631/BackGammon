@@ -501,6 +501,17 @@ _DEFS: list[SettingDef] = [
         10,
         1000,
     ),
+    SettingDef(
+        "reports.dice_alert_ppm",
+        "int",
+        1000,
+        _d(
+            "هشدار آزمون تاس: p کمتر از (در میلیون)",
+            "Dice test alert: p-value below (parts per million)",
+        ),
+        1,
+        100000,
+    ),
     # OTP and login protection (CLAUDE.md §12.1)
     SettingDef("otp.ttl_seconds", "int", 120, _d("اعتبار کد تأیید (ثانیه)", "OTP validity (s)"), 30, 900),
     SettingDef(

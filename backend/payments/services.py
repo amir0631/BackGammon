@@ -170,6 +170,17 @@ def reconcile(day: date) -> list[str]:
             problems.append(f"gateway payment {row.reference} not verified here")
     if problems:
         logger.critical("payment reconciliation %s: %s", day, problems[:50])
+    from payments.models import ReconciliationRun
+
+    ReconciliationRun.objects.update_or_create(
+        day=day,
+        gateway=gateway.name,
+        defaults={
+            "verified_count": len(ours),
+            "verified_rial": sum(p.amount_rial for p in ours.values()),
+            "problems": problems[:200],
+        },
+    )
     return problems
 
 

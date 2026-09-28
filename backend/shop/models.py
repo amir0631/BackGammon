@@ -76,3 +76,43 @@ class Phrase(models.Model):
 
     def __str__(self) -> str:
         return self.key
+
+
+class Announcement(models.Model):
+    """Announcements and banners (§13 Content), bilingual, shown between starts_at and ends_at."""
+
+    class Kind(models.TextChoices):
+        BANNER = "banner"  # a strip on the home and lobby screens
+        ANNOUNCEMENT = "announcement"  # listed in the news panel
+
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.ANNOUNCEMENT)
+    title_i18n = models.JSONField(default=dict)
+    body_i18n = models.JSONField(default=dict)
+    link = models.CharField(max_length=200, blank=True, default="")  # an in-app path such as /tournaments
+    active = models.BooleanField(default=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    sort = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "announcement"
+        ordering: ClassVar[list[str]] = ["sort", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.kind}:{self.pk}"
+
+
+class TextOverride(models.Model):
+    """An admin edit of a catalog string (§13 Content: all bilingual texts). The apps ship the catalogs
+    in packages/i18n and apply these overrides on top at runtime."""
+
+    key = models.CharField(max_length=160, unique=True)
+    text_i18n = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "text_override"
+
+    def __str__(self) -> str:
+        return self.key

@@ -71,7 +71,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
 
             await database_sync_to_async(mm.leave)(self.user)  # a closed app never gets paired
         if self.user is not None:
+            from reports import activity
+
             await self.channel_layer.group_discard(f"user.{self.user.id}", self.channel_name)
+            await database_sync_to_async(activity.socket_closed)(self.user.id, self.channel_name)
         if self.match_id is not None and self.user is not None:
             await self.channel_layer.group_discard(live.group_name(self.match_id), self.channel_name)
             await database_sync_to_async(live.disconnect)(self.match_id, self.user.id, self.channel_name)
@@ -110,6 +113,9 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # type: ignore[misc]
             self.user = user
             self._auth_deadline.cancel()
             await self.channel_layer.group_add(f"user.{user.id}", self.channel_name)
+            from reports import activity
+
+            await database_sync_to_async(activity.socket_opened)(user.id, self.channel_name)
             await self.send_json(
                 {"type": "auth.ok", "match_id": None, "seq": 0, "payload": {"username": user.username}}
             )
