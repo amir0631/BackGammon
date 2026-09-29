@@ -2,7 +2,6 @@ from typing import Any
 
 from rest_framework import serializers
 
-from accounts.avatars import AVATARS
 from accounts.models import Otp, Session, User, default_prefs
 from accounts.phone import normalize_phone
 
@@ -49,7 +48,8 @@ class PrefsSerializer(serializers.Serializer[Any]):
 
 class MeUpdateSerializer(serializers.Serializer[Any]):
     lang = serializers.ChoiceField(choices=User.Lang.choices, required=False)
-    avatar = serializers.ChoiceField(choices=list(AVATARS), required=False)
+    # A preset (AVATARS) or an avatar item the player owns from the shop; checked in the view.
+    avatar = serializers.CharField(max_length=40, required=False)
     prefs = PrefsSerializer(required=False)
 
 
@@ -63,6 +63,7 @@ def me_payload(user: User) -> dict[str, Any]:
         "avatar": user.avatar,
         "prefs": {**default_prefs(), **(user.prefs or {})},
         "status": user.status,
+        "phone_verified": user.phone_verified_at is not None,
         "elo": user.elo,
         "xp": user.xp,
         "level": user.level,

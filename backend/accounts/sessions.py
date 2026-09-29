@@ -32,14 +32,17 @@ def client_ip(request: HttpRequest) -> str | None:
     return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR")
 
 
-def access_token(user_id: int, session_id: uuid.UUID, typ: str = "access") -> str:
+WS_TOKEN_TTL_SECONDS = 60
+
+
+def access_token(user_id: int, session_id: uuid.UUID, typ: str = "access", ttl: int | None = None) -> str:
     now = datetime.now(UTC)
     claims = {
         "sub": str(user_id),
         "sid": str(session_id),
         "typ": typ,
         "iat": now,
-        "exp": now + timedelta(seconds=settings.ACCESS_TOKEN_TTL_SECONDS),
+        "exp": now + timedelta(seconds=ttl or settings.ACCESS_TOKEN_TTL_SECONDS),
     }
     return jwt.encode(claims, settings.JWT_SIGNING_KEY, algorithm=ALGORITHM)
 

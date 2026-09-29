@@ -14,7 +14,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "DJ", "RUF"]
 ignore = ["S101", "RUF001"]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S105", "S106", "S107"]
+"**/tests/**" = ["S105", "S106", "S107", "S311"]  # S311: seeded random drives test games
 "settingsapp/registry.py" = ["E501"]  # one setting per line reads as a table
 
 [tool.mypy]
@@ -24,13 +24,15 @@ plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 exclude = ["migrations/"]
 
 [[tool.mypy.overrides]]
-module = ["channels.*", "celery.*", "kombu.*"]
+module = ["channels.*", "celery.*", "kombu.*", "bot", "bot.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["*.tests.*", "conftest"]
 disallow_untyped_defs = false
 disallow_untyped_calls = false
+# State-machine tests assert a phase, act, then assert the next phase; mypy's narrowing flags that.
+disable_error_code = ["comparison-overlap"]
 
 [[tool.mypy.overrides]]
 module = ["*.tasks"]
@@ -42,4 +44,7 @@ django_settings_module = "config.settings"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
+# The bot service (../bot) runs on the engine in this tree; its tests run with the backend's.
+pythonpath = [".", ".."]
+testpaths = [".", "../bot/tests"]
 addopts = "-q --strict-markers"

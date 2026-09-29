@@ -47,7 +47,7 @@ class TestPost:
         assert Wallet.objects.get(user=a).balance == 10
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 class TestDatabaseGuards:
     def test_entries_cannot_be_updated_or_deleted(self):
         a = make_user()
@@ -125,7 +125,7 @@ def test_random_operations_keep_invariants(ops):
 # ---- Concurrency (CLAUDE.md §16): 50 parallel settlements, no double spend, no deadlock ----
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_parallel_transfers_do_not_double_spend_or_deadlock():
     users = [make_user() for _ in range(5)]
     for u in users:
@@ -154,4 +154,63 @@ def test_parallel_transfers_do_not_double_spend_or_deadlock():
     balances = list(Wallet.objects.filter(user__in=users).values_list("balance", flat=True))
     assert all(b >= 0 for b in balances)
     assert sum(balances) == 500
+    assert invariants.check() == []
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_opposite_transfers_through_the_service_do_not_deadlock():
+    """A→B and B→A at once: the service must lock wallets in the ledger's order (§7.1)."""
+    a, b = make_user(), make_user()
+    fund(a, 1000)
+    fund(b, 1000)
+    errors: list[str] = []
+    start = threading.Barrier(20)
+
+    def worker(i: int) -> None:
+        sender, recipient = (a, b) if i % 2 else (b, a)
+        try:
+            start.wait()
+            services.transfer(sender, str(recipient.username), 10, "S3cure-pass!", f"opp{i}")
+        except Exception as exc:
+            errors.append(repr(exc))
+        finally:
+            connections.close_all()
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+    assert not any(t.is_alive() for t in threads), "deadlock or hang"
+    assert errors == []
+    assert sorted(Wallet.objects.filter(user__in=[a, b]).values_list("balance", flat=True)) == [1000, 1000]
+    assert invariants.check() == []
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_concurrent_retries_of_one_transfer_all_get_the_original_result():
+    a, b = make_user(), make_user()
+    fund(a, 10_000)
+    results: list[str] = []
+    errors: list[str] = []
+    start = threading.Barrier(8)
+
+    def worker() -> None:
+        try:
+            start.wait()
+            # 3000 of the 5000 rolling limit: only the first may post; the rest must not see a limit.
+            results.append(services.transfer(a, str(b.username), 3000, "S3cure-pass!", "same")["tx_id"])
+        except Exception as exc:
+            errors.append(repr(exc))
+        finally:
+            connections.close_all()
+
+    threads = [threading.Thread(target=worker) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+    assert errors == []
+    assert len(results) == 8 and len(set(results)) == 1
+    assert Wallet.objects.get(user=b).balance == 3000
     assert invariants.check() == []

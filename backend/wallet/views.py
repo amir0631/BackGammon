@@ -4,13 +4,13 @@ from typing import Any
 
 from django.db.models import Q
 from rest_framework import serializers, status
-from rest_framework.exceptions import NotFound
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts import otp
+from accounts import otp, sms
 from accounts.models import Otp, User
 from accounts.sessions import client_ip
 from settingsapp import registry
@@ -20,6 +20,7 @@ from wallet.ledger import user_account
 from wallet.models import BankAccount, LedgerEntry, WithdrawalRequest
 
 PAGE_SIZE = 30
+HIDDEN_REFS = {"admin", "seed"}
 
 
 def idempotency_key(request: Request) -> str:
@@ -90,12 +91,14 @@ class LedgerView(AuthedView):
                 "results": [
                     {
                         "id": r.id,
+                        "tx_id": str(r.tx_id),
                         "type": r.type,
                         "amount": r.amount,
                         "created_at": r.created_at.isoformat(),
                         "counterparty": names.get(other_ids.get(r.tx_id, 0)),
-                        "ref_type": r.ref_type or None,
-                        "ref_id": r.ref_id or None,
+                        # Which admin topped up an account is not the player's business.
+                        "ref_type": None if r.ref_type in HIDDEN_REFS else r.ref_type or None,
+                        "ref_id": None if r.ref_type in HIDDEN_REFS else r.ref_id or None,
                     }
                     for r in page
                 ],
@@ -154,6 +157,7 @@ class WithdrawalOtpView(AuthedView):
         otp.request_otp(_user(request).phone, Otp.Purpose.WITHDRAWAL, client_ip(request._request))
         return Response(
             {
+                "sms": True,
                 "expires_in": registry.get("otp.ttl_seconds"),
                 "resend_after": registry.get("otp.resend_cooldown_seconds"),
             },
@@ -163,13 +167,22 @@ class WithdrawalOtpView(AuthedView):
 
 class WithdrawalCreateSerializer(serializers.Serializer[Any]):
     amount = serializers.IntegerField()
-    code = serializers.CharField(max_length=10)
+    # An SMS code, or the account password while SMS is off (`withdraw.confirm` in GET wallet).
+    code = serializers.CharField(max_length=10, required=False)
+    password = serializers.CharField(max_length=128, trim_whitespace=False, required=False)
 
 
 class WithdrawalsView(AuthedView):
     def get(self, request: Request) -> Response:
-        rows = WithdrawalRequest.objects.filter(user=_user(request)).order_by("-created_at")[:100]
-        return Response({"results": [withdrawal_payload(w) for w in rows], "next": None})
+        qs = WithdrawalRequest.objects.filter(user=_user(request)).order_by("-id")
+        cursor = request.query_params.get("cursor")
+        if cursor and cursor.isdigit():
+            qs = qs.filter(id__lt=int(cursor))
+        rows = list(qs[: PAGE_SIZE + 1])
+        page, more = rows[:PAGE_SIZE], len(rows) > PAGE_SIZE
+        return Response(
+            {"results": [withdrawal_payload(w) for w in page], "next": str(page[-1].id) if more else None}
+        )
 
     def post(self, request: Request) -> Response:
         key = idempotency_key(request)
@@ -179,12 +192,19 @@ class WithdrawalsView(AuthedView):
             return Response(withdrawal_payload(existing))
         s = WithdrawalCreateSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        amount = s.validated_data["amount"]
-        # Cheap checks first, so an obviously invalid request does not burn the SMS code.
-        if not BankAccount.objects.filter(user=user).exists():
-            raise errors.NoBankAccount()
-        token = otp.verify_otp(user.phone, Otp.Purpose.WITHDRAWAL, s.validated_data["code"].strip())
-        otp.consume_verification(token, Otp.Purpose.WITHDRAWAL)
+        # Every rule first, so a refused amount does not burn the SMS code or count a password try.
+        amount = services.check_withdrawal(user, s.validated_data["amount"])
+        if sms.enabled():
+            code = s.validated_data.get("code")
+            if not code:
+                raise ValidationError({"code": ["This field is required."]})
+            token = otp.verify_otp(user.phone, Otp.Purpose.WITHDRAWAL, code.strip())
+            otp.consume_verification(token, Otp.Purpose.WITHDRAWAL)
+        else:
+            password = s.validated_data.get("password")
+            if not password:
+                raise ValidationError({"password": ["This field is required."]})
+            services.confirm_password(user, password, "withdraw")
         req = services.request_withdrawal(user, amount, key)
         return Response(withdrawal_payload(req), status=status.HTTP_201_CREATED)
 
@@ -198,3 +218,14 @@ class WithdrawalDetailView(AuthedView):
 
     def delete(self, request: Request, withdrawal_id: int) -> Response:
         return Response(withdrawal_payload(services.cancel_withdrawal(_user(request), withdrawal_id)))
+
+
+class BanksView(APIView):
+    """Known banks by Sheba bank code, for showing the bank while the user types (§7.12)."""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request: Request) -> Response:
+        return Response(
+            {"results": [{"code": c, "name": {"fa": fa, "en": en}} for c, (fa, en) in BANKS.items()]}
+        )

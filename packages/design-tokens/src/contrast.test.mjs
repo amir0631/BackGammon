@@ -15,6 +15,8 @@ import {
   reducedDuration,
   minTouchTarget,
   boardDefaultTheme,
+  avatarArt,
+  avatarFallbackArt,
 } from "./index.ts";
 
 const TEXT = 4.5;
@@ -117,5 +119,13 @@ describe("layout and motion", () => {
   it("keeps the legal-move highlight distinct from both checker colors", () => {
     expectContrast(boardDefaultTheme.legalMove, boardDefaultTheme.checkerDark, UI, "legal/checkerDark");
     expectContrast(boardDefaultTheme.selection, boardDefaultTheme.checkerDark, UI, "selection/checkerDark");
+  });
+});
+
+describe("avatar art", () => {
+  it("keeps every motif readable on its ground", () => {
+    for (const [key, art] of Object.entries({ ...avatarArt, fallback: avatarFallbackArt })) {
+      expectContrast(art.ink, art.ground, UI, `avatar ${key} ink/ground`);
+    }
   });
 });

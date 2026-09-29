@@ -49,16 +49,36 @@ export interface TopBarProps {
   /** Back/close target. Use a href when the destination is known; otherwise `onNavigate`. */
   href?: string;
   onNavigate?: () => void;
+  /** Back/close unavailable (a coin request is in flight): stays focusable, does nothing. */
+  navDisabled?: boolean;
   /** Available coins. `undefined` hides the chip (guests, task flows); `null` shows it loading. */
   balance?: Amount | null;
   actions?: ReactNode;
+  /**
+   * Element for the title. Default `h1`. Screens whose heading lives in the content (auth steps,
+   * where the step title is the focus target) pass `p` so the page keeps a single h1.
+   */
+  titleComponent?: "h1" | "p";
 }
 
-export function TopBar({ title, leading = "none", href, onNavigate, balance, actions }: TopBarProps) {
+export function TopBar({
+  title,
+  leading = "none",
+  href,
+  onNavigate,
+  navDisabled = false,
+  balance,
+  actions,
+  titleComponent = "h1",
+}: TopBarProps) {
   const t = useTranslations("common");
 
   const navButton = (label: string, icon: ReactNode) =>
-    href ? (
+    navDisabled ? (
+      <IconButton aria-label={label} aria-disabled edge="start" sx={{ color: "text.disabled", cursor: "not-allowed" }}>
+        {icon}
+      </IconButton>
+    ) : href ? (
       <IconButton component={Link} href={href} aria-label={label} edge="start">
         {icon}
       </IconButton>
@@ -76,7 +96,7 @@ export function TopBar({ title, leading = "none", href, onNavigate, balance, act
         {leading === "close" && navButton(t("close"), <CloseIcon />)}
         <Typography
           variant="h4"
-          component="h1"
+          component={titleComponent}
           // Below ~8 title-ems of room (xs, or large text) the balance chip wraps to its own line
           // instead of squeezing the title into one word per line.
           sx={{ flex: "1 1 8em", minWidth: 0, overflowWrap: "anywhere" }}

@@ -1,11 +1,13 @@
 """Admin API (CLAUDE.md §13). Mounted at /api/v1/admin/; served only on the `admin.` host."""
 
+import json
 import logging
 from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.permissions import BasePermission
@@ -252,31 +254,56 @@ class SmsPatternView(AdminView):
 
 
 class AuditView(AdminView):
-    admin_roles = (AdminUser.Role.SUPERADMIN,)
+    """The full admin audit log (§13 Access), newest first: ?target_type=&target_id=&admin=&action=
+    &from=&to= (Tehran days) &cursor= &export=csv."""
 
-    def get(self, request: Request) -> Response:
-        qs = AdminAudit.objects.select_related("admin").order_by("-created_at")
-        if target_type := request.query_params.get("target_type"):
+    admin_roles = (AdminUser.Role.SUPERADMIN,)
+    PAGE = 100
+
+    def get(self, request: Request) -> Response | HttpResponse:
+        from adminapi.report_views import csv_response, date_range
+        from reports.services import bounds
+
+        p = request.query_params
+        qs = AdminAudit.objects.select_related("admin").order_by("-id")
+        if target_type := p.get("target_type"):
             qs = qs.filter(target_type=target_type)
-        if target_id := request.query_params.get("target_id"):
+        if target_id := p.get("target_id"):
             qs = qs.filter(target_id=target_id)
-        rows = qs[:200]
-        return Response(
-            {
-                "results": [
-                    {
-                        "id": r.id,
-                        "admin": r.admin.username,
-                        "action": r.action,
-                        "target_type": r.target_type,
-                        "target_id": r.target_id,
-                        "before": r.before,
-                        "after": r.after,
-                        "reason": r.reason,
-                        "created_at": r.created_at.isoformat(),
-                    }
-                    for r in rows
-                ],
-                "next": None,
+        if username := p.get("admin"):
+            qs = qs.filter(admin__username=username.strip().lower())
+        if action := p.get("action"):
+            qs = qs.filter(action__startswith=action)
+        if p.get("from") or p.get("to"):
+            start, end = bounds(*date_range(request))
+            qs = qs.filter(created_at__gte=start, created_at__lt=end)
+
+        def row(r: AdminAudit) -> dict[str, Any]:
+            return {
+                "id": r.id,
+                "admin": r.admin.username,
+                "action": r.action,
+                "target_type": r.target_type,
+                "target_id": r.target_id,
+                "before": r.before,
+                "after": r.after,
+                "reason": r.reason,
+                "created_at": r.created_at.isoformat(),
             }
-        )
+
+        if p.get("export") == "csv":
+            rows = [
+                {
+                    **row(r),
+                    "before": json.dumps(r.before, ensure_ascii=False),
+                    "after": json.dumps(r.after, ensure_ascii=False),
+                }
+                for r in qs[:10000]
+            ]
+            return csv_response("audit", rows)
+        if (cursor := p.get("cursor") or "").isdigit():
+            qs = qs.filter(id__lt=int(cursor))
+        page = list(qs[: self.PAGE + 1])
+        more = len(page) > self.PAGE
+        page = page[: self.PAGE]
+        return Response({"results": [row(r) for r in page], "next": str(page[-1].id) if more else None})

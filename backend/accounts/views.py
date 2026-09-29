@@ -8,6 +8,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework import serializers as serializers_drf
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -70,9 +71,12 @@ class CsrfView(PublicView):
 class OtpRequestView(PublicView):
     def post(self, request: Request) -> Response:
         data = _validated(serializers.OtpRequestSerializer, request.data)
-        otp.request_otp(data["phone"], data["purpose"], sessions.client_ip(request._request))
+        token = otp.request_otp(data["phone"], data["purpose"], sessions.client_ip(request._request))
+        if token is not None:  # SMS is off: no code to enter
+            return Response({"sms": False, "verification_token": token})
         return Response(
             {
+                "sms": True,
                 "expires_in": registry.get("otp.ttl_seconds"),
                 "resend_after": registry.get("otp.resend_cooldown_seconds"),
             },
@@ -96,8 +100,10 @@ class RegisterView(PublicView):
         validate_password(data["password"])
         referrer = None
         if data.get("referrer"):
-            referrer = (
-                User.objects.annotate(u=Lower("username")).filter(u=data["referrer"].strip().lower()).first()
+            ref = data["referrer"].strip()
+            # The stable invite code (§7.4), or a username typed by hand.
+            referrer = User.objects.filter(referral_code=ref.upper()).first() or (
+                User.objects.annotate(u=Lower("username")).filter(u=ref.lower()).first()
             )
             if referrer is None:
                 raise errors.ReferrerNotFound()
@@ -115,9 +121,18 @@ class RegisterView(PublicView):
                     username=username,
                     referrer=referrer,
                     age_confirmed_at=timezone.now(),
+                    phone_verified_at=timezone.now()
+                    if otp.proves_phone(data["verification_token"])
+                    else None,
                     lang=data.get("lang") or _cookie_lang(request),
                 )
-                user_registered.send(sender=User, user=user)
+                user_registered.send(
+                    sender=User,
+                    user=user,
+                    ip=sessions.client_ip(request._request),
+                    user_agent=request.headers.get("User-Agent", ""),
+                    device=request.headers.get("X-Device-Id", ""),
+                )
         except IntegrityError:
             raise errors.UsernameTaken() from None
         return _signed_in(user, request, status.HTTP_201_CREATED)
@@ -187,6 +202,28 @@ class PasswordResetView(PublicView):
         return _signed_in(user, request)
 
 
+class WsTokenView(APIView):
+    """A short-lived token for the WebSocket `auth` message (CLAUDE.md §10.3). The access token itself
+    stays in its HttpOnly cookie, out of reach of page scripts."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request: Request) -> Response:
+        session = _current_session(request)
+        token = sessions.access_token(
+            _user(request).id, session.id, typ="ws", ttl=sessions.WS_TOKEN_TTL_SECONDS
+        )
+        return Response({"token": token, "expires_in": sessions.WS_TOKEN_TTL_SECONDS})
+
+
+def _owns_avatar(user: User, key: str) -> bool:
+    from shop.models import Item
+    from shop.services import owns
+
+    item = Item.objects.filter(kind=Item.Kind.AVATAR, key=key, active=True).first()
+    return item is not None and owns(user, item)
+
+
 class MeView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -201,6 +238,8 @@ class MeView(APIView):
             user.lang = data["lang"]
             fields.append("lang")
         if "avatar" in data:
+            if data["avatar"] not in AVATARS and not _owns_avatar(user, data["avatar"]):
+                raise errors.AvatarInvalid()
             user.avatar = data["avatar"]
             fields.append("avatar")
         if "prefs" in data:
@@ -256,3 +295,48 @@ class UsernameAvailableView(PublicView):
 class AvatarsView(PublicView):
     def get(self, request: Request) -> Response:
         return Response({"results": [{"key": key} for key in AVATARS], "next": None})
+
+
+class PushSubscriptionSerializer(serializers_drf.Serializer[Any]):
+    endpoint = serializers_drf.URLField(max_length=1000)
+    p256dh = serializers_drf.RegexField(r"^[A-Za-z0-9_-]{80,100}$")
+    auth = serializers_drf.RegexField(r"^[A-Za-z0-9_-]{16,32}$")
+
+
+class PushKeyView(APIView):
+    """The VAPID public key the browser subscribes with; null while push is not configured."""
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request: Request) -> Response:
+        from accounts import push
+
+        return Response({"enabled": push.enabled(), "key": push.public_key()})
+
+
+class PushSubscriptionsView(APIView):
+    """Subscribe this browser (§11.5, only after the user allowed notifications) or remove it."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request: Request) -> Response:
+        from accounts import push
+        from accounts.models import PushSubscription
+
+        s = PushSubscriptionSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        d = s.validated_data
+        if not push.allowed_endpoint(d["endpoint"]):
+            raise errors.PushEndpointInvalid()
+        PushSubscription.objects.update_or_create(
+            endpoint=d["endpoint"],
+            defaults={"user": _user(request), "p256dh": d["p256dh"], "auth": d["auth"]},
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def delete(self, request: Request) -> Response:
+        from accounts.models import PushSubscription
+
+        endpoint = str(request.data.get("endpoint") or "") if isinstance(request.data, dict) else ""
+        PushSubscription.objects.filter(user=_user(request), endpoint=endpoint).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

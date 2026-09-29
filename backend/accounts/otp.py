@@ -10,7 +10,7 @@ from django.core import signing
 from django.db import transaction
 from django.utils import timezone
 
-from accounts import errors, ratelimit
+from accounts import errors, ratelimit, sms
 from accounts.models import Otp, User
 from accounts.tasks import send_otp_sms
 from config.errors import AppError
@@ -36,17 +36,24 @@ def _rate_limit(phone: str, ip: str | None) -> None:
             raise errors.OtpRateLimited(details={"retry_after": retry_after})
 
 
-def request_otp(phone: str, purpose: str, ip: str | None) -> None:
+def request_otp(phone: str, purpose: str, ip: str | None) -> str | None:
+    """Sends a code by SMS. While SMS is off, returns a verification token for signup instead
+    (the phone is not verified), and refuses the purposes that prove phone ownership."""
     exists = User.objects.filter(phone=phone).exists()
     if purpose == Otp.Purpose.REGISTER and exists:
         raise errors.PhoneTaken()
+    if not sms.enabled():
+        if purpose != Otp.Purpose.REGISTER:
+            raise errors.SmsUnavailable()
+        _rate_limit(phone, ip)
+        return _unverified_token(phone, purpose, ip)
     cooldown = registry.get("otp.resend_cooldown_seconds")
     allowed, retry_after = ratelimit.hit(f"otp:resend:{phone}:{purpose}", 1, cooldown)
     if not allowed:
         raise errors.OtpRateLimited(details={"retry_after": retry_after, "reason": "cooldown"})
     _rate_limit(phone, ip)
     if purpose in (Otp.Purpose.PASSWORD_RESET, Otp.Purpose.WITHDRAWAL) and not exists:
-        return  # same response as success: do not reveal which numbers have accounts
+        return None  # same response as success: do not reveal which numbers have accounts
 
     # 10000 to 99999: never a leading zero, which the SMS pattern's integer variable would drop.
     code = secrets.randbelow(90_000) + 10_000
@@ -59,6 +66,30 @@ def request_otp(phone: str, purpose: str, ip: str | None) -> None:
             ip=ip,
         )
         transaction.on_commit(lambda: send_otp_sms.delay(otp.id, code))
+    return None
+
+
+def _unverified_token(phone: str, purpose: str, ip: str | None) -> str:
+    otp = Otp.objects.create(
+        phone=phone,
+        purpose=purpose,
+        code_hash=_hash(phone, purpose, secrets.randbelow(10**9)),
+        expires_at=timezone.now(),
+        verified_at=timezone.now(),
+        ip=ip,
+    )
+    return signing.dumps(
+        {"otp": otp.id, "phone": phone, "purpose": purpose, "unverified": True}, salt=VERIFICATION_SALT
+    )
+
+
+def proves_phone(token: str) -> bool:
+    """True when the token came from an SMS code (not from signup while SMS is off)."""
+    try:
+        data = signing.loads(token, salt=VERIFICATION_SALT, max_age=VERIFICATION_MAX_AGE_SECONDS)
+    except signing.BadSignature:
+        return False
+    return not data.get("unverified")
 
 
 def verify_otp(phone: str, purpose: str, code: str) -> str:

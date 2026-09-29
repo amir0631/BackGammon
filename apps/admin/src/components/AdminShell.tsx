@@ -19,11 +19,10 @@ import Typography from "@mui/material/Typography";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { InfoIcon, MenuIcon, SettingsIcon, WarningIcon } from "@/components/icons";
+import { InfoIcon, MenuIcon, WarningIcon } from "@/components/icons";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { useAdmin } from "@/lib/admin-context";
-
-const NAV = [{ href: "/settings", key: "admin.shell.nav.settings", icon: <SettingsIcon /> }];
+import { NAV, canSee } from "@/lib/nav";
 
 export function useOnline(): boolean {
   const [online, setOnline] = useState(true);
@@ -50,7 +49,7 @@ export function AdminShell({ children, mainId }: { children: ReactNode; mainId: 
 
   const navList = (compact: boolean) => (
     <List component="nav" aria-label={t("admin.shell.nav.label")} sx={{ px: 1 }}>
-      {NAV.map((item) => {
+      {NAV.filter((item) => canSee(item, admin?.role)).map((item) => {
         const label = t(item.key);
         const button = (
           <ListItemButton

@@ -8,6 +8,9 @@ from accounts import ratelimit
 from accounts.models import Otp, Session, User
 from accounts.signals import user_registered
 
+# These tests cover the code-by-SMS flows; the SMS-off flows are in test_sms_off.py.
+pytestmark = pytest.mark.usefixtures("sms_on")
+
 PHONE = "+989121234567"
 CODE = 48213
 
@@ -66,7 +69,9 @@ class TestRegister:
         assert settings.ACCESS_COOKIE in res.cookies and settings.REFRESH_COOKIE in res.cookies
         assert res.cookies[settings.ACCESS_COOKIE]["httponly"]
         assert [u.username for u in received] == ["Reza_90"]
-        assert client.get("/api/v1/me").json()["username"] == "Reza_90"
+        me = client.get("/api/v1/me").json()
+        assert me["username"] == "Reza_90" and me["phone_verified"] is True
+        assert client.get("/api/v1/wallet").json()["balance"] == 100  # signup bonus for a proven number
 
     def test_otp_is_stored_hashed_only(self, client, fixed_code):
         client.post("/api/v1/auth/otp", {"phone": "09121234567", "purpose": "register"}, format="json")
@@ -152,6 +157,15 @@ class TestRegister:
         assert User.objects.get(username="Child_1").referrer_id == User.objects.get(username="Parent_1").id
         res = register(APIClient(), username="Child_2", phone="+989123333333", referrer="nobody_here")
         assert res.json()["code"] == "REFERRER_NOT_FOUND"
+        # The stable invite code works in any case, even after the referrer renames.
+        parent = User.objects.get(username="Parent_1")
+        User.objects.filter(pk=parent.pk).update(username="Renamed_1")
+        other_ip = APIClient(REMOTE_ADDR="10.0.0.9")  # the OTP limit is 3 per IP per 10 minutes (§12.1)
+        res = register(
+            other_ip, username="Child_3", phone="+989124444444", referrer=parent.referral_code.lower()
+        )
+        assert res.status_code == 201
+        assert User.objects.get(username="Child_3").referrer_id == parent.id
 
 
 @pytest.mark.django_db
@@ -193,7 +207,7 @@ class TestOtp:
 
     def test_resend_cooldown(self, client):
         res = client.post("/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json")
-        assert res.json() == {"expires_in": 120, "resend_after": 60}
+        assert res.json() == {"sms": True, "expires_in": 120, "resend_after": 60}
         res = client.post("/api/v1/auth/otp", {"phone": PHONE, "purpose": "register"}, format="json")
         assert res.status_code == 429
         assert res.json()["details"]["reason"] == "cooldown"

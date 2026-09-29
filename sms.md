@@ -16,6 +16,8 @@ Rules:
 - Marketing, bulk, phonebook, and voice sends are out of scope.
 - In development and tests, `SMS_PROVIDER=console` logs the message instead of sending it. Only staging and production use `SMS_PROVIDER=ippanel`.
 
+**Off switch.** The `sms.enabled` setting (admin panel, default `false`) stops all sending. While it is off, signup skips the code step (`POST auth/otp` returns `{"sms": false, "verification_token": ...}`), password reset by SMS returns `SMS_UNAVAILABLE`, withdrawals are confirmed with the account password (`withdraw.confirm` in `GET wallet`), and no withdrawal-paid SMS is sent.
+
 ## 2. Credentials and configuration
 
 The API key never goes into the repo, the vault, or logs (CLAUDE.md §22.1). `sms_api.txt` in the project root holds it locally and is git-ignored. On every environment it is set as an env var:

@@ -7,7 +7,20 @@ from accounts.sms.console import ConsoleSmsProvider
 from accounts.sms.ippanel import IPPanelSmsProvider
 from settingsapp import registry
 
-__all__ = ["SmsError", "SmsProvider", "get_provider", "ippanel", "send_otp", "send_withdrawal_paid"]
+__all__ = [
+    "SmsError",
+    "SmsProvider",
+    "enabled",
+    "get_provider",
+    "ippanel",
+    "send_otp",
+    "send_withdrawal_paid",
+]
+
+
+def enabled() -> bool:
+    """`sms.enabled` switch: while off, nothing is sent (the flows that need a code adapt)."""
+    return bool(registry.get("sms.enabled"))
 
 
 def ippanel() -> IPPanelSmsProvider:

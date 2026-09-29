@@ -5,6 +5,7 @@ invalidated on write, so admin changes take effect without a redeploy. Writes re
 new value so the admin API can record them in `admin_audit` (CLAUDE.md §2 rule 12).
 """
 
+import itertools
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -251,6 +252,10 @@ _DEFS: list[SettingDef] = [
         None,
     ),
     SettingDef("coin.price_toman", "int", 1000, _d("قیمت هر سکه (تومان)", "Price per coin (toman)"), 1, None),
+    # Off until a real payment provider is connected (§18); until then support tops up wallets (§7.9).
+    SettingDef(
+        "payments.enabled", "bool", False, _d("خرید آنلاین سکه فعال است", "Online coin purchase enabled")
+    ),
     SettingDef(
         "shop.custom_min_toman",
         "int",
@@ -298,6 +303,15 @@ _DEFS: list[SettingDef] = [
         None,
     ),
     SettingDef("xp.per_win", "int", 15, _d("امتیاز تجربه برد", "XP per win"), 0, None),
+    SettingDef(
+        "xp.level_thresholds",
+        "int_list",
+        [100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200, 4000, 5000, 6200, 7600, 9200, 11000],
+        _d("تجربهٔ لازم برای سطح ۲ به بعد", "XP to reach level 2, 3, ..."),
+        1,
+        None,
+        check=lambda v: all(a < b for a, b in itertools.pairwise(v)),
+    ),
     SettingDef(
         "elo.k_new",
         "int",
@@ -362,6 +376,17 @@ _DEFS: list[SettingDef] = [
         _d("ورودی بازی با ربات", "Bot match entry enabled"),
     ),
     SettingDef(
+        "bot.entry_coins", "int", 10, _d("ورودی بازی با ربات (سکه)", "Bot match entry (coins)"), 1, 1000
+    ),
+    SettingDef(
+        "bot.prize_coins",
+        "int",
+        15,
+        _d("جایزهٔ برد مقابل ربات (سکه)", "Prize for beating the bot (coins)"),
+        1,
+        2000,
+    ),
+    SettingDef(
         "live.max_spectators_per_match",
         "int",
         500,
@@ -400,6 +425,9 @@ _DEFS: list[SettingDef] = [
         None,
     ),
     # SMS through IPPanel Edge (sms.md). The API key is a secret and stays in the environment.
+    # Off until the sender line and patterns are approved: signup skips the code step, password
+    # reset by SMS is unavailable, and withdrawals are confirmed with the account password.
+    SettingDef("sms.enabled", "bool", False, _d("ارسال پیامک فعال است", "SMS sending enabled")),
     SettingDef(
         "sms.from_number",
         "str",
@@ -428,6 +456,81 @@ _DEFS: list[SettingDef] = [
         _d("هشدار کمبود اعتبار پیامک (ریال)", "Low SMS credit alert (rial)"),
         0,
         None,
+    ),
+    # Anti-fraud thresholds (CLAUDE.md §12.2: all thresholds are settings)
+    SettingDef(
+        "antifraud.link_window_days",
+        "int",
+        30,
+        _d("پنجرهٔ پیوند حساب‌ها (روز)", "Account link window (days)"),
+        1,
+        365,
+    ),
+    SettingDef(
+        "antifraud.chip_min_matches",
+        "int",
+        5,
+        _d("حداقل بازی برای بررسی واگذاری", "Matches before a chip-dumping check"),
+        2,
+        100,
+    ),
+    SettingDef(
+        "antifraud.chip_one_sided_pct", "int", 90, _d("درصد برد یک‌طرفه", "One-sided win share (%)"), 50, 100
+    ),
+    SettingDef(
+        "antifraud.chip_window_days",
+        "int",
+        7,
+        _d("پنجرهٔ بررسی واگذاری (روز)", "Chip-dumping window (days)"),
+        1,
+        90,
+    ),
+    SettingDef(
+        "antifraud.early_resign_moves", "int", 4, _d("تسلیم زودهنگام (حرکت)", "Early resign (moves)"), 0, 50
+    ),
+    SettingDef(
+        "antifraud.collusion_stake_pct",
+        "int",
+        50,
+        _d("سهم پیش‌بینی مشکوک از استخر (٪)", "Suspicious prediction share of pool (%)"),
+        1,
+        100,
+    ),
+    SettingDef(
+        "antifraud.engine_agreement_pct",
+        "int",
+        90,
+        _d("هم‌خوانی مشکوک با موتور (٪)", "Suspicious engine agreement (%)"),
+        50,
+        100,
+    ),
+    SettingDef(
+        "antifraud.engine_min_moves",
+        "int",
+        60,
+        _d("حداقل حرکت برای بررسی موتور", "Moves before an engine check"),
+        10,
+        1000,
+    ),
+    SettingDef(
+        "reports.dice_alert_ppm",
+        "int",
+        1000,
+        _d(
+            "هشدار آزمون تاس: p کمتر از (در میلیون)",
+            "Dice test alert: p-value below (parts per million)",
+        ),
+        1,
+        100000,
+    ),
+    SettingDef(
+        "support.contact",
+        "str",
+        "",
+        _d(
+            "راه تماس با پشتیبانی (ایمیل، شماره یا نشانی؛ خالی: support@دامنه)",
+            "Support contact (email, phone, or URL; empty: support@ the site domain)",
+        ),
     ),
     # OTP and login protection (CLAUDE.md §12.1)
     SettingDef("otp.ttl_seconds", "int", 120, _d("اعتبار کد تأیید (ثانیه)", "OTP validity (s)"), 30, 900),
@@ -507,6 +610,7 @@ _UNITS: dict[str, str] = {
     "username.change_cost": "coins",
     "xp.per_match": "xp",
     "xp.per_win": "xp",
+    "xp.level_thresholds": "xp",
 }
 _SUFFIX_UNITS = [
     ("_seconds", "seconds"),

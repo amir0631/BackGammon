@@ -19,27 +19,24 @@ Every user-facing screen, sheet, dialog, and overlay on `m.` in Phase 1.
 | `auth.md` | Welcome, signup (phone, 18+, terms, OTP, account, avatar step), login, password reset, logout, account suspended screen and banner, banned panel | 2 |
 | `onboarding.md` | Signup-bonus notice, first-time hints framework (the avatar step moved to `auth.md`) | 3 |
 | `profile.md` | Account hub, edit profile, username change, sessions, public profile, and the step-2 base of `/settings` (language, lite graphics, reduced animations, sound, vibration) | 2 (username change purchase active from step 3) |
-| `wallet.md` | Balance, on-hold amount, transaction history (all §7.2 types), pending payments | 3 |
-| `transfer.md` | Transfer task flow, receipt, received-transfer notice | 3 |
-| `withdrawal.md` | Bank account (one per user: add, change), withdrawal task flow, SMS code, requests list and detail, cancel | 3 |
-| `match.md` | Game screen (player), all in-match sheets, dialogs and overlays, result sheet, finished-match summary, loading, unsupported | 5–6 |
-| `lobby.md` | Play tab, table setup, join confirmation, bot setup, insufficient-coins sheet, resume banner | 7–8 |
-| `matchmaking.md` | Search overlay, match found | 8 |
+| `wallet.md` | Balance, on-hold and welcome-coin amounts, transaction history (all §7.2 types), get-coins (support top-up) sheet, transfer task flow and receipt, received-coins notice, bank account (one per user: add, change, remove), withdrawal task flow (SMS code or password), requests list and detail, cancel. Consolidates the planned `transfer.md` and `withdrawal.md`. Pending payments are added with `coins-purchase.md` (step 9). | 3 |
+| `match.md` | Game screen (player), all in-match sheets, dialogs and overlays, result sheet, finished-match summary, loading, unsupported, waiting for the opponent to join (MA-19) | 5–6 |
+| `play.md` | Play tab, table setup, join confirmation, bot setup, insufficient-coins sheet, resume banner, search overlay, match found. Consolidates the planned `lobby.md` and `matchmaking.md`. | 7–8 |
 | `live.md` | Live list, filters, spectator view | 8 |
-| `replay.md` | Replay viewer, verify dice, 403 and purged states | 8 |
-| `history.md` | Match history list | 8 |
+| `history-replay.md` | Match history list, replay viewer, verify dice, unavailable states (403, not found, active, aborted, purged). Consolidates the planned `history.md` and `replay.md`. | 8 |
 | `leaderboard.md` | Leaderboards | 8 |
-| `coins-purchase.md` | Support top-up state, packages + custom amount, checkout confirmation, payment status | 9 (support state can ship with step 3) |
-| `shop.md` | Themes, packs, item preview, buy, equip | 10 |
+| `shop.md` | Themes, avatars, packs, item preview, buy, equip; coins page: support top-up state, packages + custom amount, checkout confirmation, payment status (the planned `coins-purchase.md` is merged here) | 9–10 |
 | `referral.md` | Referral link, earnings | 11 |
-| `predictions.md` | Prediction sheet and pool panel, my predictions | 12 |
-| `tournaments.md` | List, detail, bracket, registration, round waiting | 13 |
+| `predictions.md` | Prediction panel states and blocked reasons, confirmation, results, my predictions (owns PR-01 to PR-04; builds on live.md §3.4–§3.9) | 12 |
+| `tournaments.md` | List, detail, bracket, registration, leave, pre-start banner, match-ready dialog, round waiting, cancelled/refunded | 13 |
+| `news.md` | Announcement banner strip, news list, news item | 15 |
 | `settings.md` | Additions to `/settings` after step 2: notifications and install app (the base lives in `profile.md`) | 17 |
 | `help-legal.md` | Help topics, terms, privacy | 2 |
 | `system.md` | Offline, unsupported device, not found, update available, install banner and iOS guide, push permission sheet, global banners (account status is in `auth.md`) | 1, 6, 17 |
 | `admin-settings.md` | Admin panel (`admin.`): login with TOTP, shell, Settings with every registry key, edit/reset with confirmation and audit, SMS status card | 1–2 |
+| `admin-users-wallet.md` | Admin panel (`admin.`): users search and detail, wallet top-up (§7.9), withdrawals queue with approve and reject (§7.12) | 3 |
 
-Recommended writing order: `auth` → `wallet` → `transfer` → `withdrawal` → `coins-purchase` (support state) → `match` → `lobby` → `matchmaking`, then the rest in step order. The wallet specs move up because step 3 now ships them.
+Recommended writing order: `auth` → `wallet` (includes transfer and withdrawal) → `admin-users-wallet` → `coins-purchase` → `match` → `play` → `live` → `history-replay`, then the rest in step order. The wallet specs move up because step 3 now ships them.
 
 ---
 
@@ -58,6 +55,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | AU-05 | Avatar picker | `/signup/avatar` | S | auth | loading avatars, none selected, skip, save failed |
 | AU-06 | Login | `/login` | S | auth | wrong credentials, locked 15 min (countdown), suspended → AU-13, banned → AU-14 panel |
 | AU-07 | Reset: phone | `/password/reset` | S | auth | unknown phone (no account enumeration beyond the login flow) |
+| AU-07U | Reset unavailable (SMS off) | Panel on `/password/reset` | O | auth | `503 SMS_UNAVAILABLE`; support contact; back to log in; try again |
 | AU-08 | Reset: SMS code | `/password/reset/verify` | S | auth | as AU-03 |
 | AU-09 | Reset: new password | `/password/reset/new` | S | auth | weak password, verification expired; success → signed in here, all other sessions revoked (§12.1) |
 | AU-10 | Language picker | Sheet from AU-01 / settings | Sh | auth | fa, en |
@@ -70,14 +68,14 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 
 | ID | Screen | Route / host | Type | Spec | Key states |
 | --- | --- | --- | --- | --- | --- |
-| PL-01 | Play lobby | `/play` | S | lobby | first-time, loading, offline, match-in-progress banner |
-| PL-02 | Table setup (variant, length, tier) | Sheet on PL-01 | Sh | lobby | tier unavailable, lengths per tier |
-| PL-03 | Join confirmation (entry, fee, payout, balance before/after) | Sheet on PL-01 | Sh | lobby | in-flight, price changed, insufficient → PL-05 |
-| PL-04 | Bot setup (level, variant, length) | Sheet on PL-01 | Sh | lobby | bot entry enabled (then shows the P§2 cost block) |
-| PL-05 | Insufficient coins | Sheet | Sh | lobby (shared component) | alternatives available / none; hidden shop link after a loss |
-| PL-06 | Matchmaking | Full overlay on PL-01 | O | matchmaking | searching, widening, cancelled, error, offline |
-| PL-07 | Match found / starting | Overlay → `/match/[id]` | O | matchmaking | opponent card, aborted before first roll (refund notice) |
-| PL-08 | Resume-match banner | Global, above nav | O | lobby | your turn / their turn |
+| PL-01 | Play lobby | `/play` | S | play | first-time, loading, offline, match-in-progress banner |
+| PL-02 | Table setup (variant, length, tier) | Sheet on PL-01 | Sh | play | tier unavailable, lengths per tier |
+| PL-03 | Join confirmation (entry, fee, payout, balance before/after) | Sheet on PL-01 | Sh | play | in-flight, price changed, insufficient → PL-05 |
+| PL-04 | Bot setup (level, variant, length) | Sheet on PL-01 | Sh | play | bot entry enabled (then shows the P§2 cost block) |
+| PL-05 | Insufficient coins | Sheet | Sh | play (shared component) | alternatives available / none; hidden shop link after a loss |
+| PL-06 | Matchmaking | Full overlay on PL-01 | O | play | searching, widening, cancelled, error, offline |
+| PL-07 | Match found / starting | Overlay → `/match/[id]` | O | play | opponent card, aborted before first roll (refund notice) |
+| PL-08 | Resume-match banner | Global, above nav | O | play | your turn / their turn |
 | PL-09 | Leaderboard | `/leaderboard` | S | leaderboard | scope tabs, own rank row pinned, empty predict scope |
 
 ### 2.3 Match (immersive)
@@ -102,6 +100,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | MA-16 | Lite-mode suggestion | Snackbar with action | O | match | — |
 | MA-17 | Unsupported device | `/unsupported` or in place | S | system | — |
 | MA-18 | Keyboard / screen-reader move entry | Panel | Sh | match | — |
+| MA-19 | Waiting for the opponent to join; cancel match | Card + sheet | O / Sh | match | elapsed, refund note, cancel before first roll |
 
 ### 2.4 Live and predictions (Tab 2)
 
@@ -127,6 +126,7 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | TO-05 | Leave registration | Sheet | Sh | tournaments | refund amount |
 | TO-06 | Round ready / waiting between rounds | Banner + state on TO-02 | O | tournaments | no-show countdown (open question) |
 | TO-07 | Push permission explanation | Sheet | Sh | system | allow / not now / denied in browser |
+| TO-08 | Tournament match ready (join countdown) | Dialog | D | tournaments | countdown, not now → resume banner, in another match |
 
 ### 2.6 Shop and coins (Tab 4)
 
@@ -135,11 +135,12 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | SH-01 | Themes | `/shop` | S | shop | free, level-locked, purchasable, owned, equipped |
 | SH-02 | Emoji and phrase packs | `/shop/packs` | S | shop | as SH-01 |
 | SH-03 | Item preview (3D preview for themes) | `/shop/items/[id]` | S | shop | loading theme, preview failed |
-| SH-04 | Item purchase confirmation | Sheet | Sh | shop | in-flight, insufficient |
-| CO-01 | Coin packages + custom amount | `/shop/coins` | S | coins-purchase | gateway available; custom amount below min / above max / rounding note |
-| CO-02 | Support top-up state | `/shop/coins` | S | coins-purchase | current state (§7.9, §7.11); support channel placeholder |
-| CO-03 | Purchase confirmation (leaving to bank) | Sheet | Sh | coins-purchase | in-flight |
-| CO-04 | Payment status | `/shop/payment/[id]` | S | coins-purchase | returned, verifying, verified, failed, cancelled, unknown / check status |
+| SH-04 | Item purchase confirmation | Sheet | Sh | shop | in-flight, insufficient, bought → use now |
+| SH-05 | Avatars | `/shop/avatars` | S | shop | as SH-01 |
+| CO-01 | Coin packages + custom amount | `/shop/coins` | S | shop | gateway available; custom amount below min / above max / rounding note |
+| CO-02 | Support top-up state | `/shop/coins` | S | shop | current state (§7.9, §7.11); support channel placeholder |
+| CO-03 | Purchase confirmation (leaving to bank) | Sheet | Sh | shop | in-flight |
+| CO-04 | Payment status | `/shop/coins/result?payment=<id>` | S | shop | returned, verifying, verified, failed, cancelled, unknown / check status |
 
 ### 2.7 Wallet (Tab 5 children)
 
@@ -148,21 +149,24 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | WA-01 | Wallet | `/wallet` | S | wallet | available / on hold / withdrawable, empty history, pending payments, actions: Get coins · Send coins · Withdraw (equal prominence, P§9.2) |
 | WA-02 | Transaction detail | Sheet | Sh | wallet | per type (§7.2, including `admin_topup`, `signup_bonus`, `transfer` in/out, `withdrawal_hold` / `_payout` / `_refund`) |
 | WA-03 | Received-coins notice | Snackbar | O | wallet | top-up, transfer received, refund |
-| TR-01 | Transfer step 1: recipient | `/wallet/transfer` | T | transfer | lookup loading, found (card), not found, self, prefilled `to` |
-| TR-02 | Transfer step 2: amount | `/wallet/transfer` | T | transfer | below min, above the rolling 24 h remaining (with next-available time), above balance, fee preview |
-| TR-03 | Transfer step 3: review + password | `/wallet/transfer` | T | transfer | in-flight, wrong password, locked (countdown), refused (linked accounts), recipient unavailable, fee changed |
-| TR-04 | Transfer receipt | `/wallet/transfer` (final state) | T | transfer | — |
-| TR-05 | Discard transfer? | Dialog | D | transfer | — |
-| WD-01 | Withdraw eligibility / intro | `/wallet/withdraw` | T | withdrawal | eligible, nothing withdrawable (bonus-only, with reason), antifraud-blocked, first-time hint |
-| WD-02 | Withdraw step 1: bank account | `/wallet/withdraw` | T | withdrawal | none registered → add (WD-08); registered → the single account card with "Change" (§7.12) |
-| WD-03 | Withdraw step 2: amount | `/wallet/withdraw` | T | withdrawal | below min, above the rolling 24 h remaining (with next-available time), above withdrawable, toman preview |
-| WD-04 | Withdraw step 3: review | `/wallet/withdraw` | T | withdrawal | price or fee changed; expected payout date (one business day) |
-| WD-05 | Withdraw step 4: SMS code | `/wallet/withdraw` | T | withdrawal | expired, wrong, resend cooldown, rate-limited, in-flight |
-| WD-06 | Withdrawal requests | `/wallet/withdrawals` | S | withdrawal | empty, list with status chips (icon + text) |
-| WD-07 | Withdrawal detail | `/wallet/withdrawals/[id]` | S | withdrawal | pending (cancel, expected by date), pending past the expected date (neutral note), paid (bank ref), rejected (reason), cancelled, "already paid" race |
-| WD-08 | Bank account: add or change | `/wallet/bank-accounts` | S | withdrawal | empty; invalid length / checksum / unknown bank code; valid (bank name shown); change confirmation (replaces the old one); change blocked while a withdrawal is pending |
-| WD-09 | Cancel withdrawal | Sheet | Sh | withdrawal | in-flight |
-| WD-10 | Discard withdrawal? | Dialog | D | withdrawal | — |
+| WA-04 | Get coins (support top-up) | Sheet on WA-01 (step 3); `/shop/coins` CO-02 from step 9 | Sh | wallet | rate, support channel, copy username; disabled while suspended |
+| TR-00 | Transfer not available | `/wallet/transfer` (in place of step 1) | T | wallet | suspended, welcome coins only, below minimum, 24 h limit reached |
+| TR-01 | Transfer step 1: recipient | `/wallet/transfer` | T | wallet | lookup loading, found (card), not found, self, prefilled `to` |
+| TR-02 | Transfer step 2: amount | `/wallet/transfer` | T | wallet | below min, above the rolling 24 h remaining (with next-available time), above balance, fee preview |
+| TR-03 | Transfer step 3: review + password | `/wallet/transfer` | T | wallet | in-flight, wrong password, locked (countdown), refused (linked accounts), recipient unavailable, fee changed |
+| TR-04 | Transfer receipt | `/wallet/transfer` (final state) | T | wallet | — |
+| TR-05 | Discard transfer? | Dialog | D | wallet | — |
+| WD-01 | Withdraw eligibility / intro | `/wallet/withdraw` | T | wallet | eligible, nothing withdrawable (bonus-only, with reason), antifraud-blocked, first-time hint |
+| WD-02 | Withdraw step 1: bank account | `/wallet/withdraw` | T | wallet | none registered → add (WD-08); registered → the single account card with "Change" (§7.12) |
+| WD-03 | Withdraw step 2: amount | `/wallet/withdraw` | T | wallet | below min, above the rolling 24 h remaining (with next-available time), above withdrawable, toman preview |
+| WD-04 | Withdraw step 3: review | `/wallet/withdraw` | T | wallet | price or fee changed; expected payout date (one business day) |
+| WD-05 | Withdraw step 4: SMS code (SMS mode only; with SMS off the password is on WD-04) | `/wallet/withdraw` | T | wallet | expired, wrong, resend cooldown, rate-limited, in-flight |
+| WD-06 | Withdrawal requests | `/wallet/withdrawals` | S | wallet | empty, list with status chips (icon + text) |
+| WD-07 | Withdrawal detail | `/wallet/withdrawals/[id]` | S | wallet | pending (cancel, expected by date), pending past the expected date (neutral note), paid (bank ref), rejected (reason), cancelled, "already paid" race |
+| WD-08 | Bank account: add or change | `/wallet/bank-accounts` | S | wallet | empty; invalid length / checksum / unknown bank code; valid (bank name shown); change confirmation (replaces the old one); change blocked while a withdrawal is pending |
+| WD-09 | Cancel withdrawal | Sheet | Sh | wallet | in-flight |
+| WD-10 | Discard withdrawal? | Dialog | D | wallet | — |
+| WD-11 | Remove bank account | Dialog | D | wallet | blocked while a withdrawal is pending |
 
 ### 2.8 Account (Tab 5)
 
@@ -173,10 +177,12 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | AC-03 | Username change confirmation | Sheet on AC-02 | Sh | profile | cost, cooldown active (next date in Jalali), insufficient |
 | AC-04 | Sessions / devices | `/me/sessions` | S | profile | log out others (dialog) |
 | AC-05 | Public profile | `/profile/[username]` | S | profile | self, other ("Send coins" action), bot (no page), not found |
-| HI-01 | Match history | `/me/matches` | S | history | empty, loading more |
-| RP-01 | Replay viewer | `/replay/[id]` | I | replay | loading, playing, paused, 403, purged, bot match |
-| RP-02 | Verify dice | Sheet / side panel on RP-01 | Sh | replay | running, verified, mismatch |
+| HI-01 | Match history | `/me/matches` | S | history-replay | empty, loading more |
+| RP-01 | Replay viewer | `/replay/[id]` | I | history-replay | loading, playing, paused, 403, purged, bot match |
+| RP-02 | Verify dice | Sheet / side panel on RP-01 | Sh | history-replay | running, verified, mismatch |
+| RP-03 | Replay unavailable | `/replay/[id]` (in place) | S | history-replay | private (403), not found, still active, aborted, purged, couldn't load |
 | RF-01 | Referral | `/me/referral` | S | referral | inactive until the referee's first purchase, earnings, empty |
+| RF-02 | Share fallback (no Web Share API) | Sheet | Sh | referral | copy link, copy code |
 | ST-01 | Settings | `/settings` | S | profile (base), settings (step 17 items) | language (fa / en), lite graphics, reduced animations (OS override), sound, vibration (unsupported), account items; later notifications, install |
 | HL-01 | Help index and topics | `/help`, `/help/[topic]` | S | help-legal | topics: coins and prices, fees, signup bonus, transfers, withdrawals, predictions, tournaments, replays and fair dice, variants, lite mode, account |
 | HL-02 | Terms / privacy | `/terms`, `/privacy` | S | help-legal | placeholder content (§18) |
@@ -191,12 +197,15 @@ Types: **S** screen (route), **T** task flow (stepped route), **I** immersive sc
 | SY-04 | Not found | 404 | S | system | — |
 | SY-05 | Install banner (Android) / iOS guide | Banner + sheet | O / Sh | system | frequency rules (§11.5) |
 | SY-06 | New version available | Snackbar | O | system | never during a match or a money flow |
-| SY-07 | Announcement banner (admin content) | Global | O | system | dismissible |
+| SY-07 | Announcement banner (admin content): moved to NW-01 | Tab roots | O | news | dismissible |
+| NW-01 | Announcement banner strip | Tab roots | O | news | one at a time, dismissed, details / open, language fallback |
+| NW-02 | News list | `/news` | S | news | empty, new chips, offline cached |
+| NW-03 | News item | `/news/[id]` | S | news | not available, link action |
 | SY-08 | Session expired | Dialog → `/login?next=` | D | system | — |
 
 ### 2.10 Admin panel (`admin.`, desktop-first)
 
-Reviewed at 1440 × 900, 1280 × 800, 1024 × 768, 768 × 1024, and 390 × 844, in fa then en (admin-settings.md §6). Other §13 sections are added in step 15.
+Reviewed at 1440 × 900, 1280 × 800, 1024 × 768, 768 × 1024, and 390 × 844, in fa then en (admin-settings.md §6). Users (search, detail, top-up) and Withdrawals are added in step 3 (admin-users-wallet.md); other §13 sections in step 15.
 
 | ID | Screen | Route / host | Type | Spec | Key states |
 | --- | --- | --- | --- | --- | --- |
@@ -209,6 +218,13 @@ Reviewed at 1440 × 900, 1280 × 800, 1024 × 768, 768 × 1024, and 390 × 844, 
 | AD-07 | Setting history | Drawer | Sh | admin-settings | empty, partial (latest 200), error |
 | AD-08 | Admin session expired | Dialog | D | admin-settings | — |
 | AD-09 | Access denied (IP or host) | `admin.` any route | S | admin-settings | ip, host |
+| AD-10 | Users search | `admin.` `/users` | S | admin-users-wallet | newest accounts, phone or username query, 50 cap, empty |
+| AD-11 | User detail (profile, status, wallet, recent ledger) | `admin.` `/users/[id]` | S | admin-users-wallet | not found, role-gated top-up, audit block (superadmin) |
+| AD-12 | Wallet top-up (amount + reason → confirm) | Dialog | D | admin-users-wallet | above cap, first top-up unlocks welcome coins, suspended/banned warning, replay, check status |
+| AD-13 | Withdrawals queue | `admin.` `/withdrawals?status=` | S | admin-users-wallet | pending oldest first, overdue, history tabs, 200 cap, no access (support) |
+| AD-14 | Withdrawal drawer | Drawer | Sh | admin-users-wallet | player status, audit (superadmin) |
+| AD-15 | Mark as paid (bank reference) | Dialog | D | admin-users-wallet | ack, banned ack, SMS on/off line, already decided (don't pay again) |
+| AD-16 | Reject with reason | Dialog | D | admin-users-wallet | reason shown to player, already decided |
 
 ---
 

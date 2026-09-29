@@ -18,4 +18,4 @@ RUN useradd --system --uid 1001 app && chown -R app /app
 USER app
 
 EXPOSE 8000
-CMD ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--ws-max-size", "65536", "--proxy-headers", "--forwarded-allow-ips", "*"]

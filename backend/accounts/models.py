@@ -10,6 +10,15 @@ def default_prefs() -> dict[str, bool]:
     return {"graphics_lite": False, "animations_reduced": False, "sound": True, "vibration": True}
 
 
+REFERRAL_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"  # no 0/O or 1/I: read aloud and typed by hand
+
+
+def new_referral_code() -> str:
+    import secrets
+
+    return "".join(secrets.choice(REFERRAL_ALPHABET) for _ in range(8))
+
+
 class UserManager(BaseUserManager["User"]):
     def create_user(self, phone: str, password: str | None = None, **extra: Any) -> "User":
         user = self.model(phone=phone, **extra)
@@ -47,6 +56,13 @@ class User(AbstractBaseUser):
         "self", null=True, blank=True, on_delete=models.PROTECT, related_name="referees", db_index=True
     )
     age_confirmed_at = models.DateTimeField(null=True, blank=True)
+    # Set when the number was proven by an SMS code; the signup bonus needs it (§7.10).
+    phone_verified_at = models.DateTimeField(null=True, blank=True)
+    username_changed_at = models.DateTimeField(null=True, blank=True)
+    # Equipped board and checker themes (item keys), set only through the equip endpoint.
+    equipped = models.JSONField(default=dict, blank=True)
+    # Stable invite code (§7.4): survives username changes, so shared links keep working.
+    referral_code = models.CharField(max_length=12, unique=True, default=new_referral_code)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects: ClassVar[UserManager] = UserManager()
@@ -114,3 +130,20 @@ class Session(models.Model):
 
     def __str__(self) -> str:
         return f"session:{self.pk}"
+
+
+class PushSubscription(models.Model):
+    """A browser's Web Push subscription (CLAUDE.md §11.5): tournament start and your-turn alerts."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="push_subscriptions")
+    endpoint = models.URLField(max_length=1000, unique=True)
+    p256dh = models.CharField(max_length=128)  # the browser's public key, base64url
+    auth = models.CharField(max_length=64)  # the browser's auth secret, base64url
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "push_subscription"
+        indexes: ClassVar[list[models.Index]] = [models.Index(fields=["user", "created_at"])]
+
+    def __str__(self) -> str:
+        return f"push:{self.user_id}"

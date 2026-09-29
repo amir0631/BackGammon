@@ -2,6 +2,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from config.errors import AppError, exception_handler
+from settingsapp import registry
 
 
 @pytest.mark.django_db
@@ -38,3 +39,14 @@ def test_drf_errors_are_mapped():
 
     body = exception_handler(NotAuthenticated(), {}).data  # type: ignore[union-attr]
     assert body == {"code": "UNAUTHENTICATED", "message_key": "errors.unauthenticated", "details": {}}
+
+
+@pytest.mark.django_db
+def test_public_config_is_readable_signed_out():
+    body = APIClient().get("/api/v1/config").json()
+    assert body["sms_enabled"] is False and body["payments_enabled"] is False
+    assert body["username_change"] == {"cost": 200, "cooldown_days": 30}
+    assert "phone" not in str(body)
+    assert body["support_contact"] == "support@localhost"  # from BASE_DOMAIN until an admin sets it
+    registry.set_value("support.contact", "https://t.me/example_support")
+    assert APIClient().get("/api/v1/config").json()["support_contact"] == "https://t.me/example_support"

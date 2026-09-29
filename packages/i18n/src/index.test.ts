@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   digitsOnly,
+  maskPhone,
+  nationalPhone,
+  tehranToday,
   direction,
   formatDate,
   formatNumber,
@@ -89,5 +92,19 @@ describe("digit normalization", () => {
 describe("bidi isolation", () => {
   it("wraps values in first-strong isolate marks", () => {
     expect(isolate("ali_tbz")).toBe("\u2068ali_tbz\u2069");
+  });
+});
+
+
+describe("own phone and Tehran date", () => {
+  it("formats and masks the owner's number", () => {
+    expect(nationalPhone("+989123456789")).toBe("09123456789");
+    expect(maskPhone("+989123456789")).toBe("0912•••••89");
+    expect(maskPhone("+989123456789", "*")).toBe("0912*****89");
+  });
+
+  it("uses the Tehran calendar day", () => {
+    // 21:00 UTC is 00:30 the next day in Tehran (UTC+3:30).
+    expect(tehranToday(new Date("2026-09-28T21:00:00Z"))).toBe("2026-09-29");
   });
 });

@@ -43,6 +43,8 @@ Dark is the default scheme. Light is fully supported. Both define every token. C
 | `coin` / `coinRim` | `#e9b949` / `#9a6e1c` | `#c8961e` / `#6b4a0c` | Coin glyph (decorative, always next to a number) |
 | `playerLight` / `playerLightRim`, `playerDark` / `playerDarkRim` | see code | see code | Player markers in bars, mirroring checker colors |
 
+**Avatar art** (`avatarArt`, `avatarFallbackArt`): the 12 preset avatars (`avatar_01` … `avatar_12`, the keys `GET avatars` returns) are original flat motifs on a colored disc: khatam star, cypress, paisley, pomegranate, moon, sun, die, crown, bird, fish, tulip, mountain. Each has `ground`, `ink`, and `accent`. They are artwork, so they are the same in both schemes (like a photo). The test keeps `ink` at ≥ 3:1 on `ground` so each shape reads at 40 px.
+
 Contrast guarantees (tested for both schemes):
 - `textPrimary`, `textSecondary`, and every tone (`primary` through `info`) reach at least 4.5:1 on `background`, `surface`, and `surfaceRaised`. So a tone color can be used for text such as links and error helper text.
 - Every `onX` reaches 4.5:1 on `X`, and every `onXContainer` on `XContainer`.
@@ -120,7 +122,8 @@ Script rules:
 - **Sizing tokens (`layout`):**
   - Structure: `topBarHeight 56`, `bottomNavHeight 64`, `railWidth 104`. The rail is `max(104px, 6.5rem)`, so it grows with text size.
   - Panels: `dialogMaxWidth 480`, `taskFlowMaxWidth 560`, `readableMaxWidth 720`, `sidePanelWidth 320/360`, `sheetMaxHeightDvh 90`.
-  - Component metrics: `navIndicator`, `sheetHandle`, `otpBox`.
+  - Component metrics: `navIndicator`, `sheetHandle`, `otpBox`, `listRowMinHeight` (56, grouped list rows; they grow with text).
+  - `avatarSize`: `sm 40`, `md 56` (picker minimum, profile.md AC-02), `lg 96`.
 - **Units and insets:**
   - Viewport height: `100dvh`, never `100vh`.
   - Safe-area insets are physical, so use the helpers `safeInsetStart(dir)` and `safeInsetEnd(dir)` with logical properties. The side rail pads its start edge. The content column pads whichever edge the rail does not cover.
@@ -187,17 +190,20 @@ Rules:
   - Sizes: `iconSize.sm 18`, `md 24`, `lg 32`, `illustration 96`.
 - **Available icons:**
   - Navigation: Play (die), Live (broadcast), Tournaments (cup), Shop (bag), Account.
-  - Actions: Back, ChevronForward, Close, Check, Refresh, Eye, EyeOff.
+  - Actions: Back, ChevronForward, Close, Check, Refresh, Eye, EyeOff, Edit, Copy, Logout (mirrors), Globe (language), Settings, Devices, Document, Lock.
   - Status: Info, Help, Error, Warning, Success, Pending, Offline.
+  - Wallet (wallet.md): Wallet, Send (paper plane, mirrors), AddCoins, Bank, Withdraw (arrow into a tray), CoinsIn / CoinsOut (ledger rows), Gift (welcome coins and rewards), Support (headset), Clock (expected dates; never mirrors).
   - Brand: Coin, BrandMark.
 - **Mirroring (P§11):**
-  - Only `BackIcon` and `ChevronForwardIcon` mirror in RTL (`mirrorInRtl`).
+  - `BackIcon`, `ChevronForwardIcon`, `LogoutIcon`, and `SendIcon` mirror in RTL (`mirrorInRtl`). Vertical arrows (Withdraw, CoinsIn, CoinsOut) never do.
   - Clocks, refresh, media controls, and glyphs such as "?" never mirror.
   - Media icons for replay controls come with the replay screen, and they will not mirror.
 - **Icons are `aria-hidden`.** The control around an icon carries the i18n `aria-label`.
 - **`CoinIcon`:** a brass disc with a khatam eight-point star, colored from `coin` and `coinRim`.
 - **`BrandMarkIcon`:** an eight-point star (two squares at 45°). It is a placeholder mark until a brand identity exists (`APP_NAME`).
 - **`Illustration`** (empty, error, offline): a quiet khatam star in an octagon with a small center glyph. It is decorative only.
+- **`BoardArt`** (`components/art/BoardArt.tsx`): a static top-down board in the default "Walnut & Brass" colors (`boardDefaultTheme`), with the opening position, two dice, and a khatam star inlay on the bar. Used on the welcome screen and the auth art pane, where there is no WebGL (auth.md AU-01). Decorative (`aria-hidden`), never mirrored.
+- **`Avatar`** (`components/profile/Avatar.tsx`): the preset avatar art as inline SVG. Decorative next to a visible username; pass `label` when it stands alone. Unknown keys use `avatarFallbackArt`. Names for screen readers are `avatars.<key>` (profile.md open question 8).
 - **All artwork is original,** drawn from geometric primitives. No third-party icon sets.
 - **New icons** follow the same grid and stroke, and need a gallery entry.
 
@@ -208,7 +214,8 @@ Rules:
 | File | Purpose |
 | --- | --- |
 | `theme.ts` | `createAppTheme({ direction, script, reducedMotion })`. CSS-variable color schemes (`cssVariables`, selector `data`, prefix `bg`), both schemes from tokens, script-specific typography, token durations and easings, component overrides |
-| `ThemeRegistry.tsx` | Emotion cache per direction (the `muirtl` cache adds `@mui/stylis-plugin-rtl`), `ThemeProvider` with `defaultMode="dark"` and storage key `bg-color-mode`, `CssBaseline`, `MotionProvider`, global `ToastProvider` |
+| `ThemeRegistry.tsx` | `EmotionRegistry`, `ThemeProvider` with `defaultMode="dark"` and storage key `bg-color-mode`, `CssBaseline`, `MotionProvider`, global `ToastProvider` |
+| `EmotionRegistry.tsx` | Two Emotion caches for the App Router, `mui` (LTR) and `muirtl` (adds `@mui/stylis-plugin-rtl`), both alive for the session. The provider swaps between them, so a runtime language switch (`router.refresh()`) flips direction without remounting the tree and form entries survive. MUI's `AppRouterCacheProvider` creates its cache once, so it kept RTL styles after a switch to en. |
 | `layout.tsx` (app) | `InitColorSchemeScript` sets the scheme before paint (no flash) |
 | `mui.d.ts` | Augments `palette.tokens` and the `bodyLarge`, `label`, `labelSmall` variants |
 | `layout.ts` | Media queries, safe-area helpers, gutters, `visuallyHidden` |
@@ -237,7 +244,7 @@ Global overrides that matter:
 - **Alerts:** use the `…Container` / `on…Container` pairs.
 - **Segmented controls** (ToggleButtonGroup) wrap instead of overflowing.
 - **`body`** gets `overflow-wrap: break-word`, so long words wrap at 200% text.
-- **Not yet overridden:** `Switch`. Its target sizing will be defined with the settings screen.
+- **Switch** (settings, profile.md ST-01): 64 × 44 root, 20 px thumb, 44 × 20 track with a 1 px `outline` border (≥ 3:1) on `surfaceSunken` when off; `primary` track with an `onPrimary` thumb when on; disabled uses `outlineSubtle` / `textDisabled` (checked + disabled: `primaryContainer`). Focus ring on the thumb. The thumb travels toward the end side; in RTL the stylis plugin flips both `left` and `translateX`, so one value serves both directions. Use it inside `SwitchRow`, whose whole row is the target.
 
 ---
 
@@ -249,6 +256,7 @@ All components are presentational. They make no API calls and have no business l
 
 **`AppShell`** (`shell/AppShell.tsx`). Props: `topBar`, `banner`, `hideNav`, `activeKey`, `children`.
 - Renders a skip link, `SideRail`, a content column (top bar, banner, `<main id="main">`), and `BottomNav`.
+- `<main>` is a flex column, so a screen can fill the remaining height (sticky footers, centered cards).
 - Both navs render, and CSS shows exactly one (`display:none` removes the other from the accessibility tree).
 - The active tab comes from the path (`navigation.ts`, ia.md §3.1 plus child routes).
 - The bottom nav hides while the on-screen keyboard is open (`useVirtualKeyboardOpen`).
@@ -262,9 +270,9 @@ All components are presentational. They make no API calls and have no business l
   - Visually hidden at xs, with a long-press tooltip.
   - Visually hidden when the bar is narrower than 24 label-ems (large text).
   - Wrap in the rail.
-- No badges yet. Dot badges (ia.md §3.1) will get `nav.badge.*` keys when a spec needs them.
+- **Dot badges** (ia.md §3.1): `badges` maps a tab to its screen-reader text (`nav.badge.*`). The dot is a 10 px `error` disc with a `surface` ring (shape, not color alone) and is `aria-hidden`; the text is appended to the link name. Used for the Account tab while a withdrawal decision is unseen (wallet.md §3.8, `nav.badge.withdrawal`).
 
-**`TopBar`** (`shell/TopBar.tsx`). Props: `title`, `leading` (`brand` | `back` | `close` | `none`), `href` or `onNavigate`, `balance` (`undefined` hides the chip, `null` shows it loading), `actions`.
+**`TopBar`** (`shell/TopBar.tsx`). Props: `title`, `leading` (`brand` | `back` | `close` | `none`), `href` or `onNavigate`, `navDisabled` (a coin request is in flight: the back/close button stays focusable with `aria-disabled` and does nothing), `balance` (`undefined` hides the chip, `null` shows it loading), `actions`, `titleComponent` (`h1` default; `p` on screens whose h1 is in the content, like auth steps).
 - Sticky, solid `surface`, top safe area.
 - The title is an `h1`.
 - The row wraps: when the title needs the width (xs, large text), the chip moves to its own line.
@@ -352,16 +360,74 @@ All components are presentational. They make no API calls and have no business l
 | `LoadingState` | `variant` (`list` or `cards`), `rows` | Skeletons shaped like the content, with a hidden "Loading…" status |
 | `LoadingState` | `variant="progress"`, `value`, `label`, `detail`, `onCancel`, `onRetry` | Determinate bar, percent, and detail. After 10 s without progress: "This is taking longer than usual" plus Retry / Cancel. The base for the 3D scene loader |
 
-### 9.6 Shared helpers
+### 9.6 Auth and account building blocks (auth.md, profile.md)
+
+| Component | File | Notes |
+| --- | --- | --- |
+| `AuthScreen` | `auth/AuthScreen.tsx` | Frame for every auth step: no nav, top bar with back or brand plus `LanguageButton`, offline banner. Phones: one column; the footer (primary action) is sticky only when the viewport is ≥ 600 px tall, else inline. md: centered card (max 480). lg and tall md landscape: `BoardArt` pane on the start side. Props: `title` (the h1, focused on load), `step` (`{current, total?}`; "Step N" without a total), `intro`, `backHref`/`onBack`, `footer`, `onSubmit` (a real `<form>`), `replaceWith` (banned and reset-unavailable panels), `pending` (session unknown: frame only, so no form flashes). |
+| `AuthPanel` | `auth/AuthScreen.tsx` | The card surface for panels that replace a form. |
+| `CodeStep` | `auth/CodeStep.tsx` | SMS code step shared by AU-03 and AU-08: server countdowns, tries left, dead/expired states, resend, WebOTP, offline wait, SMS-off continuation. |
+| `BannedPanel` | `auth/BannedPanel.tsx` | AU-14, `role="alert"`, focus on its title. |
+| `ResetUnavailablePanel` | `auth/ResetUnavailablePanel.tsx` | AU-07U, `role="region"`, info styling, focus on its heading. |
+| `ActionButton` | `forms/ActionButton.tsx` | Primary action with `disabledReason` (stays focusable with `aria-disabled`, visible reason linked by `aria-describedby`), `blockedBy` (reason shown elsewhere, e.g. a countdown banner), `onBlockedClick`, and in-flight `loading` + `loadingLabel`. Playwright treats `aria-disabled` as not actionable: tests submit with Enter. |
+| `CheckboxField`, `FieldError`, `FieldSuccess` | `forms/FieldText.tsx` | Real checkbox with the sentence as label (links inside stay separate targets); helper lines with icon + text. |
+| `StandaloneLink`, `PromptLink` | `forms/StandaloneLink.tsx` | Links on their own line (44 px tall) and the short link in a prompt line ("Already have an account? Log in"), 44 × 44. Links inside running sentences stay plain (WCAG 2.5.8 inline exception). |
+| `SwitchRow` | `forms/SwitchRow.tsx` | Settings row: `<label>` around text and `Switch`, ≥ 56 px, description and status note linked by `aria-describedby`; disabled switches always show their reason. |
+| `CountdownText` | `feedback/CountdownText.tsx` | Sentence with a ticking mm:ss for sighted users and a static copy for screen readers, so live regions announce once, not every second. |
+| `ConfirmDialog` | `feedback/ConfirmDialog.tsx` | Confirmations (log out, sign out other devices, discard a flow, replace or remove the bank account, cancel a withdrawal): initial focus on the safe option (`cancelLabel`, default "Cancel"; "Keep going", "Keep request"), not dismissible in flight, errors inside, and "Still working…" + `onCheckStatus` after 10 s in flight. |
+| `SlowNotice`, `useSlowRequest` | `feedback/SlowNotice.tsx` | "Still working…" (or a custom line such as `wallet.flow.checking`) with "Check status" after `feedbackTiming.slowRequestMs`; the caller re-sends with the same Idempotency-Key or re-reads, never a blind retry. |
+| `OfflineBanner`, `SuspensionBanner` | `feedback/StatusBanners.tsx` | Global banners below the top bar; not dismissible; they clear with their status. |
+| `SignedInShell` | `shell/SignedInShell.tsx` | Signed-in frame: guest → `/login?next=`, AU-13 once per sign-in for suspended accounts, suspension and offline banners. The balance chip shows `useWallet().summary.balance` (a skeleton until the first read); `showBalance={false}` hides it in task flows (wallet.md §4). |
+| `NavGroup`, `NavRow`, `ActionRow`, `InfoRow` | `lists/NavList.tsx` | Inset grouped rows (≥ 56 px): icon, label, optional secondary line, mirrored chevron; the current route gets a filled row plus a start-edge bar (not color alone). |
+| `Avatar`, `AvatarPicker`, `AvatarPickerSkeleton` | `profile/` | The picker is a native radio group (one tab stop, arrows move, the browser mirrors them in RTL); options ≥ 56 px that grow with text; selected = check badge + 3 px outline. |
+| `ProfileCard`, `PublicProfileView`, `Username` | `profile/ProfileViews.tsx` | Identity views; usernames are always LTR-isolated. |
+| `AccountHub`, `LogoutDialog`, `AccountLayout`, `DetailColumns` | `profile/` | Tab 5 frame: list-detail when the frame is ≥ 44rem wide (container query; at 768 px the rail leaves too little room), plus a context column in the detail panel from 44rem. |
+| `LanguageButton`, `LanguageOptions`, `useChooseLanguage` | `i18n/LanguageControls.tsx` | AU-10: each option in its own language and font with `lang`; applies at once and, when signed in, `PATCH me {lang}`. |
+
+### 9.7 Wallet (wallet.md)
+
+Task-flow frame and money pieces for the wallet screens (`/wallet`, `/wallet/transfer`, `/wallet/withdraw`, `/wallet/withdrawals[/id]`, `/wallet/bank-accounts`). Presentational components live in `components/wallet/`; screens and their state in `features/wallet/`.
+
+| Component | File | Notes |
+| --- | --- | --- |
+| `TaskFlow` | `flow/TaskFlow.tsx` | Frame of a multi-step money flow (P§1): no nav, no balance chip, close (×) with `closeDisabled` while in flight, "Step n of N", the step heading as the h1 (focused on every step change), a real `<form>`, and a footer that is sticky in the thumb zone on phones ≥ 600 px tall (inline otherwise, and at the end of a centered 560 px column from md). Steps cross-fade with the theme's short duration (none with reduced motion). `plain` renders a div for TR-00 / WD-01 / receipts. |
+| `useFlowSteps` | `lib/useFlowSteps.ts` | Steps in browser history: Back moves one step; Back from step 1 with entries asks "Discard?"; Back is swallowed while `locked`; `exit(fn)` unwinds to the route's own entry before `fn`, then the hook ignores history, so Back after a completed flow never re-enters a step. |
+| `AmountField` | `wallet/AmountField.tsx` | Coin input: LTR value, `inputmode="numeric"`, Persian/Arabic-Indic/Latin digits accepted and never converted under the cursor; helper lines (minimum, 24-hour window, movable now) shown before typing and linked by `aria-describedby`; icon + text error. |
+| `RecipientCard` | `wallet/RecipientCard.tsx` | "Check the recipient" (check icon + heading), avatar, `@username` (LTR), level, and the irreversibility line; `compact` for the review. Container query: avatar above text under 16rem. |
+| `BankAccountCard`, `MaskedIban`, `IbanField` | `wallet/BankAccount.tsx` | Masked Sheba as bullets in 4-character groups, LTR via the `dir` attribute (never CSS `direction`, which the RTL stylis plugin flips), groups wrap between each other, spoken as `bank.card.a11y`. `IbanField`: fixed "IR" on the physical left of the digits in both directions, groups of 4, caret kept among the digits while re-spacing, paste with or without IR, spaces, dashes, Persian digits; shows "Bank: {name}" once valid. |
+| `SignedAmount`, `LedgerList`, `TxDetail`, `useTxLabel` | `wallet/Ledger.tsx` | "+۲۰۰" / "−۱۰۰" (U+2212) with the coin glyph; the sign is `aria-hidden` and screen readers hear "200 coins added / deducted". Rows are grouped by local day ("Today", "Yesterday", Jalali date), one button per row (≥ 56 px), mirrored chevron, `aria-current` on the row shown in the side panel. Transfers name the other player by username only; unknown types show "Transaction" + the raw type. |
+| `WithdrawalStatusChip`, `WithdrawalTimeline` | `wallet/WithdrawalStatus.tsx` | Status = icon + text (pending: dashed circle, paid: check, rejected: "!", cancelled: ×); the timeline is an ordered list with a connector on the start side. |
+| `SupportTopupContent` | `wallet/SupportTopup.tsx` | WA-04 "Get coins" while online purchase is off: status, rate, support channel (a link when it is a URL, email, or phone) with copy, username with copy, other ways that exist now, safety line. No amounts, packages, or urgency (P§9). Reused by the coins page in step 9. |
+| `CopyButton` | `wallet/CopyButton.tsx` | Explicit label ("Copy reference"), check icon for 4 s, polite "Copied". |
+| `InfoLine` | `wallet/InfoLine.tsx` | Icon + secondary text line for helper facts, notes, and reasons. |
+
+Layout rules used by the wallet screens:
+- **WA-01** is one column on phones; from a 40rem container, summary (320–360 px) and history; from 64rem, a third column with the WA-02 detail panel (otherwise WA-02 opens as a bottom sheet, a dialog at md). The panel is detected from its computed display, so it follows text size too.
+- **The three wallet actions** (Get coins, Send coins, Withdraw) are identical tonal tiles on `surfaceRaised` with an `outline` border; none is primary. They stack as full-width rows under a 17rem container (xs at 200% text).
+- **Landscape phones** (height < 500 px): the balance card drops the toman line and divider and uses the h3 size.
+- **Side columns stick** only when the viewport is at least 700 px tall.
+- **Review steps** put the password field in the sticky footer, directly above the action error and the button (P§2.6).
+
+### 9.8 Shared helpers
 
 | Helper | Location | Purpose |
 | --- | --- | --- |
-| `useFormat()` | `lib/useFormat.ts` | `number`, `digits`, `percent`, `coins`, `toman` for the current locale |
+| `useFormat()` | `lib/useFormat.ts` | `number`, `digits`, `percent`, `coins`, `toman`, `date`, `dateTime`, `monthYear` (Jalali in fa), `relative`, `clock` (mm:ss) for the current locale |
+| `useSession`, `useRequireUser`, `useGuestOnly`, `useCompleteSignIn` | `lib/session.tsx` | Who is signed in (`GET /me` via the api-client), route guards, sign-in exits (account language, AU-13) |
+| `useLocaleSwitch` | `lib/locale.tsx` | Sets the locale cookie and re-renders the server tree (`router.refresh()`), after the next navigation when needed |
+| `useCountdown`, `useOnline` | `lib/` | Server-deadline countdowns; browser connectivity |
+| `useWallet` / `WalletProvider` | `lib/wallet.tsx` | The shared `GET wallet` summary (balance chip, account hub, wallet screens), refreshed on sign-in, focus, and reconnect (no polling); cached per tab for offline "Last updated"; received-coins notices (§3.8) held back on task-flow and match routes; the pending → decided withdrawal tracking behind the Account-tab dot |
+| `usePublicConfig` | `lib/config.ts` | `GET config` once per page load (SMS mode, prices); screens render neutral copy until it arrives |
+| `useSession().handleAuthError` | `lib/session.tsx` | `AUTH_BANNED` ends the session → `/login?reason=banned`; an expired session (401 `AUTH_SESSION_INVALID` / `UNAUTHENTICATED`) opens the SY-08 dialog. Wallet password errors are never session errors |
+| `useWalletFormat`, `useAmountErrorText`, `passwordLock`, `tehranToday` | `features/wallet/shared.ts` | Rolling-window times («۷ مهر، ۱۴:۳۰» + relative within 24 h), date-only `expected_by`, amount error text by flow, the per-action password lock kept in sessionStorage |
+| `parseAmount`, `amountProblem`, `feeFor`, `ibanDigits`, `ibanProblem`, `maskPhone` | `features/wallet/validation.ts` | Client checks that mirror the server rules for instant feedback (integer-only fee preview, ISO 13616 mod-97, known bank code); the server stays the judge |
+| `signupFlow`, `resetFlow`, `referral` | `lib/flows.ts` | Per-tab auth flow state (sessionStorage, never passwords or codes); `?ref=` capture |
+| `toApiError`, `useErrorText` | `lib/apiErrors.ts` | API error → i18n text, with the code for unknown errors |
 | `useCloseOnBack` | `lib/` | Back button closes the open sheet |
 | `useVirtualKeyboardOpen` | `lib/` | Detects the on-screen keyboard |
 | `toLatinDigits`, `digitsOnly`, `localizeDigits`, `normalizeMobileNumber`, `groupMobileNumber`, `formatPercent`, `isolate` | `@bg/i18n` | Digit, phone, percent, and bidi helpers, shared with Phase 2 |
 
-### 9.7 i18n keys added
+### 9.9 i18n keys added
 
 | Namespace | Keys |
 | --- | --- |
@@ -373,6 +439,8 @@ All components are presentational. They make no API calls and have no business l
 | `net.*` | offline |
 | `forms.*` | `phone.*`, `password.*`, `otp.*` |
 | `devGallery.*` | Gallery-only sample copy |
+| `auth.*`, `account.*`, `errors.auth.*`, `errors.csrf`, `profile.*`, `settings.*`, `sessions.*`, `publicProfile.*`, `legal.*`, `avatars.*`, `support.contact.channel`, `net.offlineAction` | Auth and profile screens (auth.md §7, profile.md §7); `errors.auth.*` match the backend `message_key` values |
+| `wallet.*`, `transfer.*`, `withdraw.*`, `withdrawals.*`, `bank.*`, `shop.coins.supportTopup.*`, `errors.wallet.*`, `nav.badge.withdrawal`, `session.expired.*`, `devGallery.sections.wallet` | Wallet screens (wallet.md §7) plus: `shop.coins.supportTopup.how` carries a `<link>` tag around the channel, `.howTitle`, `.copyChannel`; `transfer.review.linked` (TRANSFER_LINKED), `transfer.unavailable.suspended.body`; `withdraw.unavailable.blockedTitle` (WITHDRAW_UNDER_REVIEW), `withdraw.review.timingRule` and `.expectedAfter` (the server now sends `withdraw.expected_by`); `errors.wallet.*` match the backend `message_key` values |
 
 ---
 
@@ -397,12 +465,16 @@ These were run for this foundation with a throwaway Playwright script against `/
 
 **Contrast:** token pairs are unit-tested (§2).
 
-**Still to add in the first screen PR:**
-- axe-core (zero serious or critical issues).
-- Committed Playwright visual regression using `reviewViewports`.
+**Committed suite (auth and profile PR):** `apps/mobile/e2e/` (`pnpm --filter @bg/mobile e2e`, needs `E2E_BASE_URL` pointing at the app behind Nginx).
+- `screens.spec.ts` renders every screen state with a mocked API, asserts no horizontal overflow and no target under 44 px, then no overflow at 200% text. `UPDATE_SCREENSHOTS=1` writes `docs/ui/screenshots/<area>/<id>--<locale>-<w>x<h>.png`; `ALL_VIEWPORTS=1` runs all six §11.7 viewports in fa and en.
+
+**Wallet suite (wallet PR):** `e2e/wallet.spec.ts` + `e2e/wallet-mocks.ts`, same checks and flags as above, screenshots in `docs/ui/screenshots/wallet/`. It covers every WA/TR/WD screen state in the spec plus behaviour tests (one Idempotency-Key reused across retries, own username refused without a request, Persian-digit Sheba saved as `IR` + Latin digits, "Show more" stops at `next: null`, status chips with text). Pages are ready at `load` + h1 + no `aria-busy` skeleton instead of `networkidle`: against `next start` without Nginx, prefetches of routes that are not built yet (`/live`, `/shop`, `/tournaments`) never settle in Chromium, so `networkidle` hangs on any screen with the nav. Run: `E2E_BASE_URL=http://m.localhost:3000 pnpm --filter @bg/mobile e2e e2e/wallet.spec.ts`.
+
+**Still to add:**
+- axe-core (zero serious or critical issues): `@axe-core/playwright` is not a §3 dependency yet; it needs approval (CLAUDE.md §19).
 - Lighthouse on non-game routes.
 
-**Bundle size:** `/` first-load JS is 154 kB (budget: 250 kB gzipped, §11.4). The gallery route is dev-only.
+**Bundle size:** first-load JS (budget: 250 kB gzipped, §11.4) after the wallet step: `/` 221 kB, `/wallet` 248 kB, `/wallet/withdraw` 249 kB, `/wallet/transfer` 245 kB. The wallet routes are close to the budget; the next feature that adds weight to them should lazy-load the sheets (WA-02, WA-04) and the SMS code step. The gallery route is dev-only.
 
 ---
 
@@ -410,7 +482,7 @@ These were run for this foundation with a throwaway Playwright script against `/
 
 | Route | Purpose |
 | --- | --- |
-| `/dev/gallery` | Every token and component, with controls for language (cookie), color mode, text size 100% / 200% (`?text=200`), and the reduced-motion setting |
+| `/dev/gallery` | Every token and component (including the wallet section: signed amounts, status chips, timeline, recipient card, bank card, Sheba and amount fields), with controls for language (cookie), color mode, text size 100% / 200% (`?text=200`), and the reduced-motion setting |
 | `/dev/gallery/viewports` | The gallery in iframes at the §11.7 viewports and two phone landscapes |
 
 - Both routes return **404 in production builds** unless the deployment sets `DEV_GALLERY=1`, for example a staging review environment.

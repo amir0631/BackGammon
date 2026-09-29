@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { layout, radii, zIndex } from "@bg/design-tokens";
 import { useVirtualKeyboardOpen } from "@/lib/useVirtualKeyboardOpen";
+import { useWallet } from "@/lib/wallet";
 import { mqBeyondShell, mqRail, safeInsetEnd, safeInsetStart, safeInsetTop, visuallyHidden } from "@/theme/layout";
 import { focusRingStyle, tokensOf } from "@/theme/theme";
 import { activeNavKey, type NavKey } from "./navigation";
@@ -38,6 +39,9 @@ const Column = styled("div")({
 const Main = styled("main")({
   flex: "1 1 auto",
   minWidth: 0,
+  // A flex column so a screen can fill the remaining height (sticky footers, centered cards).
+  display: "flex",
+  flexDirection: "column",
   "&:focus": { outline: "none" },
 });
 
@@ -81,7 +85,11 @@ export interface AppShellProps {
 
 export function AppShell({ children, topBar, banner, hideNav = false, activeKey }: AppShellProps) {
   const t = useTranslations("common");
+  const tNav = useTranslations("nav");
   const theme = useTheme();
+  const { withdrawalUpdates } = useWallet();
+  // Account-tab dot while a withdrawal decision is unseen (wallet.md §3.8 step 3).
+  const badges: Partial<Record<NavKey, string>> = withdrawalUpdates.length ? { account: tNav("badge.withdrawal") } : {};
   const pathname = usePathname();
   const keyboardOpen = useVirtualKeyboardOpen();
   const active = activeKey !== undefined ? activeKey : activeNavKey(pathname ?? "");
@@ -90,7 +98,7 @@ export function AppShell({ children, topBar, banner, hideNav = false, activeKey 
   return (
     <Shell>
       <SkipLink href="#main">{t("skipToContent")}</SkipLink>
-      {!hideNav && <SideRail active={active} />}
+      {!hideNav && <SideRail active={active} badges={badges} />}
       <Column
         sx={{
           // Insets on the side(s) the rail does not already cover.
@@ -104,7 +112,7 @@ export function AppShell({ children, topBar, banner, hideNav = false, activeKey 
         <Main id="main" tabIndex={-1}>
           {children}
         </Main>
-        {!hideNav && <BottomNav active={active} keyboardOpen={keyboardOpen} />}
+        {!hideNav && <BottomNav active={active} keyboardOpen={keyboardOpen} badges={badges} />}
       </Column>
     </Shell>
   );

@@ -10,6 +10,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, ApiRequestError } from "@bg/api-client";
 import type { AdminMe } from "@bg/protocol";
+import { HOME } from "@/lib/nav";
 
 type Status = "loading" | "signedIn" | "signedOut";
 
@@ -137,5 +138,5 @@ export function useAdmin(): AdminContextValue {
 
 /** Same-origin admin path only, so `next` can never redirect off-site. */
 export function safeNext(next: string | null): string {
-  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/settings";
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : HOME;
 }

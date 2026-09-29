@@ -137,6 +137,9 @@ Board rules are standard backgammon for all variants: 24 points, 15 checkers eac
 
 - Match = first to N points. Allowed N: 1, 3, 5, 7, 11. Admin chooses the allowed subset per table tier and tournament.
 - Entry fee is paid once per match, not per game.
+- Table tiers are the entries in `table.tiers`; every tier offers every variant and the lengths in `game.allowed_lengths`. A queue's `tier_id` is the tier's entry fee.
+- The opening roll waits until both players have joined; a match that ends before its first roll (a player never came) is aborted: entries refunded, unrated, `match.ended` with no winner.
+- XP is granted for human-vs-human matches only, so bot matches cannot be farmed for levels.
 
 ### 5.3 Turn flow
 
@@ -341,7 +344,7 @@ commission = floor(referee_entry * referral.pct / 100)    # default 1
 
 ### 10.3 WebSocket protocol
 
-Endpoint `/ws`. First message must be `auth` with the access token; otherwise close within 5 s.
+Endpoint `/ws`. First message must be `auth` with a token from `GET auth/ws-token` (60 s, bound to the session; the access token itself stays in its HttpOnly cookie); otherwise close within 5 s. The server answers `auth.ok`.
 
 Envelope (both directions):
 
@@ -373,6 +376,13 @@ Envelope (both directions):
 | S→C | `spectate.state` | full match state for a joining spectator, then the same event stream players receive |
 | S→C | `spectators.count` | current spectator count (sent to players and spectators, throttled to 1 per 5 s) |
 | C→S | `spectate.react` | `emoji_key` (spectator panel only; never delivered to players) |
+| S→C | `turn.moved` | player, move list, hits, position after, `auto` (`forced`, `timeout`, or none) |
+| S→C | `turn.passed` / `turn.timeout` | player (timeout: count and limit) |
+| S→C | `cube.update` | `offer`, `take`, or `drop`, cube value and owner |
+| S→C | `game.started` / `game.ended` | game number, Crawford flag, score / result and score |
+| S→C | `queue.status` | `waiting`, `left`, or `removed` (with reason), tier, variant, length |
+
+Payload types are generated from the pydantic models in `backend/realtime/protocol.py` into `packages/protocol/src/ws.ts` (`manage.py protocol_ts`); a contract test fails when they differ. An unanswered double is taken on timeout.
 
 Shared TypeScript types for every message live in `packages/protocol`; Python side mirrors them with pydantic models. Keep both in sync; add a contract test.
 
@@ -598,7 +608,7 @@ Required keys with defaults:
 | `elo.k_new` / `elo.k` / `elo.new_threshold` | 40 / 20 / 30 |
 | `matchmaking.elo_window` / `matchmaking.widen_step` / `matchmaking.widen_seconds` | 150 / 50 / 10 |
 | `username.change_cost` / `username.change_cooldown_days` | 200 / 30 |
-| `bot.entry_enabled` | false |
+| `bot.entry_enabled` / `bot.entry_coins` / `bot.prize_coins` | false / 10 / 15 |
 | `live.max_spectators_per_match` | 500 |
 | `live.spectator_delay_seconds` | 0 |
 | `live.spectator_reactions_enabled` | true |
@@ -701,6 +711,7 @@ Implement with the default and keep the value configurable. Do not ask about the
 | Coin package prices | Seed 4 placeholder packages, admin-editable |
 | Payment gateway | Added later. For now implement only the abstract `PaymentGateway` interface and a sandbox adapter; the real Shaparak PSP adapter comes when the provider is chosen. Users are charged through admin top-up (§7.9) until then |
 | SMS provider | Abstract `SmsProvider` interface; IPPanel Edge adapter (pattern sends, see `sms.md`) + a console adapter for dev |
+| SMS off switch | `sms.enabled` (default `false` until the sender line and patterns are approved). While off: nothing is sent; signup gets a verification token without a code (phone not verified); password reset by SMS returns `SMS_UNAVAILABLE`; withdrawals are confirmed with the account password. Turn it on before launch |
 | Brand name | Use `APP_NAME` env var and i18n key `app.name` |
 | Terms of service and privacy text | Placeholder pages with i18n keys; include an 18+ age confirmation checkbox at signup |
 

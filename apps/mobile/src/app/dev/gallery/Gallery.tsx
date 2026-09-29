@@ -17,6 +17,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import {
+  avatarSize,
   elevationLevels,
   fontStack,
   lineHeight,
@@ -28,7 +29,15 @@ import {
   type TypeRole,
 } from "@bg/design-tokens";
 import { isolate, LOCALE_COOKIE, locales, type Locale } from "@bg/i18n";
+import { BoardArt } from "@/components/art/BoardArt";
 import { Banner } from "@/components/feedback/Banner";
+import { CountdownText } from "@/components/feedback/CountdownText";
+import { ActionButton } from "@/components/forms/ActionButton";
+import { PromptLink } from "@/components/forms/StandaloneLink";
+import { SwitchRow } from "@/components/forms/SwitchRow";
+import { InfoRow, NavGroup, NavRow } from "@/components/lists/NavList";
+import { Avatar } from "@/components/profile/Avatar";
+import { AvatarPicker } from "@/components/profile/AvatarPicker";
 import { useToast } from "@/components/feedback/Toast";
 import { OtpInput } from "@/components/forms/OtpInput";
 import { PasswordField } from "@/components/forms/PasswordField";
@@ -42,6 +51,12 @@ import { BottomSheet } from "@/components/sheet/BottomSheet";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
+import { AmountField } from "@/components/wallet/AmountField";
+import { BankAccountCard, IbanField } from "@/components/wallet/BankAccount";
+import { SignedAmount } from "@/components/wallet/Ledger";
+import { RecipientCard } from "@/components/wallet/RecipientCard";
+import { WithdrawalStatusChip, WithdrawalTimeline } from "@/components/wallet/WithdrawalStatus";
+import { useCountdown } from "@/lib/useCountdown";
 import { useFormat } from "@/lib/useFormat";
 import { gutterStyles } from "@/theme/layout";
 import { useReducedMotionSetting } from "@/theme/motion";
@@ -279,6 +294,14 @@ const iconList: [string, ComponentType<IconProps>, boolean][] = [
   ["Refresh", Icons.RefreshIcon, false],
   ["Eye", Icons.EyeIcon, false],
   ["EyeOff", Icons.EyeOffIcon, false],
+  ["Edit", Icons.EditIcon, false],
+  ["Copy", Icons.CopyIcon, false],
+  ["Logout", Icons.LogoutIcon, true],
+  ["Globe", Icons.GlobeIcon, false],
+  ["Settings", Icons.SettingsIcon, false],
+  ["Devices", Icons.DevicesIcon, false],
+  ["Document", Icons.DocumentIcon, false],
+  ["Lock", Icons.LockIcon, false],
   ["Info", Icons.InfoIcon, false],
   ["Help", Icons.HelpIcon, false],
   ["Error", Icons.ErrorIcon, false],
@@ -286,6 +309,16 @@ const iconList: [string, ComponentType<IconProps>, boolean][] = [
   ["Success", Icons.SuccessIcon, false],
   ["Pending", Icons.PendingIcon, false],
   ["Offline", Icons.OfflineIcon, false],
+  ["Wallet", Icons.WalletIcon, false],
+  ["Send", Icons.SendIcon, true],
+  ["AddCoins", Icons.AddCoinsIcon, false],
+  ["Bank", Icons.BankIcon, false],
+  ["Withdraw", Icons.WithdrawIcon, false],
+  ["CoinsIn", Icons.CoinsInIcon, false],
+  ["CoinsOut", Icons.CoinsOutIcon, false],
+  ["Gift", Icons.GiftIcon, false],
+  ["Support", Icons.SupportIcon, false],
+  ["Clock", Icons.ClockIcon, false],
   ["Coin", Icons.CoinIcon, false],
   ["BrandMark", Icons.BrandMarkIcon, false],
 ];
@@ -541,6 +574,102 @@ function States() {
   );
 }
 
+function AccountDemo() {
+  const t = useTranslations();
+  const f = useFormat();
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [sound, setSound] = useState(true);
+  const [until] = useState(() => Date.now() + 125_000);
+  const left = useCountdown(until);
+  const keys = Array.from({ length: 12 }, (_, i) => `avatar_${String(i + 1).padStart(2, "0")}`);
+  return (
+    <Stack spacing={3}>
+      <Box sx={{ maxWidth: 360 }}>
+        <BoardArt />
+      </Box>
+      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+        {keys.map((k) => (
+          <Avatar key={k} avatarKey={k} size={avatarSize.sm} label={t(`avatars.${k}`)} />
+        ))}
+      </Stack>
+      <Box sx={{ maxWidth: 480 }}>
+        <Typography id="g-avatar-pick" variant="labelSmall" component="p" sx={{ mb: 1 }}>
+          {t("auth.avatar.title")}
+        </Typography>
+        <AvatarPicker avatars={keys} value={avatar} onChange={setAvatar} labelledBy="g-avatar-pick" />
+      </Box>
+      <Box sx={{ maxWidth: 480 }}>
+        <ActionButton disabledReason={avatar ? null : t("auth.avatar.disabled")}>{t("auth.avatar.cta")}</ActionButton>
+      </Box>
+      <Box sx={{ maxWidth: 480 }}>
+        <Banner severity="error">
+          <CountdownText seconds={left} clock={f.clock} render={(time) => t("errors.auth.otpRateLimited", { time })} />
+        </Banner>
+      </Box>
+      <Box sx={{ maxWidth: 480, border: 1, borderColor: "divider", borderRadius: 4 }}>
+        <SwitchRow label={t("settings.sound.label")} description={t("settings.sound.desc")} checked={sound} onChange={setSound} />
+        <SwitchRow
+          label={t("settings.vibration.label")}
+          description={t("settings.vibration.desc")}
+          checked={false}
+          disabled
+          onChange={() => undefined}
+          note={t("settings.vibration.unsupported")}
+        />
+      </Box>
+      <Box sx={{ maxWidth: 480 }}>
+        <NavGroup title={t("profile.hub.group.account")}>
+          <NavRow href="/dev/gallery" icon={Icons.DevicesIcon} label={t("profile.hub.sessions")} current />
+          <NavRow href="/dev/gallery" icon={Icons.SettingsIcon} label={t("profile.hub.settings")} />
+          <InfoRow label={t("settings.account.phone")} value={<bdi dir="ltr">{f.digits("0912•••••67")}</bdi>} />
+        </NavGroup>
+      </Box>
+      <Typography variant="body2" color="text.secondary">
+        {t.rich("auth.login.noAccount", { signup: (chunks) => <PromptLink href="/dev/gallery">{chunks}</PromptLink> })}
+      </Typography>
+    </Stack>
+  );
+}
+
+function WalletDemo() {
+  const t = useTranslations();
+  const f = useFormat();
+  const [amount, setAmount] = useState("");
+  const [iban, setIban] = useState("");
+  return (
+    <Stack spacing={3} sx={{ maxWidth: 480 }}>
+      <Stack direction="row" sx={{ gap: 2, flexWrap: "wrap" }}>
+        <SignedAmount amount={200} />
+        <SignedAmount amount={-150} />
+      </Stack>
+      <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}>
+        {(["pending", "paid", "rejected", "cancelled"] as const).map((s) => (
+          <WithdrawalStatusChip key={s} status={s} />
+        ))}
+      </Stack>
+      <WithdrawalTimeline
+        label={t("withdrawals.detail.title")}
+        steps={[
+          { key: "a", label: t("withdrawals.detail.timeline.requested"), detail: f.dateTime(new Date()), state: "done" },
+          { key: "b", label: t("withdrawals.detail.timeline.waiting", { date: f.date(new Date()) }), state: "current" },
+        ]}
+      />
+      <RecipientCard user={{ username: "ali_tbz", avatar: "avatar_08", elo: 1618, level: 7, created_at: "2025-11-02T10:00:00Z" }} />
+      <BankAccountCard
+        title={t("bank.card.title")}
+        account={{ id: 1, iban: "IR82******************9002", bank_code: "054", bank: { fa: "بانک پارسیان", en: "Parsian Bank" } }}
+      />
+      <IbanField digits={iban} onChange={setIban} problem={null} />
+      <AmountField
+        label={t("transfer.amount.label")}
+        value={amount}
+        onChange={setAmount}
+        helpers={[t("transfer.amount.helperMin", { min: f.number(10) }), t("transfer.amount.helperSendable", { amount: f.number(1250) })]}
+      />
+    </Stack>
+  );
+}
+
 export function Gallery() {
   const t = useTranslations("devGallery");
   return (
@@ -582,6 +711,12 @@ export function Gallery() {
         </Section>
         <Section id="g-states" title={t("sections.states")}>
           <States />
+        </Section>
+        <Section id="g-account" title={t("sections.account")}>
+          <AccountDemo />
+        </Section>
+        <Section id="g-wallet" title={t("sections.wallet")}>
+          <WalletDemo />
         </Section>
       </Box>
     </AppShell>

@@ -70,6 +70,15 @@ class WithdrawalRequest(models.Model):
         on_delete=models.PROTECT,
         related_name="withdrawal_decisions",
     )
+    # A finance admin claims a request before making the bank transfer, so two admins never both pay it.
+    claimed_by = models.ForeignKey(
+        "adminapi.AdminUser",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="withdrawal_claims",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
     bank_reference = models.CharField(max_length=64, blank=True, default="")
     reject_reason = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

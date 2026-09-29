@@ -7,9 +7,11 @@ django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from channels.security.websocket import AllowedHostsOriginValidator  # noqa: E402
+from django.urls import path  # noqa: E402
 
-# WebSocket routes (`/ws`, CLAUDE.md §10.3) are added by the realtime app in §17 step 5.
-websocket_urlpatterns: list[object] = []
+from realtime.consumers import GameConsumer  # noqa: E402
+
+websocket_urlpatterns = [path("ws", GameConsumer.as_asgi())]  # CLAUDE.md §10.3
 
 application = ProtocolTypeRouter(
     {

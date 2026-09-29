@@ -1,0 +1,223 @@
+"use client";
+
+import InputAdornment from "@mui/material/InputAdornment";
+import Skeleton from "@mui/material/Skeleton";
+import Stack from "@mui/material/Stack";
+import { styled, useTheme } from "@mui/material/styles";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { useLocale, useTranslations } from "next-intl";
+import { useId, useLayoutEffect, useRef, type ReactNode } from "react";
+import { radii } from "@bg/design-tokens";
+import type { BankAccountInfo, Lang } from "@bg/protocol";
+import { FieldError, FieldSuccess } from "@/components/forms/FieldText";
+import { BankIcon } from "@/components/icons";
+import { groupIban, ibanLast4, maskedIbanGroups, type IbanProblem } from "@bg/api-client";
+import { tokensOf } from "@/theme/theme";
+
+// Bank account (Sheba) building blocks (wallet.md §3.5, WD-08, WD-02).
+// - Sheba numbers are always LTR with Latin digits (P§10), grouped in 4s; groups wrap between
+//   each other at 200% text, never inside a group.
+// - The masked Sheba reads "{bank} account, Sheba ending {last4}" to screen readers, not bullets.
+
+const Groups = styled("span")(({ theme }) => ({
+  display: "inline-flex",
+  flexWrap: "wrap",
+  columnGap: "0.4em",
+  rowGap: theme.spacing(0.25),
+  fontVariantNumeric: "tabular-nums",
+  letterSpacing: "0.02em",
+  "& > span": { whiteSpace: "nowrap" },
+}));
+
+export function bankName(bank: Record<Lang, string>, locale: string): string {
+  return (locale === "en" ? bank.en : bank.fa) || bank.fa || bank.en;
+}
+
+/** Masked Sheba from the API, `IR82 •••• … ••90 02`, with a spoken label. */
+export function MaskedIban({ account }: { account: BankAccountInfo }) {
+  const t = useTranslations("bank");
+  const locale = useLocale();
+  return (
+    <Groups
+      role="img"
+      dir="ltr"
+      aria-label={t("card.a11y", { bank: bankName(account.bank, locale) || account.bank_code, last4: ibanLast4(account.iban) })}
+    >
+      {maskedIbanGroups(account.iban).map((g, i) => (
+        <span key={i} aria-hidden>
+          {g}
+        </span>
+      ))}
+    </Groups>
+  );
+}
+
+const Card = styled("div")(({ theme }) => {
+  const t = tokensOf(theme);
+  return {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(1.5),
+    padding: theme.spacing(2),
+    borderRadius: radii.lg,
+    border: `1px solid ${t.outline}`,
+    backgroundColor: t.surface,
+    containerType: "inline-size",
+    "& .bank-head": { display: "flex", gap: theme.spacing(1.5), alignItems: "flex-start" },
+    "& .bank-icon": { flex: "none", color: t.primary, marginBlockStart: theme.spacing(0.25) },
+  };
+});
+
+/** The one registered account: bank name in the UI language and the masked Sheba (+ actions). */
+export function BankAccountCard({ account, actions, title }: { account: BankAccountInfo; actions?: ReactNode; title?: string }) {
+  const locale = useLocale();
+  const name = bankName(account.bank, locale);
+  return (
+    <Card>
+      <div className="bank-head">
+        <BankIcon className="bank-icon" />
+        <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+          {title && (
+            <Typography variant="labelSmall" component="p" color="text.secondary">
+              {title}
+            </Typography>
+          )}
+          <Typography variant="body1" component="p" sx={{ fontWeight: 600, overflowWrap: "anywhere" }}>
+            {name || <bdi dir="ltr">{account.bank_code}</bdi>}
+          </Typography>
+          <Typography variant="body1" component="p" color="text.secondary">
+            <MaskedIban account={account} />
+          </Typography>
+        </Stack>
+      </div>
+      {actions && (
+        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+          {actions}
+        </Stack>
+      )}
+    </Card>
+  );
+}
+
+export function BankAccountCardSkeleton() {
+  return <Skeleton variant="rectangular" height="7.5rem" sx={{ borderRadius: `${radii.lg}px` }} aria-hidden />;
+}
+
+// ---- Sheba input ---------------------------------------------------------------------------------
+
+export interface IbanFieldProps {
+  /** Latin digits after "IR" (possibly incomplete). */
+  digits: string;
+  onChange: (digits: string) => void;
+  onBlur?: () => void;
+  problem: IbanProblem | null;
+  /** Bank name once the value is valid and the bank is known ("Bank: Melli"). */
+  bank?: string | null;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  name?: string;
+}
+
+/** Characters that count as a digit in what the user typed (Latin, Persian, Arabic-Indic). */
+const DIGIT = /[0-9۰-۹٠-٩]/;
+
+/**
+ * Fixed "IR" prefix + 24 digits, shown in groups of 4 (LTR). Paste works with or without IR,
+ * spaces or dashes, and Persian digits; the caret keeps its place among the digits while groups
+ * are re-spaced.
+ */
+export function IbanField({ digits, onChange, onBlur, problem, bank, disabled, autoFocus, name = "iban" }: IbanFieldProps) {
+  const t = useTranslations("bank");
+  const theme = useTheme();
+  const helperId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const caretDigits = useRef<number | null>(null);
+  const display = groupIban(digits).join(" ");
+
+  // Put the caret back after the same number of digits once the grouped value renders.
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    const count = caretDigits.current;
+    if (!input || count === null || document.activeElement !== input) return;
+    caretDigits.current = null;
+    let pos = 0;
+    let seen = 0;
+    while (pos < display.length && seen < count) {
+      if (/[0-9]/.test(display[pos] ?? "")) seen += 1;
+      pos += 1;
+    }
+    input.setSelectionRange(pos, pos);
+  }, [display]);
+
+  const change = (raw: string, caret: number | null) => {
+    let value = raw.replace(/^\s*[iI][rR]/, "");
+    const before = caret === null ? null : raw.slice(0, caret).replace(/^\s*[iI][rR]/, "");
+    caretDigits.current = before === null ? null : [...before].filter((c) => DIGIT.test(c)).length;
+    value = [...value]
+      .filter((c) => DIGIT.test(c))
+      .join("")
+      .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06f0))
+      .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660));
+    onChange(value);
+  };
+
+  const errorText =
+    problem === "required"
+      ? t("error.required")
+      : problem === "format"
+        ? t("error.format")
+        : problem === "checksum"
+          ? t("error.checksum")
+          : problem === "bank"
+            ? t("error.bank")
+            : null;
+
+  const prefix = (
+    <InputAdornment position={theme.direction === "rtl" ? "end" : "start"}>
+      <bdi dir="ltr">{t("field.prefix")}</bdi>
+    </InputAdornment>
+  );
+
+  return (
+    <TextField
+      inputRef={inputRef}
+      name={name}
+      label={t("field.label")}
+      value={display}
+      onChange={(e) => change(e.target.value, e.target.selectionStart)}
+      onBlur={onBlur}
+      disabled={disabled}
+      autoFocus={autoFocus}
+      error={Boolean(errorText)}
+      helperText={
+        errorText ? (
+          <FieldError>{errorText}</FieldError>
+        ) : bank ? (
+          <FieldSuccess>{t("valid.bank", { bank })}</FieldSuccess>
+        ) : (
+          t("field.helper")
+        )
+      }
+      slotProps={{
+        formHelperText: { id: helperId, component: "div" } as object,
+        htmlInput: {
+          dir: "ltr",
+          inputMode: "numeric",
+          autoComplete: "off",
+          autoCorrect: "off",
+          spellCheck: false,
+          "aria-describedby": helperId,
+          "aria-invalid": Boolean(errorText) || undefined,
+          style: { fontVariantNumeric: "tabular-nums" },
+        },
+        // The label and outline follow the UI direction; the number itself is LTR. "IR" must sit
+        // at the physical left of the digits, which is the end side in RTL.
+        input:
+          theme.direction === "rtl"
+            ? { endAdornment: prefix }
+            : { startAdornment: prefix },
+      }}
+    />
+  );
+}

@@ -5,6 +5,7 @@ from wallet import views
 urlpatterns = [
     path("wallet", views.WalletView.as_view()),
     path("wallet/ledger", views.LedgerView.as_view()),
+    path("wallet/banks", views.BanksView.as_view()),
     path("wallet/transfer", views.TransferView.as_view()),
     path("wallet/withdrawals", views.WithdrawalsView.as_view()),
     path("wallet/withdrawals/otp", views.WithdrawalOtpView.as_view()),

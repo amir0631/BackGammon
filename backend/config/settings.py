@@ -25,6 +25,19 @@ SECRET_KEY = env("DJANGO_SECRET_KEY", "insecure-dev-key" if DEBUG else None)
 BASE_DOMAIN = env("BASE_DOMAIN", "localhost")
 URL_SCHEME = env("URL_SCHEME", "http")
 APP_NAME = env("APP_NAME", "Takhte Nard")
+# Web Push (CLAUDE.md §11.5): `manage.py vapid_keys` makes the key; empty disables push.
+VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", "")
+VAPID_SUBJECT = env("VAPID_SUBJECT", f"mailto:support@{BASE_DOMAIN}")
+# Browsers' push services; the server only ever POSTs to these (subscriptions are user input: no SSRF).
+PUSH_ALLOWED_HOSTS = [
+    h.strip()
+    for h in env(
+        "PUSH_ALLOWED_HOSTS",
+        "fcm.googleapis.com,updates.push.services.mozilla.com,push.services.mozilla.com,"
+        ".push.apple.com,.notify.windows.com",
+    ).split(",")
+    if h.strip()
+]
 APP_ENV = env("APP_ENV", "development")  # development | staging | production, shown in the admin header
 DESKTOP_ENABLED = env_bool("DESKTOP_ENABLED")
 SURFACE_HOSTS = [f"m.{BASE_DOMAIN}", f"app.{BASE_DOMAIN}", BASE_DOMAIN]
@@ -42,6 +55,17 @@ INSTALLED_APPS = [
     "settingsapp",
     "adminapi",
     "wallet",
+    "game",
+    "realtime",
+    "ranking",
+    "matchmaking",
+    "antifraud",
+    "payments",
+    "shop",
+    "referrals",
+    "predictions",
+    "tournaments",
+    "reports",
 ]
 
 MIDDLEWARE = [
@@ -91,6 +115,11 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULE = {
     "ledger-invariants-hourly": {"task": "wallet.tasks.check_ledger_invariants", "schedule": 3600.0},
+    "leaderboards-nightly": {"task": "ranking.tasks.rebuild_leaderboards_nightly", "schedule": 86400.0},
+    "payments-reconcile-nightly": {"task": "payments.tasks.reconcile_yesterday", "schedule": 86400.0},
+    "payments-expire": {"task": "payments.tasks.expire_stale_payments", "schedule": 900.0},
+    "replays-purge-nightly": {"task": "game.tasks.purge_replays", "schedule": 86400.0},
+    "dice-test-weekly": {"task": "reports.tasks.weekly_dice_test", "schedule": 7 * 86400.0},
 }
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
@@ -114,13 +143,13 @@ CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = SECURE_COOKIES
 
 # Player auth (CLAUDE.md §3): access JWT 15 min, refresh 30 days, HttpOnly cookies.
-JWT_SIGNING_KEY = env("JWT_SIGNING_KEY", SECRET_KEY)
+JWT_SIGNING_KEY = env("JWT_SIGNING_KEY", "") or SECRET_KEY  # empty in .env: fall back (dev only)
 ACCESS_TOKEN_TTL_SECONDS = 15 * 60
 REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 3600
 ACCESS_COOKIE = "bg_access"
 REFRESH_COOKIE = "bg_refresh"
 # Admin panel (CLAUDE.md §12.1): separate host-only cookie, TOTP, optional IP allowlist.
-ADMIN_SECRET_KEY = env("ADMIN_SECRET_KEY", SECRET_KEY)
+ADMIN_SECRET_KEY = env("ADMIN_SECRET_KEY", "") or SECRET_KEY
 ADMIN_COOKIE = "bga_session"
 ADMIN_SESSION_TTL_SECONDS = 8 * 3600
 ADMIN_ENFORCE_HOST = env_bool("ADMIN_ENFORCE_HOST", default=True)
@@ -132,7 +161,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
+# The host comes from `Host`, which Nginx sets. X-Forwarded-Host is client-controlled (Nginx passes it
+# through), so trusting it would let a request to `m.` pass the admin host check.
+USE_X_FORWARDED_HOST = False
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
@@ -150,6 +181,8 @@ SMS_PROVIDER = env("SMS_PROVIDER", "console")
 IPPANEL_BASE_URL = env("IPPANEL_BASE_URL", "https://edge.ippanel.com/v1")
 IPPANEL_API_KEY = env("IPPANEL_API_KEY", "")
 PAYMENT_GATEWAY = env("PAYMENT_GATEWAY", "sandbox")
+# Bot service (CLAUDE.md §9); empty uses the in-process fallback.
+BOT_URL = env("BOT_URL", "")
 
 LOGGING = {
     "version": 1,

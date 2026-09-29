@@ -28,6 +28,20 @@ docker compose -f infra/docker-compose.yml --env-file .env up -d --build
 
 Set `HTTP_PORT` in `.env` if port 80 is taken.
 
+### Test accounts
+
+```sh
+docker compose -f infra/docker-compose.yml --env-file .env exec backend python manage.py seed_testers
+```
+
+Creates `tester1`…`tester5` (phone `09000000001`…, 100 signup bonus + 1000 coins each) and a superadmin
+`admin`, and prints every password plus the admin's authenticator secret (add it to Google Authenticator or
+any TOTP app; the admin login asks for its 6-digit code). Options: `--count`, `--coins`, `--password`,
+`--admin`, `--admin-password`. Re-running rotates the passwords and keeps coins and the authenticator.
+Refused when `APP_ENV=production`.
+
+SMS is off by default (`sms.enabled`): signup needs no code, and withdrawals are confirmed with the password.
+
 ## Develop
 
 ```sh

@@ -50,7 +50,19 @@ const ItemRoot = styled(Link, { shouldForwardProp: (p) => p !== "variant" })<{ v
         width: layout.navIndicator.width,
         height: layout.navIndicator.height,
         borderRadius: radii.pill,
+        position: "relative",
         transition: theme.transitions.create("background-color", { duration: theme.transitions.duration.shorter }),
+      },
+      "& .nav-badge": {
+        position: "absolute",
+        insetBlockStart: 2,
+        insetInlineEnd: 10,
+        width: 10,
+        height: 10,
+        borderRadius: radii.pill,
+        backgroundColor: t.error,
+        // A ring keeps the dot visible on the active pill too (shape, not color alone).
+        boxShadow: `0 0 0 2px ${t.surface}`,
       },
       "& .nav-label": {
         ...theme.typography.labelSmall,
@@ -76,10 +88,12 @@ interface NavItemLinkProps {
   active: boolean;
   variant: Variant;
   label: string;
+  /** Screen-reader text of an unseen-update dot (e.g. a withdrawal decision). */
+  badge?: string;
 }
 
 const NavItemLink = forwardRef<HTMLAnchorElement, NavItemLinkProps>(function NavItemLink(
-  { item, active, variant, label, ...rest },
+  { item, active, variant, label, badge, ...rest },
   ref,
 ) {
   const Icon = item.icon;
@@ -93,8 +107,10 @@ const NavItemLink = forwardRef<HTMLAnchorElement, NavItemLinkProps>(function Nav
     >
       <span className="nav-indicator">
         <Icon />
+        {badge && <span className="nav-badge" aria-hidden />}
       </span>
       <span className="nav-label">{label}</span>
+      {badge && <span style={visuallyHidden}>{`, ${badge}`}</span>}
     </ItemRoot>
   );
 });
@@ -152,9 +168,10 @@ const Rail = styled("nav")(({ theme }) => {
 
 export interface PrimaryNavProps {
   active: NavKey | null;
+  badges?: Partial<Record<NavKey, string>>;
 }
 
-export function BottomNav({ active, keyboardOpen }: PrimaryNavProps & { keyboardOpen: boolean }) {
+export function BottomNav({ active, keyboardOpen, badges = {} }: PrimaryNavProps & { keyboardOpen: boolean }) {
   const t = useTranslations("nav");
   const isXs = useMediaQuery(mqXs.replace("@media ", ""));
   const ref = useRef<HTMLElement>(null);
@@ -183,7 +200,7 @@ export function BottomNav({ active, keyboardOpen }: PrimaryNavProps & { keyboard
       {primaryNav.map((item) => {
         const label = t(item.labelKey);
         const link = (
-          <NavItemLink key={item.key} item={item} active={active === item.key} variant="bar" label={label} />
+          <NavItemLink key={item.key} item={item} active={active === item.key} variant="bar" label={label} badge={badges[item.key]} />
         );
         // Icon-only at xs: long-press shows the label (ia.md §3.1).
         return isXs ? (
@@ -198,13 +215,13 @@ export function BottomNav({ active, keyboardOpen }: PrimaryNavProps & { keyboard
   );
 }
 
-export function SideRail({ active }: PrimaryNavProps) {
+export function SideRail({ active, badges = {} }: PrimaryNavProps) {
   const t = useTranslations("nav");
   const theme = useTheme();
   return (
     <Rail aria-label={t("label")} sx={{ [mqRail]: { paddingInlineStart: `calc(${safeInsetStart(theme.direction)} + ${theme.spacing(0.5)})` } }}>
       {primaryNav.map((item) => (
-        <NavItemLink key={item.key} item={item} active={active === item.key} variant="rail" label={t(item.labelKey)} />
+        <NavItemLink key={item.key} item={item} active={active === item.key} variant="rail" label={t(item.labelKey)} badge={badges[item.key]} />
       ))}
     </Rail>
   );

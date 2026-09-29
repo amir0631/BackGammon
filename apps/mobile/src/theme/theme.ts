@@ -282,6 +282,52 @@ export function createAppTheme({ direction, script, reducedMotion }: AppThemeOpt
       MuiRadio: {
         styleOverrides: { root: { padding: (minTouchTarget - 24) / 2 } },
       },
+      // Switch (profile.md ST-01). The settings row is the 44 px target; the switch itself is
+      // 44 px tall too. Track outline ≥ 3:1 in both states, thumb position + fill carry the state
+      // (not color alone). The thumb travels toward the end side: in RTL the stylis plugin flips
+      // both `left` and `translateX`, so one value serves both directions (no logical property
+      // exists for transforms).
+      MuiSwitch: {
+        styleOverrides: {
+          root: {
+            width: 64,
+            height: minTouchTarget,
+            padding: "12px 10px",
+            // Clips MUI's 300%-wide hit input (it would otherwise widen the page near an edge);
+            // the thumb's focus ring fits inside the padding.
+            overflow: "hidden",
+          },
+          switchBase: ({ theme }) => {
+            const t = tokensOf(theme);
+            return {
+              padding: 12,
+              color: t.textSecondary,
+              "&.Mui-checked": {
+                transform: "translateX(20px)",
+                color: t.onPrimary,
+                "& + .MuiSwitch-track": { backgroundColor: t.primary, borderColor: t.primary, opacity: 1 },
+              },
+              "&.Mui-disabled": {
+                color: t.textDisabled,
+                "& + .MuiSwitch-track": { opacity: 1, borderColor: t.outlineSubtle },
+              },
+              "&.Mui-checked.Mui-disabled": {
+                color: t.onPrimaryContainer,
+                "& + .MuiSwitch-track": { backgroundColor: t.primaryContainer, borderColor: t.primaryContainer },
+              },
+              "&.Mui-focusVisible .MuiSwitch-thumb": focusRingStyle(theme),
+            };
+          },
+          thumb: { width: 20, height: 20, boxShadow: "none" },
+          track: ({ theme }) => ({
+            opacity: 1,
+            borderRadius: radii.pill,
+            boxSizing: "border-box",
+            border: `${borderWidth.control}px solid ${tokensOf(theme).outline}`,
+            backgroundColor: tokensOf(theme).surfaceSunken,
+          }),
+        },
+      },
       MuiChip: {
         styleOverrides: {
           root: ({ theme }) => ({
