@@ -484,7 +484,7 @@ Dice throw (pre-simulate, then play back)
   - Never show the prompt during a match.
 - Service worker caches static assets, the 3D engine bundle, the Rapier WASM, and equipped themes.
 - Web Push for tournament start and your-turn (with permission) on both surfaces; on iOS only inside the installed PWA.
-- Offline: show a connection-lost screen; offer local bot play (no coins, no rating).
+- Offline: show a connection-lost screen with a retry. Local offline bot play is deferred: it would need client-side dice, which §2 rule 6 forbids (user decision, 2026-09-29).
 - `app.` has no manifest and is not installable; its service worker only caches assets.
 
 ### 11.6 Lite mode (user setting)
