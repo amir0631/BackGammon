@@ -355,7 +355,7 @@ test.describe("play behaviour", () => {
     await dialog.getByText("First to 1", { exact: true }).click();
     await visible(page, /^Start practice match$/).click();
     await page.waitForURL(/\/match\//, { timeout: 5000 });
-    expect(body).toEqual({ level: "easy", variant: "standard_nocube", length: 1 });
+    expect(body).toEqual({ level: "easy", variant: "standard_nocube", length: 1, entry: 0 });
   });
 
   test("tier list shows server payouts", async ({ page }) => {

@@ -13,7 +13,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@bg/api-client";
 import { avatarSize, iconSize, layout, minTouchTarget, radii, zIndex } from "@bg/design-tokens";
-import type { MatchView, Player, TurnBuilder } from "@bg/game-core";
+import { gamePoints, isBeforeFirstRoll, resignPreview, type ClockReading, type MatchView, type Player, type TurnBuilder } from "@bg/game-core";
 import type { GameResultOut, MatchEndedOut, MatchRulesOut, Tier, UserPrefs } from "@bg/protocol";
 import { ActionButton } from "@/components/forms/ActionButton";
 import { SwitchRow } from "@/components/forms/SwitchRow";
@@ -33,9 +33,8 @@ import { safeInsetBottom, safeInsetTop } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
 import { InsufficientOptions } from "../play/InsufficientOptions";
 import { useGameLabels } from "../play/labels";
-import { Choice, MatchInfo, MoveEntry, MoveHistory, ReactionPicker, resignPreview, useNames, type ReactionsProps } from "./panels";
+import { Choice, MatchInfo, MoveEntry, MoveHistory, ReactionPicker, useNames, type ReactionsProps } from "./panels";
 import { ClockDisplay } from "./parts";
-import { gamePoints, type ClockReading } from "./rules";
 
 // Sheets, dialogs, and overlays of the match screen (match.md MA-03 … MA-19). One sheet at a time
 // (P§1): the sheet kinds swap content inside one BottomSheet. MA-07 (double offered), MA-10
@@ -79,10 +78,6 @@ export interface MatchOverlaysProps {
   suspended: boolean;
 }
 
-/** Before the match's first roll: resigning the match cancels it with refunds (§3.12, §10 Q4). */
-function beforeFirstRoll(view: MatchView, history: HistoryItem[]): boolean {
-  return view.gameNo === 1 && view.phase === "opening" && !view.dice && view.results.length === 0 && history.every((h) => h.kind === "game");
-}
 
 export function MatchOverlays(props: MatchOverlaysProps) {
   const { view, you, sheet, setSheet, rules, history } = props;
@@ -220,7 +215,7 @@ export function MatchOverlays(props: MatchOverlaysProps) {
         break;
       case "resign": {
         title = t("match.resign.title");
-        const early = beforeFirstRoll(view, history);
+        const early = isBeforeFirstRoll(view, history.filter((h) => h.kind !== "game").length);
         const preview = you !== null ? resignPreview(view, you, rules) : null;
         const between = view.phase === "game_over";
         const bot = Boolean(oppInfo?.is_bot);

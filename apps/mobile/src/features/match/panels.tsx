@@ -12,7 +12,7 @@ import { useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { iconSize, layout, minTouchTarget, radii } from "@bg/design-tokens";
 import { isolate } from "@bg/i18n";
-import { BAR, OFF, type Player, type Position, type TurnBuilder } from "@bg/game-core";
+import { BAR, OFF, countAt, pipCount, type Player, type TurnBuilder } from "@bg/game-core";
 import type { MatchView } from "@bg/game-core";
 import { CheckIcon, ErrorIcon, EyeIcon, InfoIcon } from "@/components/icons";
 import { KeyboardIcon, ShieldIcon } from "@/components/icons/game";
@@ -22,7 +22,6 @@ import type { HistoryItem } from "@/lib/match/store";
 import { useFormat } from "@/lib/useFormat";
 import { tokensOf } from "@/theme/theme";
 import { useGameLabels } from "../play/labels";
-import { gamePoints, lossKind, type LossKind } from "./rules";
 
 // Content shared by bottom sheets (phones) and side panels (md/lg): match info (MA-03), move
 // history (MA-04), reactions (MA-05), move entry (MA-18), resign options (MA-08). Container
@@ -80,9 +79,9 @@ export function MoveHistory({ view, history, you }: { view: MatchView | null; hi
   const dice = (d: [number, number] | null) => (d ? `${f.number(d[0])}–${f.number(d[1])}` : "");
   const pips = view
     ? t("match.history.pips", {
-        self: f.number(pipsOf(view.position, you ?? 0)),
+        self: f.number(pipCount(view.position, you ?? 0)),
         username: names(you === null ? 1 : 1 - you),
-        opp: f.number(pipsOf(view.position, (you === null ? 1 : 1 - you) as Player)),
+        opp: f.number(pipCount(view.position, (you === null ? 1 : 1 - you) as Player)),
       })
     : null;
 
@@ -131,15 +130,6 @@ export function MoveHistory({ view, history, you }: { view: MatchView | null; hi
   );
 }
 
-function pipsOf(p: Position, side: Player): number {
-  let total = 0;
-  for (let abs = 1; abs <= 24; abs++) {
-    const v = p.board[abs - 1]!;
-    if (side === 0 && v > 0) total += abs * v;
-    if (side === 1 && v < 0) total += (25 - abs) * -v;
-  }
-  return total + p.bar[side] * 25;
-}
 
 // ---- MA-03 Match info ------------------------------------------------------------------------
 
@@ -390,31 +380,9 @@ export function MoveEntry({ builder, view, you, lastMove, selected, onSelect, on
   );
 }
 
-/** Checkers of `side` on point `p` in `numbering`'s numbering (25 = that side's bar). */
-function countAt(position: Position, side: Player, p: number, numbering: Player = side): number {
-  if (p === BAR) return position.bar[side];
-  const abs = numbering === 0 ? p : 25 - p;
-  const v = position.board[abs - 1] ?? 0;
-  return side === 0 ? Math.max(0, v) : Math.max(0, -v);
-}
 
 // ---- MA-08 Resign ------------------------------------------------------------------------------
 
-export interface ResignPreview {
-  kind: LossKind;
-  points: number | null;
-  scoreAfter: [number, number];
-  endsMatch: boolean;
-}
-
-export function resignPreview(view: MatchView, you: Player, rules: Parameters<typeof gamePoints>[0]): ResignPreview {
-  const kind = lossKind(view.position, you);
-  const points = gamePoints(rules, kind, view.cubeValue);
-  const opp = 1 - you;
-  const oppAfter = view.score[opp]! + (points ?? 0);
-  const scoreAfter: [number, number] = [view.score[you]!, oppAfter];
-  return { kind, points, scoreAfter, endsMatch: oppAfter >= view.length };
-}
 
 export function Choice({ selected, onClick, title, children, disabled }: { selected: boolean; onClick: () => void; title: string; children: ReactNode; disabled?: boolean }) {
   return (

@@ -17,7 +17,7 @@ import { mqXs, visuallyHidden } from "@/theme/layout";
 import { useReducedMotion } from "@/theme/motion";
 import { tokensOf } from "@/theme/theme";
 import { useGameLabels } from "../play/labels";
-import type { ClockReading } from "./rules";
+import type { ClockReading } from "@bg/game-core";
 
 // Match screen building blocks (match.md §3.2, §3.4, §4 MA-02, MA-11, MA-12). HTML over solid
 // surfaces, never text on the canvas. Ownership, timers, and the cube never rely on color alone.

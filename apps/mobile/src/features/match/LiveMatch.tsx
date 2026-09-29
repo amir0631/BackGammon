@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "@bg/api-client";
 import { feedbackTiming, iconSize, layout, zIndex } from "@bg/design-tokens";
-import { canDouble, encode, initialPosition, pipCount, TurnBuilder, BAR, OFF, type Player } from "@bg/game-core";
+import { canDouble, encode, initialPosition, isWaitingForOpponent, pipCount, readClock, toViewerPoint, TurnBuilder, type Player } from "@bg/game-core";
 import { isolate } from "@bg/i18n";
 import type { MatchEndedOut, PhraseText, ServerEnvelope } from "@bg/protocol";
 import { BackIcon, EyeIcon, WarningIcon } from "@/components/icons";
@@ -33,7 +33,6 @@ import { MatchLoader } from "./MatchLoader";
 import { MatchOverlays, type SheetKind } from "./MatchOverlays";
 import { EMOJI, FREE_EMOJIS, FREE_PHRASES, MatchInfo, MoveHistory, ReactionPicker, useNames, useNotation } from "./panels";
 import { ClockDisplay, CubeChip, DiceChips, PlayerBar, StatusLine } from "./parts";
-import { readClock } from "./rules";
 import { useSceneLabels } from "./useSceneLabels";
 
 // MA-02 game screen (match.md §3, §4). Driven by the shared GameSocket and the game-core store:
@@ -688,8 +687,8 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
     if (!lastOppMove || lastOppMove.player === you) return null;
     // Opponent's numbering → viewer's numbering: points mirror; bar/off stay the mover's.
     return lastOppMove.moves.map(([a, b]) => ({
-      from: a === BAR ? BAR : a === OFF ? OFF : 25 - a!,
-      to: b === BAR ? BAR : b === OFF ? OFF : 25 - b!,
+      from: toViewerPoint(a!),
+      to: toViewerPoint(b!),
     }));
   }, [lastOppMove, you]);
   // Trails stay until this player rolls (§3.3 turn.moved row).
@@ -877,15 +876,7 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
 
   // MA-19: waiting for a human opponent to join before the first roll.
   const waitingJoin = Boolean(
-    view &&
-      view.status === "active" &&
-      view.gameNo === 1 &&
-      view.phase === "opening" &&
-      !view.dice &&
-      oppInfo &&
-      !oppInfo.is_bot &&
-      !oppInfo.connected &&
-      snap.history.every((h) => h.kind === "game"),
+    view && isWaitingForOpponent(view, oppInfo ?? null, snap.history.filter((h) => h.kind !== "game").length),
   );
 
   // MA-13a: between games.
