@@ -164,6 +164,15 @@ class MatchRulesOut(_Model):
     payout: int  # what the match winner receives (0 when there is no entry fee)
 
 
+class HistoryEntryOut(_Model):
+    """One turn of the current game, oldest first (match.md MA-04): a move, a pass, or a cube action."""
+
+    player: int
+    dice: list[int]
+    moves: list[list[int]]
+    cube: Literal["offer", "take", "drop"] | None
+
+
 class MatchStateOut(_Model):
     match_id: str
     status: Literal["active", "finished", "aborted", "voided"]
@@ -192,6 +201,7 @@ class MatchStateOut(_Model):
     spectators: int
     rules: MatchRulesOut
     grace: list[int | None]  # per side: epoch ms when an absent player forfeits (or the match aborts)
+    history: list[HistoryEntryOut] = Field(default_factory=list)  # turns of the current game
 
 
 class TurnRolledOut(_Model):

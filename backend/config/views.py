@@ -62,5 +62,11 @@ def public_config(request: Request) -> Response:
             },
             "allowed_lengths": registry.get("game.allowed_lengths"),
             "tiers": registry.get("table.tiers"),
+            # §9: bot matches are free unless the admin sets an entry; the app shows the cost first.
+            "bot_entry": {
+                "enabled": bool(registry.get("bot.entry_enabled")),
+                "entry": registry.get("bot.entry_coins") if registry.get("bot.entry_enabled") else 0,
+                "prize": registry.get("bot.prize_coins") if registry.get("bot.entry_enabled") else 0,
+            },
         }
     )

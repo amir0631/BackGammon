@@ -134,6 +134,12 @@ def withdraw_window(user: User) -> Window:
     return _window(list(rows), registry.get("withdraw.daily_max_coins"))
 
 
+def _withdraw_blocked(user: User) -> bool:
+    from antifraud.rules import has_open_flag
+
+    return has_open_flag(user.id)
+
+
 def summary(user: User) -> dict[str, Any]:
     wallet = ledger.ensure_wallet(user.id)
     locked_bonus = bonus_locked(user, wallet.balance)
@@ -155,6 +161,8 @@ def summary(user: User) -> dict[str, Any]:
             # How the user confirms a withdrawal: an SMS code, or the password while SMS is off.
             "confirm": "sms" if sms.enabled() else "password",
             "expected_by": next_working_day(timezone.now()).isoformat(),
+            # §7.12: an open anti-fraud flag blocks withdrawals; the app says so before the form.
+            "blocked": _withdraw_blocked(user),
         },
         "coin_price_toman": registry.get("coin.price_toman"),
     }

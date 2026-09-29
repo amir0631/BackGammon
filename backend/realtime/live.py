@@ -864,8 +864,25 @@ def snapshot(live: Live, you: int | None) -> dict[str, Any]:
         "spectators": live.spectators,
         "rules": rules_payload(live),
         "grace": [None if g is None else int(g * 1000) for g in live.grace],
+        "history": _history(live),
     }
     return protocol.MatchStateOut.model_validate(body).model_dump(mode="json")
+
+
+def _history(live: Live) -> list[dict[str, Any]]:
+    """The current game's turns from the move record, so a reconnect or reload keeps MA-04 whole."""
+    if live.game_pk is None:
+        return []
+    rows = Move.objects.filter(game_id=live.game_pk).order_by("seq")
+    return [
+        {
+            "player": m.player,
+            "dice": list(m.dice or []),
+            "moves": m.moves_json or [],
+            "cube": m.cube_action or None,
+        }
+        for m in rows
+    ]
 
 
 def _payout(live: Live, pot: int, rake_pct: int) -> int:

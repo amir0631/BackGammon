@@ -34,6 +34,9 @@ class BotMatchSerializer(serializers.Serializer[Any]):
     level = serializers.ChoiceField(choices=["easy", "medium", "hard"])
     variant = serializers.ChoiceField(choices=Match.Variant.choices)
     length = serializers.IntegerField()
+    # The entry the player confirmed (§9, §21.2: cost shown before confirming). A different current
+    # entry is refused with BOT_ENTRY_CHANGED, so a setting change never charges anyone unseen.
+    entry = serializers.IntegerField(required=False, default=0, min_value=0)
 
 
 class BotMatchView(APIView):
@@ -53,6 +56,8 @@ class BotMatchView(APIView):
         if (running := active_match(user)) is not None:
             raise errors.MatchInProgress(details={"match_id": str(running.id)})
         entry = registry.get("bot.entry_coins") if registry.get("bot.entry_enabled") else 0
+        if entry != d["entry"]:
+            raise errors.BotEntryChanged(details={"entry": entry, "prize": registry.get("bot.prize_coins")})
         with transaction.atomic():
             if entry:
                 # §9: a small fixed entry and a fixed prize; nothing if the match never starts.

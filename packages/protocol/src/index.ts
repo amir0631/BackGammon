@@ -185,7 +185,13 @@ export interface WalletSummary {
   transferable: number;
   transfer: RollingWindow;
   /** `confirm`: an SMS code, or the account password while SMS is off. */
-  withdraw: RollingWindow & { confirm: "sms" | "password"; /** ISO date: next Iranian working day. */ expected_by: string };
+  withdraw: RollingWindow & {
+    confirm: "sms" | "password";
+    /** ISO date: next Iranian working day. */
+    expected_by: string;
+    /** An open anti-fraud flag blocks withdrawals (§7.12); say so before the form. */
+    blocked: boolean;
+  };
   coin_price_toman: number;
 }
 
@@ -884,4 +890,6 @@ export interface PublicConfig {
   username_change: { cost: number; cooldown_days: number };
   allowed_lengths: number[];
   tiers: number[];
+  /** §9: bot matches are free unless enabled; show the cost and pass `entry` to startBot. */
+  bot_entry: { enabled: boolean; entry: number; prize: number };
 }

@@ -25,10 +25,19 @@ def test_bot_match_plays_to_the_end(clock, published, django_capture_on_commit_c
         fund(user, 100)
     c = APIClient()
     c.force_authenticate(user=user)
+    config = c.get("/api/v1/config").json()["bot_entry"]
+    assert config == (
+        {"enabled": True, "entry": 10, "prize": 15} if paid else {"enabled": False, "entry": 0, "prize": 0}
+    )
+    body = {"level": "medium", "variant": "standard_cube", "length": 1}
+    if paid:
+        # A client that didn't show the cost (no entry, or a stale one) charges nothing.
+        refused = c.post("/api/v1/matches/bot", body, format="json")
+        assert refused.status_code == 409 and refused.json()["code"] == "BOT_ENTRY_CHANGED"
+        assert refused.json()["details"]["entry"] == 10
+        assert c.get("/api/v1/wallet").json()["balance"] == 100
     with django_capture_on_commit_callbacks(execute=True):
-        res = c.post(
-            "/api/v1/matches/bot", {"level": "medium", "variant": "standard_cube", "length": 1}, format="json"
-        )
+        res = c.post("/api/v1/matches/bot", {**body, "entry": config["entry"]}, format="json")
     assert res.status_code == 201, res.json()
     mid = res.json()["match_id"]
     assert (

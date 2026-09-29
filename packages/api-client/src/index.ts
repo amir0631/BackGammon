@@ -358,10 +358,12 @@ export const api = {
     get: (id: string, o?: Opts) => apiRequest<MatchSummary & Partial<MyMatchSummary>>(`/matches/${encodeURIComponent(id)}`, o),
     /** Players of the match only (403 for anyone else). */
     replay: (id: string, o?: Opts) => apiRequest<Replay>(`/matches/${encodeURIComponent(id)}/replay`, o),
-    startBot: (level: "easy" | "medium" | "hard", variant: string, length: number) =>
+    /** `entry`: the cost the player confirmed (config.bot_entry.entry, 0 when free); a different
+     * current entry is refused with BOT_ENTRY_CHANGED so nobody is charged unseen (§9). */
+    startBot: (level: "easy" | "medium" | "hard", variant: string, length: number, entry = 0) =>
       apiRequest<{ match_id: string; seed_commit: string; entry: number }>("/matches/bot", {
         method: "POST",
-        body: { level, variant, length },
+        body: { level, variant, length, entry },
       }),
     active: (o?: Opts) => apiRequest<ActiveMatch>("/me/matches/active", o),
   },

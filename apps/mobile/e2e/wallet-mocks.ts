@@ -30,6 +30,7 @@ export function summaryFixture(overrides: Partial<WalletSummary> = {}): WalletSu
       fee_pct: 0,
       confirm: "password",
       expected_by: ymd(1),
+      blocked: false,
     },
     coin_price_toman: 1000,
   };

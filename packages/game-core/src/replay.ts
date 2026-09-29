@@ -83,6 +83,7 @@ function startView(r: Replay): MatchView {
         payout: 0,
       },
       grace: [null, null],
+      history: [],
     },
   });
 }

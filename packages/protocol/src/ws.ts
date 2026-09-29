@@ -53,6 +53,13 @@ export interface GameStartedOut {
   position: string;
 }
 
+export interface HistoryEntryOut {
+  player: number;
+  dice: number[];
+  moves: number[][];
+  cube: "offer" | "take" | "drop" | null;
+}
+
 export interface MatchEndedOut {
   winner: number | null;
   score: number[];
@@ -117,6 +124,7 @@ export interface MatchStateOut {
   spectators: number;
   rules: MatchRulesOut;
   grace: (number | null)[];
+  history: HistoryEntryOut[];
 }
 
 export interface MatchSyncIn {

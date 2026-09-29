@@ -117,12 +117,16 @@ class TestWalletBlocks:
         fund(u, 1000)
         BankAccount.objects.create(user=u, iban=make_iban())
         assert wallet.check_withdrawal(u, 200) == 200
+        assert wallet.summary(u)["withdraw"]["blocked"] is False
         f = rules.flag("engine_assist", u)
+        # The wallet summary says so up front (W-20), before the user fills the form.
+        assert wallet.summary(u)["withdraw"]["blocked"] is True
         with pytest.raises(AppError) as exc:
             wallet.check_withdrawal(u, 200)
         assert exc.value.code == "WITHDRAW_UNDER_REVIEW"
         FraudFlag.objects.filter(pk=f.pk).update(status="dismissed")
         assert wallet.check_withdrawal(u, 200) == 200
+        assert wallet.summary(u)["withdraw"]["blocked"] is False
 
 
 @pytest.mark.django_db

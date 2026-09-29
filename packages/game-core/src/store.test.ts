@@ -48,6 +48,7 @@ function state(overrides: Partial<MatchStateOut> = {}): { type: "match.state"; m
         payout: 0,
       },
       grace: [null, null],
+      history: [],
       spectators: 0,
       ...overrides,
     },

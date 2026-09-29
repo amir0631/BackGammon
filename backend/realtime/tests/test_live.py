@@ -77,6 +77,10 @@ class TestFlow:
         assert moved["player"] == side and moved["moves"] == legal[0] and moved["auto"] is None
         # The event carries the next turn's running clock, so the roller sees their deadline (§5.4).
         assert moved["clock"]["actor"] == 1 - side and moved["clock"]["deadline"] is not None
+        # A full state (reconnect, reload) carries the game's turns so far (match.md MA-04).
+        history = live.state_envelope(mid, a.id)["payload"]["history"]
+        assert history == [{"player": side, "dice": history[0]["dice"], "moves": legal[0], "cube": None}]
+        assert len(history[0]["dice"]) == 2
         other = user_of(1 - side, a, b)
         # A stale seq is ignored and answered with the current state.
         replies = live.handle(mid, other.id, "turn.roll", {}, seq(mid) - 1)

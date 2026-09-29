@@ -46,6 +46,7 @@ export const configFixture = (): PublicConfig => ({
   username_change: { cost: 200, cooldown_days: 30 },
   allowed_lengths: [1, 3, 5, 7, 11],
   tiers: [50, 100, 500, 1000],
+  bot_entry: { enabled: false, entry: 0, prize: 0 },
 });
 
 export interface PlayMockOptions {
@@ -162,6 +163,7 @@ export function stateFixture(overrides: Partial<MatchStateOut> = {}): MatchState
       payout: 180,
     },
     grace: [null, null],
+    history: [],
     ...overrides,
   } as MatchStateOut;
 }
