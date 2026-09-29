@@ -429,7 +429,7 @@ Routing rules (implemented in `packages/device-routing`, enforced in each app's 
 
 Scene
 - React Three Fiber scene with one base board model and one checker model; themes swap materials and textures only.
-- Camera: fixed, top-down with a slight tilt (~15°). No free orbit. The scene lives in `packages/game3d`; each app passes its own camera and framing. Mobile portrait: board rotated 90° to fill the width, checkers at least 44 CSS px wide on a 360 px screen. Desktop and mobile landscape: natural orientation.
+- Camera: fixed, top-down with a slight tilt (~15°). No free orbit. The scene lives in `packages/game3d`; each app passes its own camera and framing. Mobile portrait: board rotated 90° to fill the width, checkers at least 32 CSS px wide at 360 × 800; each point's hit area at least 44 px along the point and 32 px across; the bar and the bear-off trays are whole-region targets; the match screen also offers every legal move as a list of ≥ 44 px controls. Desktop and mobile landscape: natural orientation.
 - Lighting: baked lighting and shadows in textures (lightmaps/AO), at most 2 real-time lights, real-time shadow only under the dice.
 - The 3D canvas holds only the board, checkers, and dice. Player bars, timers, buttons, emojis, and menus are MUI/HTML overlays.
 
@@ -508,7 +508,7 @@ Rules:
 
 - Portrait and landscape supported at every breakpoint; the game screen re-frames the 3D camera on resize and orientation change without reloading the scene or losing state.
 - Use `dvh`/`svh` units, never `100vh`. Respect `env(safe-area-inset-*)` for notches and home indicators.
-- Touch targets ≥ 44 × 44 CSS px; primary game actions (roll, confirm, double) in the bottom 40% of the screen in portrait.
+- Touch targets ≥ 44 × 44 CSS px (board points, bar, and trays follow §11.1 instead); primary game actions (roll, confirm, double) in the bottom 40% of the screen in portrait.
 - Mouse and keyboard also work on `m.` (hover states, keyboard shortcuts from §11.0) since desktop users use it in Phase 1.
 - Text scales to 200% (browser zoom and OS font size) without clipping or horizontal scroll.
 - Foldables and split-screen: layout must survive width changes at runtime.
