@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { TournamentReadyHost } from "@/features/tournaments/TournamentReadyHost";
 import { ActiveMatchProvider } from "@/lib/activeMatch";
 import { useTrackInAppNavigation } from "@/lib/inAppNav";
 import { LocaleSwitchProvider } from "@/lib/locale";
@@ -10,7 +11,8 @@ import { WalletProvider } from "@/lib/wallet";
 
 /**
  * App-wide client state below the theme: language switching, the signed-in user, the wallet
- * summary, the running match for the resume banner, and the shared game socket.
+ * summary, the running match for the resume banner, the shared game socket, and the tournament
+ * "match ready" dialog (TO-08), which must reach every route.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   useTrackInAppNavigation();
@@ -22,7 +24,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <SessionProvider>
         <WalletProvider>
           <ActiveMatchProvider>
-            <SocketProvider>{children}</SocketProvider>
+            <SocketProvider>
+              {children}
+              {/* TO-08 on every route, including the spectator view (review TO-01). */}
+              <TournamentReadyHost />
+            </SocketProvider>
           </ActiveMatchProvider>
         </WalletProvider>
       </SessionProvider>

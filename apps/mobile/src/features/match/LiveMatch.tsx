@@ -30,6 +30,8 @@ import { mqXs, safeInsetBottom, safeInsetTop, visuallyHidden } from "@/theme/lay
 import { useReducedMotion } from "@/theme/motion";
 import { tokensOf } from "@/theme/theme";
 import { useGameLabels } from "../play/labels";
+import { TournamentReadyNotice } from "../tournaments/TournamentReadyDialog";
+import { usePlayerMatchMark } from "../tournaments/readyStore";
 import { BoardStage, loadPhysics } from "./BoardStage";
 import { MatchLoader } from "./MatchLoader";
 import { MatchOverlays, type SheetKind } from "./MatchOverlays";
@@ -246,6 +248,8 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
   const { prefs, set: setPref } = usePrefs();
   const socket = useGameSocket();
   const { refresh: refreshActive, clear: clearActive } = useActiveMatch();
+  // TO-08 turns into the in-match notice while this screen is up (tournaments.md §3.6 step 2).
+  usePlayerMatchMark(matchId);
   const [store, setStore] = useState(() => (socket.match?.matchId === matchId ? socket.match : null));
   const snap = useMatchSnapshot(store);
   const view = snap.view;
@@ -1105,7 +1109,10 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
         </IconButton>
       </TopStrip>
 
-      <div className="m-opp">{view && barFor(opp)}</div>
+      <div className="m-opp">
+        <TournamentReadyNotice matchId={matchId} />
+        {view && barFor(opp)}
+      </div>
       <div className="m-own">{view && you !== null && barFor(you)}</div>
       </div>
 

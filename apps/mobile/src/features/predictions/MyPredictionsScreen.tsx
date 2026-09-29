@@ -241,7 +241,6 @@ export function MyPredictionsScreen() {
           </>
         )}
       </Stack>
-      <Box className="detail-context" />
     </DetailColumns>
   );
 }

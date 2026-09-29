@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INSTALL_RESHOW_MS, installBannerDue, installPlatform, isInstallHost, recordInstallShow } from "./install";
+import { INSTALL_RESHOW_MS, installBannerDue, installPlatform, isInstallHost, pushOfferable, recordInstallShow } from "./install";
 
 describe("install banner rules", () => {
   it("shows on the first visit, again after 7 days, at most 3 times", () => {
@@ -25,5 +25,20 @@ describe("install banner rules", () => {
     expect(isInstallHost("/play")).toBe(true);
     expect(isInstallHost("/match/abc")).toBe(false);
     expect(isInstallHost("/wallet/transfer")).toBe(false);
+  });
+});
+
+describe("push explanation after the first registration (review TO-03)", () => {
+  const base = { asked: false, permission: "default" as const, pushManager: true, standalone: false, userAgent: "Android Chrome" };
+  it("offers once, only while the browser can still ask", () => {
+    expect(pushOfferable(base)).toBe(true);
+    expect(pushOfferable({ ...base, asked: true })).toBe(false);
+    expect(pushOfferable({ ...base, permission: "denied" })).toBe(false);
+    expect(pushOfferable({ ...base, permission: "granted" })).toBe(false);
+    expect(pushOfferable({ ...base, pushManager: false })).toBe(false);
+  });
+  it("on iOS only inside the installed app", () => {
+    expect(pushOfferable({ ...base, userAgent: "iPhone Safari" })).toBe(false);
+    expect(pushOfferable({ ...base, userAgent: "iPhone Safari", standalone: true })).toBe(true);
   });
 });

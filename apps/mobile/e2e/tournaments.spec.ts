@@ -43,6 +43,16 @@ async function open(page: Page, baseURL: string | undefined, path: string, onJoi
         ...playHandlers(),
         "GET /tournaments": { status: 200, body: { results: [tour({}), tour({ id: 12, name: { fa: "", en: "Free Friday" }, entry: 0, prizes: [0, 0, 0, 0] })], next: null } },
         "GET /tournaments/11": { status: 200, body: tour({}) as unknown as Record<string, unknown> },
+        "GET /tournaments/13": { status: 200, body: tour({ id: 13, status: "finished", joined: true, round: 3, my_place: 3, my_prize: 90 }) as unknown as Record<string, unknown> },
+        "GET /tournaments/13/bracket": {
+          status: 200,
+          body: {
+            slots: [
+              { round: 1, position: 0, players: ["tester1", "x"], winner: "tester1", match_id: null, score: [3, 1], live: false },
+              { round: 2, position: 0, players: ["tester1", "y"], winner: "y", match_id: null, score: [1, 3], live: false },
+            ],
+          },
+        },
         "POST /tournaments/11/join": () => {
           onJoin?.();
           return { status: 201, body: tour({ joined: true, entries: 6 }) as unknown as Record<string, unknown> };
@@ -77,4 +87,11 @@ test("TO-02 shows the rules and TO-04 the cost before one join", async ({ page, 
   await pay.dblclick();
   await expect(page.getByText("ثبت‌نام کرده‌اید").first()).toBeVisible();
   expect(joins).toBe(1);
+});
+
+test("TO-02 finished shows my_place and my_prize for 3rd place (review TO-02)", async ({ page, baseURL }) => {
+  await open(page, baseURL, "/tournaments/13");
+  await expect(page.getByText("رتبه‌ی شما: سوم").first()).toBeVisible();
+  await expect(page.getByText("+۹۰ سکه جایزه").first()).toBeVisible();
+  await expect(page.getByText(/حذف در دور/)).toHaveCount(0);
 });

@@ -8,6 +8,7 @@ import { useCallback, useState } from "react";
 import { api, isEquippable } from "@bg/api-client";
 import type { ShopItem } from "@bg/protocol";
 import { useToast } from "@/components/feedback/Toast";
+import { BalanceUnknownNote, UnknownValue } from "@/components/money/BalanceUnknown";
 import { ValueRows } from "@/components/money/ValueRows";
 import { BottomSheet } from "@/components/sheet/BottomSheet";
 import { useActiveMatch } from "@/lib/activeMatch";
@@ -73,17 +74,19 @@ export function ShopInsufficientSheet({
 }) {
   const t = useTranslations();
   const router = useRouter();
-  const b = balance ?? 0;
+  // An unread balance is a skeleton with a note, never 0 (SH-01).
+  const known = balance !== null;
   return (
     <BottomSheet open={open} onClose={onClose} title={t("coins.insufficient.title")}>
       <Stack spacing={2}>
         <ValueRows
           rows={[
             { label: t("coins.cost"), value: cost, coins: true, emphasis: true },
-            { label: t("coins.balance"), value: b, coins: true, divider: true },
-            { label: t("coins.shortfall"), value: Math.max(0, cost - b), coins: true, emphasis: true },
+            { label: t("coins.balance"), value: known ? balance : <UnknownValue />, coins: known, divider: true },
+            { label: t("coins.shortfall"), value: known ? Math.max(0, cost - balance) : <UnknownValue />, coins: known, emphasis: true },
           ]}
         />
+        {!known && <BalanceUnknownNote />}
         <Button variant="outlined" onClick={() => router.push(ownedHref)}>
           {t("shop.insufficient.owned")}
         </Button>

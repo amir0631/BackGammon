@@ -43,6 +43,23 @@ export function installPlatform(o: { standalone: boolean; hasPrompt: boolean; us
   return "manual";
 }
 
+/**
+ * TO-07 push explanation after the first tournament registration (tournaments.md §3.3 step 4,
+ * P§15; review TO-03): once per account, only while the browser can still ask (`default`), only
+ * with Web Push available, and on iOS only inside the installed app.
+ */
+export function pushOfferable(o: {
+  asked: boolean;
+  permission: "default" | "granted" | "denied" | null;
+  pushManager: boolean;
+  standalone: boolean;
+  userAgent: string;
+  maxTouchPoints?: number;
+}): boolean {
+  if (o.asked || o.permission !== "default" || !o.pushManager) return false;
+  return installPlatform({ standalone: o.standalone, hasPrompt: false, userAgent: o.userAgent, maxTouchPoints: o.maxTouchPoints }) !== "ios";
+}
+
 /** Screens where the banner may appear: the tab roots (never immersive screens or money flows). */
 export const INSTALL_HOSTS = ["/play", "/live", "/tournaments", "/shop", "/me"] as const;
 

@@ -12,6 +12,7 @@ import {
   myRank,
   parseLiveFilter,
   parseScope,
+  finishedResult,
   personalResult,
   prestartTournament,
   roundName,
@@ -168,6 +169,15 @@ describe("tournament rules", () => {
     expect(personalResult(t, slots, "me").kind).toBe("waiting");
     expect(personalResult(t, [slot(1, 0, "me", "x", "x")], "me")).toEqual({ kind: "out", round: 1 });
     expect(personalResult(t, [slot(2, 0, "me", "y", "me")], "me")).toEqual({ kind: "champion" });
+  });
+
+  it("uses my_place and my_prize for a finished result (review TO-02)", () => {
+    const t = tour({ status: "finished", joined: true, capacity: 4, rounds: 2, prizes: [500, 250, 125, 125], my_place: 3, my_prize: 125 });
+    expect(finishedResult(t, { kind: "out", round: 1 })).toEqual({ kind: "place", place: 3, prize: 125 });
+    const noApi = tour({ status: "finished", joined: true, prizes: [500, 250, 125, 125], my_place: null, my_prize: null });
+    expect(finishedResult(noApi, { kind: "champion" })).toEqual({ kind: "place", place: 1, prize: 500 });
+    expect(finishedResult(noApi, { kind: "out", round: 1 })).toEqual({ kind: "out", round: 1 });
+    expect(finishedResult(noApi, { kind: "none" })).toEqual({ kind: "none" });
   });
 
   it("groups mine and finds the pre-start tournament", () => {

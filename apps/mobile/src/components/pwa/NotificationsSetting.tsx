@@ -1,14 +1,11 @@
 "use client";
 
-import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { subscribePush, unsubscribePush } from "@bg/api-client";
+import { unsubscribePush } from "@bg/api-client";
 import { SwitchRow } from "@/components/forms/SwitchRow";
-import { BottomSheet } from "@/components/sheet/BottomSheet";
 import { swRegistration } from "@/lib/pwa";
+import PushExplainSheet, { type PushOutcome } from "./PushExplainSheet";
 
 // Web Push opt-in (CLAUDE.md §11.5; patterns.md §15; screen-inventory TO-07): asked only after the
 // user turns the switch on, with an explanation sheet first; the browser prompt appears only on
@@ -40,31 +37,20 @@ export function NotificationsSetting() {
     };
   }, []);
 
-  const enable = async () => {
-    setBusy(true);
-    setNote(null);
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setStatus(permission === "denied" ? "denied" : "off");
-        setNote(permission === "denied" ? "denied" : null);
-        return;
-      }
-      const reg = await swRegistration();
-      if (!reg) {
-        setStatus("unsupported");
-        return;
-      }
-      const result = await subscribePush(reg);
-      if (result === "subscribed") {
-        setStatus("on");
-        setNote("on");
-      } else setNote(result === "denied" ? "denied" : result === "disabled" ? "disabled" : "unsupported");
-    } catch {
-      setNote("failed");
-    } finally {
-      setBusy(false);
-      setSheet(false);
+  // The explanation sheet's outcome (the browser prompt appears only after "Allow").
+  const onResult = (outcome: PushOutcome) => {
+    if (outcome === "on") {
+      setStatus("on");
+      setNote("on");
+    } else if (outcome === "denied") {
+      setStatus("denied");
+      setNote("denied");
+    } else if (outcome === "off") {
+      setStatus("off");
+      setNote(null);
+    } else {
+      if (outcome === "unsupported") setStatus("unsupported");
+      setNote(outcome);
     }
   };
 
@@ -98,17 +84,7 @@ export function NotificationsSetting() {
         }}
         note={noteText}
       />
-      <BottomSheet open={sheet} onClose={() => !busy && setSheet(false)} dismissible={!busy} title={t("sheet.title")}>
-        <Stack spacing={2}>
-          <Typography>{t("sheet.body")}</Typography>
-          <Button variant="contained" size="large" loading={busy} onClick={() => void enable()}>
-            {t("sheet.allow")}
-          </Button>
-          <Button variant="text" onClick={() => setSheet(false)} disabled={busy}>
-            {t("sheet.notNow")}
-          </Button>
-        </Stack>
-      </BottomSheet>
+      <PushExplainSheet open={sheet} onClose={() => setSheet(false)} onResult={onResult} />
     </>
   );
 }

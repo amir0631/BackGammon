@@ -139,10 +139,12 @@ export function usePredictionFlow({
   }, [own?.side]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = Boolean(totals?.open) && !ended;
+  // A viewer with PR-01 or PR-02 open, or a stake typed into an always-visible panel, sees
+  // `predict.error.closed` in place until they dismiss it (live.md §3.5 step 7, AC 14; review PR-01).
   const markClosed = useCallback(() => {
     setTotals((x) => (x ? { ...x, open: false } : x));
-    if (!inFlight && (step === "panel" || step === "confirm")) setClosedWhileEntering(true);
-  }, [inFlight, step]);
+    if (!inFlight && (step === "panel" || step === "confirm" || stakeText.trim() !== "")) setClosedWhileEntering(true);
+  }, [inFlight, step, stakeText]);
 
   const applyPool = useCallback(
     (p: PoolUpdateOut) => {
@@ -345,6 +347,7 @@ export function usePredictionFlow({
       if (inFlight) return;
       setStep(null);
       setPlaced(null);
+      setClosedWhileEntering(false);
     },
     openPanel: () => {
       setClosedWhileEntering(false);

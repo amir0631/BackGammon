@@ -15,6 +15,7 @@ import { ChoiceGroup } from "@/components/forms/ChoiceGroup";
 import { FieldError } from "@/components/forms/FieldText";
 import { TextInput } from "@/components/forms/TextInput";
 import { ErrorIcon, InfoIcon } from "@/components/icons";
+import { BalanceUnknownNote, UnknownValue } from "@/components/money/BalanceUnknown";
 import { ValueRows } from "@/components/money/ValueRows";
 import { BottomSheet } from "@/components/sheet/BottomSheet";
 import { InfoLine } from "@/components/wallet/InfoLine";
@@ -55,6 +56,7 @@ export function CoinsPurchase({ packages, onDisabled, onPackageGone }: CoinsPurc
   const [actionError, setActionError] = useState<ReactNode | null>(null);
   const keyRef = useRef<string | null>(null);
   const reasonId = useId();
+  const balanceNoteId = useId();
   const suspended = me?.status === "suspended";
   const balance = wallet.summary?.balance ?? null;
 
@@ -92,7 +94,7 @@ export function CoinsPurchase({ packages, onDisabled, onPackageGone }: CoinsPurc
   };
 
   const pay = async () => {
-    if (inFlight || toman === null) return;
+    if (inFlight || toman === null || balance === null) return;
     keyRef.current ??= newIdempotencyKey();
     setInFlight(true);
     setActionError(null);
@@ -218,7 +220,18 @@ export function CoinsPurchase({ packages, onDisabled, onPackageGone }: CoinsPurc
                 </Typography>
               </Stack>
             )}
-            <Button variant="contained" size="large" fullWidth loading={inFlight} loadingPosition="start" onClick={() => void pay()} disabled={!online}>
+            {/* Never "balance 0" for an unread wallet: skeleton rows, this note, primary disabled (SH-01). */}
+            {balance === null && !inFlight && <BalanceUnknownNote id={balanceNoteId} />}
+            <Button
+              variant="contained"
+              size="large"
+              fullWidth
+              loading={inFlight}
+              loadingPosition="start"
+              onClick={() => void pay()}
+              disabled={!online || (balance === null && !inFlight)}
+              aria-describedby={balance === null && !inFlight ? balanceNoteId : undefined}
+            >
               {t("shop.coins.confirm.cta", { amount: f.number(toman ?? 0) })}
             </Button>
             <Button variant="text" fullWidth onClick={() => setConfirm(false)} disabled={inFlight}>
@@ -232,8 +245,8 @@ export function CoinsPurchase({ packages, onDisabled, onPackageGone }: CoinsPurc
             rows={[
               { label: t("shop.coins.confirm.price"), value: f.toman(toman ?? 0), emphasis: true },
               { label: t("shop.coins.confirm.receive"), value: coins ?? 0, coins: true, emphasis: true },
-              { label: t("coins.balance"), value: balance ?? 0, coins: true, divider: true },
-              { label: t("shop.coins.confirm.balanceAfter"), value: (balance ?? 0) + (coins ?? 0), coins: true },
+              { label: t("coins.balance"), value: balance ?? <UnknownValue />, coins: balance !== null, divider: true },
+              { label: t("shop.coins.confirm.balanceAfter"), value: balance === null ? <UnknownValue /> : balance + (coins ?? 0), coins: balance !== null },
             ]}
           />
           <InfoLine icon={InfoIcon}>{t("shop.coins.confirm.leaving")}</InfoLine>

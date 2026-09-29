@@ -53,7 +53,11 @@ const Detail = styled("div")({
   containerName: "detail",
 });
 
-/** Detail content with an optional context column (profile.md §6 lg). */
+/**
+ * Detail content with an optional context column (profile.md §6 lg). The second track exists only
+ * when a screen renders real `.detail-context` content, so wide screens never show an empty column
+ * (review X-03).
+ */
 export const DetailColumns = styled("div")(({ theme }) => ({
   display: "grid",
   gap: theme.spacing(4),
@@ -61,7 +65,9 @@ export const DetailColumns = styled("div")(({ theme }) => ({
   "& > .detail-main": { minWidth: 0, maxWidth: layout.taskFlowMaxWidth, width: "100%" },
   "& > .detail-context": { display: "none" },
   [`@container detail (min-width: ${CONTEXT_MIN})`]: {
-    gridTemplateColumns: `minmax(0, ${layout.taskFlowMaxWidth}px) minmax(14rem, ${layout.sidePanelWidth}px)`,
+    "&:has(> .detail-context)": {
+      gridTemplateColumns: `minmax(0, ${layout.taskFlowMaxWidth}px) minmax(14rem, ${layout.sidePanelWidth}px)`,
+    },
     "& > .detail-context": { display: "block" },
   },
 }));

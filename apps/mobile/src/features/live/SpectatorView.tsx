@@ -52,6 +52,7 @@ import { usePredictionFlow } from "../predictions/usePredictionFlow";
 
 const LANDSCAPE_PHONE = `@media (orientation: landscape) and (max-height: ${layout.compactHeight - 0.02}px)`;
 const WIDE = `@media (min-width: 900px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`;
+const WIDEST = `@media (min-width: 1280px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`;
 
 const Screen = styled("div")(({ theme }) => {
   const t = tokensOf(theme);
@@ -72,7 +73,7 @@ const Screen = styled("div")(({ theme }) => {
     "& .s-board": { gridArea: "board", minHeight: 0, minWidth: 0, position: "relative" },
     "& .s-own": { gridArea: "own", minWidth: 0, containerType: "inline-size", containerName: "pbar" },
     "& .s-actions": { gridArea: "actions" },
-    "& .s-end": { display: "none" },
+    "& .s-end, & .s-start": { display: "none" },
     [LANDSCAPE_PHONE]: {
       overflowY: "hidden",
       gridTemplateColumns: "minmax(min(10rem, 22vw), min(12rem, 24vw)) minmax(55vw, 1fr) minmax(min(7.5rem, 17vw), min(8.5rem, 20vw))",
@@ -88,6 +89,13 @@ const Screen = styled("div")(({ theme }) => {
       maxWidth: layout.shellMaxWidth,
       marginInline: "auto",
       "& .s-end": { display: "flex", gridArea: "end", borderInlineStart: `1px solid ${t.outlineSubtle}` },
+    },
+    // `lg` (live.md §6, review LV-01): board plus two side panels, no tabs. Start: move history
+    // and the players' reactions log. End: spectators (count, reactions) and the prediction pool.
+    [WIDEST]: {
+      gridTemplateColumns: `${layout.sidePanelWidth}px minmax(0, 1fr) ${layout.sidePanelWidth}px`,
+      gridTemplateAreas: `"start top end" "start banner end" "start opp end" "start board end" "start own end" "start actions end"`,
+      "& .s-start": { display: "flex", gridArea: "start", borderInlineEnd: `1px solid ${t.outlineSubtle}` },
     },
   };
 });
@@ -158,6 +166,8 @@ const Panel = styled("aside")(({ theme }) => ({
 
 type SheetKind = "menu" | "reactions" | "peek";
 
+const REACT_LOG_MAX = 30;
+
 interface LaneEntry {
   id: number;
   key: string;
@@ -188,6 +198,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   const snap = useMatchSnapshot(store);
   const view = snap.view;
   const wide = useMediaQuery(`(min-width: 900px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`);
+  const widest = useMediaQuery(`(min-width: 1280px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`);
 
   const [unavailable, setUnavailable] = useState<SpectateUnavailable | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
@@ -198,6 +209,8 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   const [endTab, setEndTab] = useState(1);
   const [ended, setEnded] = useState<MatchEndedOut | null>(null);
   const [lane, setLane] = useState<LaneEntry[]>([]);
+  /** The players' reactions, newest first, for the `lg` start panel (live.md §6). */
+  const [reactLog, setReactLog] = useState<{ id: number; sender: number; text: string }[]>([]);
   const [recent, setRecent] = useState(0);
   const [reactionsOff, setReactionsOff] = useState(config ? !config.spectator_reactions_enabled : false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
@@ -253,6 +266,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   const loadPool = flow.reload;
   const applyPool = flow.applyPool;
   const closePool = flow.closeNow;
+  const poolWasOpen = Boolean(flow.totals?.open);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 250);
@@ -308,7 +322,10 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
           break;
         case "turn.rolled": {
           const p = env.payload;
-          if (p.opening) closePool();
+          if (p.opening) {
+            if (poolWasOpen) setAnnounce(t("predict.closed"));
+            closePool();
+          }
           if (p.player !== null) setAnnounce(t("match.rolled.theirs", { username: nameOf(p.player), a: f.number(p.dice[0] ?? 0), b: f.number(p.dice[1] ?? 0) }));
           break;
         }
@@ -329,6 +346,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
           const key = Date.now();
           setBubbles((b) => ({ ...b, [p.sender]: { text, key } }));
           setAnnounce(t("match.reactions.received", { username: nameOf(p.sender), text }));
+          setReactLog((log) => [{ id: key, sender: p.sender, text }, ...log].slice(0, REACT_LOG_MAX));
           window.setTimeout(() => setBubbles((b) => (b[p.sender]?.key === key ? { ...b, [p.sender]: null } : b)), 3000);
           break;
         }
@@ -354,7 +372,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
           break;
       }
     },
-    [matchId, onPlayer, onNotLive, join, socket, loadPool, applyPool, closePool, t, f, nameOf, showToast],
+    [matchId, onPlayer, onNotLive, join, socket, loadPool, applyPool, closePool, poolWasOpen, t, f, nameOf, showToast],
   );
   const handleRef = useRef(handle);
   handleRef.current = handle;
@@ -393,10 +411,25 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
 
   const poolOpen = Boolean(predictionsOn && flow.totals?.open && view?.status === "active" && ended === null && flow.blocked !== "player");
   // The panel stays reachable after the close when the viewer has a stake ("Your prediction").
-  const poolVisible = Boolean(predictionsOn && flow.entry && ended === null && flow.blocked !== "player" && (poolOpen || flow.own));
+  // …and stays mounted while PR-01/PR-02 is open or the close notice is unread, so a pool that
+  // closes under the viewer shows "closed, nothing charged" in place instead of vanishing (PR-01).
+  const entering = flow.step !== null || flow.closedWhileEntering;
+  const poolVisible = Boolean(predictionsOn && flow.entry && ended === null && flow.blocked !== "player" && (poolOpen || flow.own || entering));
   const openPredict = () => {
     if (wide) setEndTab(0);
-    else flow.openPanel();
+    flow.openPanel();
+    if (widest) window.requestAnimationFrame(() => document.getElementById("sv-pool")?.scrollIntoView({ block: "nearest" }));
+  };
+  /** R (§6): the picker sheet on phones, the reactions tab at `md`, the always-visible grid at `lg`. */
+  const openReactions = () => {
+    if (widest) document.querySelector<HTMLButtonElement>("#sv-react-grid button")?.focus();
+    else if (wide) setEndTab(2);
+    else setSheet("reactions");
+  };
+  const selectEndTab = (v: number) => {
+    setEndTab(v);
+    if (v === 0) flow.openPanel();
+    else if (tabValue === 0) flow.dismiss();
   };
   const reconnecting = (socket.status === "reconnecting" || !online) && ended === null && unavailable === null;
 
@@ -407,12 +440,12 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
       const target = e.target as HTMLElement | null;
       if (target?.closest("input, textarea, [contenteditable=true]")) return;
       if (e.key.toLowerCase() === "p" && poolVisible) openPredict();
-      else if (e.key.toLowerCase() === "r" && !reactionsOff) setSheet("reactions");
+      else if (e.key.toLowerCase() === "r" && !reactionsOff) openReactions();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poolVisible, reactionsOff, wide]);
+  }, [poolVisible, reactionsOff, wide, widest]);
 
   const leave = () => router.push("/live");
 
@@ -523,7 +556,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
           {t("spectate.reactions.cooldown", { seconds: f.number(cooldown) })}
         </Typography>
       )}
-      <Box role="list" sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(52px, 1fr))", gap: 1 }}>
+      <Box role="list" id="sv-react-grid" sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(52px, 1fr))", gap: 1 }}>
         {FREE_EMOJIS.map((key) => (
           <div role="listitem" key={key}>
             <Button
@@ -703,9 +736,67 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
         </div>
       </ActionRow>
 
-      {wide && (
+      {widest && (
+        <Panel className="s-start" aria-label={t("spectate.menu.moves")}>
+          <section aria-labelledby="sv-start-moves">
+            <Typography id="sv-start-moves" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
+              {t("spectate.menu.moves")}
+            </Typography>
+            <MoveHistory view={view} history={snap.history} you={null} />
+          </section>
+          <section aria-labelledby="sv-start-reactions">
+            <Typography id="sv-start-reactions" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
+              {t("spectate.panel.playerReactions")}
+            </Typography>
+            {reactLog.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                {t("spectate.panel.noReactions")}
+              </Typography>
+            ) : (
+              <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0, display: "grid", gap: 0.5 }}>
+                {reactLog.map((r) => (
+                  <Typography key={r.id} component="li" variant="body2">
+                    {t("match.reactions.received", { username: nameOf(r.sender), text: r.text })}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+          </section>
+        </Panel>
+      )}
+
+      {widest ? (
+        <Panel className="s-end" aria-label={t("spectate.reactions.lane")}>
+          <section aria-labelledby="sv-end-spect">
+            <Typography id="sv-end-spect" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
+              {t("spectate.reactions.lane")}
+            </Typography>
+            <Stack spacing={1.5}>
+              <InfoLine icon={EyeIcon}>{t("spectate.watching", { count })}</InfoLine>
+              <Typography variant="body2" color="text.secondary">
+                {t("spectate.reactions.recent", { count: recent })}
+              </Typography>
+              {reactionsOff ? <InfoLine>{t("spectate.reactions.off")}</InfoLine> : reactionGrid}
+            </Stack>
+          </section>
+          {poolVisible && (
+            <section id="sv-pool" aria-labelledby="sv-end-pool">
+              <Typography id="sv-end-pool" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
+                {flow.own ? t("predict.yourPrediction") : t("predict.title")}
+              </Typography>
+              {poolPanel}
+            </section>
+          )}
+          <section aria-labelledby="sv-end-info">
+            <Typography id="sv-end-info" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
+              {t("spectate.menu.info")}
+            </Typography>
+            {infoPanel}
+          </section>
+        </Panel>
+      ) : wide && (
         <Panel className="s-end" aria-label={t("spectate.menu.info")}>
-          <Tabs value={tabValue} onChange={(_, v: number) => setEndTab(v)} variant="fullWidth" aria-label={t("spectate.menu.info")}>
+          <Tabs value={tabValue} onChange={(_, v: number) => selectEndTab(v)} variant="fullWidth" aria-label={t("spectate.menu.info")}>
             {poolVisible && <Tab value={0} label={flow.own ? t("predict.yourPrediction") : t("predict.button")} />}
             <Tab value={1} label={t("spectate.menu.moves")} />
             <Tab value={2} label={t("spectate.reactions.lane")} />
@@ -798,7 +889,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   );
 }
 
-/** LV-07 (live.md §4): over the lower part of the board; no replay link, no share. */
+/** LV-07 (live.md §4): over the lower part of the board, scrolling within itself when taller; no replay link, no share. */
 function EndedCard({ ended, names, onBack, prediction }: { ended: MatchEndedOut; names: [string, string]; onBack: () => void; prediction: ReactNode }) {
   const t = useTranslations();
   const f = useFormat();
@@ -833,6 +924,12 @@ function EndedCard({ ended, names, onBack, prediction }: { ended: MatchEndedOut;
         boxShadow: 4,
         maxWidth: 480,
         mx: "auto",
+        // Never taller than the board region, whose root clips (overflow: hidden): in landscape
+        // phones and at 200% text the card scrolls inside itself, so the focused heading, the
+        // prediction result, and both buttons stay reachable (live.md AC 22, review LV-02).
+        maxHeight: "calc(100% - 16px)",
+        overflowY: "auto",
+        overscrollBehavior: "contain",
       }}
     >
       <Stack spacing={1}>

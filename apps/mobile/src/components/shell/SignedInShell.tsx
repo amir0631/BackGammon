@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { OfflineBanner, SuspensionBanner } from "@/components/feedback/StatusBanners";
 import { ResumeMatchBanner } from "@/components/play/ResumeMatchBanner";
-import { TournamentPrestartBanner, TournamentReadyDialog } from "@/features/tournaments/TournamentAlerts";
+import { TournamentPrestartBanner } from "@/features/tournaments/TournamentAlerts";
 import { readJson, storageKeys } from "@/lib/storage";
 import { ErrorState } from "@/components/states/ErrorState";
 import { useRequireUser, useSession } from "@/lib/session";
@@ -60,7 +60,6 @@ export function SignedInShell({ topBar, children, hideNav, isStatusPage = false,
           {!isStatusPage && <SuspensionBanner me={me} />}
           {me && <ResumeMatchBanner />}
           {me && <TournamentPrestartBanner />}
-          {me && <TournamentReadyDialog />}
           <OfflineBanner />
           {me && (
             <Suspense fallback={null}>

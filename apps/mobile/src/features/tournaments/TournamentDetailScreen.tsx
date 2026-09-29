@@ -11,11 +11,12 @@ import Typography from "@mui/material/Typography";
 import NextLink from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   api,
   detailRefreshMs,
   finalists,
+  finishedResult,
   newIdempotencyKey,
   personalResult,
   prizePool,
@@ -30,7 +31,7 @@ import { Banner } from "@/components/feedback/Banner";
 import { ConfirmDialog } from "@/components/feedback/ConfirmDialog";
 import { useToast } from "@/components/feedback/Toast";
 import { StickyActions } from "@/components/flow/StickyActions";
-import { ChevronForwardIcon, CoinIcon, ErrorIcon, EyeIcon, HelpIcon, LiveIcon, TournamentsIcon } from "@/components/icons";
+import { ChevronForwardIcon, CoinIcon, ErrorIcon, EyeIcon, LiveIcon, TournamentsIcon } from "@/components/icons";
 import { RatedIcon } from "@/components/icons/game";
 import { CostConfirmation } from "@/components/money/CostConfirmation";
 import { ValueRows } from "@/components/money/ValueRows";
@@ -54,6 +55,9 @@ import { Bracket } from "./Bracket";
 import { NameText, useTournamentName } from "./labels";
 import { refreshMyTournaments } from "./TournamentAlerts";
 import { TournamentStatusChips } from "./TournamentCard";
+
+// TO-07 push explanation, loaded only when offered (review TO-03; §11.4 first-load budget).
+const PushExplainSheet = lazy(() => import("@/components/pwa/PushExplainSheet"));
 
 // TO-02 Tournament detail `/tournaments/[id]` with the Bracket tab (`?tab=bracket`, TO-03), TO-04
 // registration confirmation, and TO-05 leave (tournaments.md §3.2–§3.10). Every rule is visible
@@ -128,6 +132,7 @@ export function TournamentDetailScreen({ id }: { id: number }) {
   const [others, setOthers] = useState<TournamentInfo[] | null>(null);
   const [announce, setAnnounce] = useState("");
   const [hintSeen, setHintSeen] = useState(true);
+  const [pushOffer, setPushOffer] = useState(false);
   const keyRef = useRef<string | null>(null);
   const lastStatus = useRef<string | null>(null);
 
@@ -255,6 +260,7 @@ export function TournamentDetailScreen({ id }: { id: number }) {
       void refreshMyTournaments();
       toast.show({ message: t("tournaments.register.done", { name: name.text }) });
       setAnnounce(t("tournaments.register.done", { name: name.text }));
+      offerPush();
     } catch (e) {
       if (handleAuthError(e)) return;
       const err = toApiError(e);
@@ -286,8 +292,21 @@ export function TournamentDetailScreen({ id }: { id: number }) {
       setSheet(null);
       void wallet.refresh();
       toast.show({ message: t("tournaments.register.done", { name: name.text }) });
+      offerPush();
     }
   };
+
+  /**
+   * TO-07 (§3.3 step 4, P§15; review TO-03): once per account, after the first successful
+   * registration, when push is supported and the browser can still ask. "Not now" asks nothing.
+   */
+  function offerPush() {
+    if (!me) return;
+    void import("@/components/pwa/PushExplainSheet")
+      .then((m) => m.offerPushOnce(String(me.id)))
+      .then((ok) => ok && setPushOffer(true))
+      .catch(() => undefined);
+  }
 
   const leave = async () => {
     if (inFlight) return;
@@ -378,25 +397,19 @@ export function TournamentDetailScreen({ id }: { id: number }) {
     status = <Typography>{t("tournaments.status.watchRunning", { round: f.number(tour.round), rounds: f.number(tour.rounds) })}</Typography>;
   } else if (tour.status === "finished") {
     const top = slots ? finalists(tour, slots) : null;
+    // `my_place` / `my_prize` from the API first, so 3rd and 4th place show their prize (TO-02).
+    const final = finishedResult(tour, result);
     status = (
       <Stack spacing={1}>
-        {result.kind === "champion" && (
+        {final.kind === "place" && (
           <>
             <Typography variant="h4" component="p">
-              {t("tournaments.result.won", { name: name.text })}
+              {final.place === 1 ? t("tournaments.result.won", { name: name.text }) : t("tournaments.result.place", { place: placeName(final.place) })}
             </Typography>
-            {(tour.prizes[0] ?? 0) > 0 && <Typography>{t("tournaments.result.prize", { amount: f.number(tour.prizes[0]!) })}</Typography>}
+            {final.prize > 0 && <Typography>{t("tournaments.result.prize", { amount: f.number(final.prize) })}</Typography>}
           </>
         )}
-        {result.kind === "runnerUp" && (
-          <>
-            <Typography variant="h4" component="p">
-              {t("tournaments.result.place", { place: placeName(2) })}
-            </Typography>
-            {(tour.prizes[1] ?? 0) > 0 && <Typography>{t("tournaments.result.prize", { amount: f.number(tour.prizes[1]!) })}</Typography>}
-          </>
-        )}
-        {result.kind === "out" && <Typography>{t("tournaments.result.outInRound", { round: f.number(result.round) })}</Typography>}
+        {final.kind === "out" && <Typography>{t("tournaments.result.outInRound", { round: f.number(final.round) })}</Typography>}
         {top && <Typography color="text.secondary">{t("tournaments.result.champion", { winner: isolate(top.winner), runnerUp: isolate(top.runnerUp ?? "") })}</Typography>}
       </Stack>
     );
@@ -555,10 +568,7 @@ export function TournamentDetailScreen({ id }: { id: number }) {
                 <dd>{t("tournaments.facts.format", { capacity: f.number(tour.capacity), rounds: f.number(tour.rounds) })}</dd>
                 <dt>{t("tournaments.facts.variant")}</dt>
                 <dd>
-                  {labels.variant(tour.variant)} · {labels.length(tour.length)}{" "}
-                  <Link component={NextLink} href="/help/variants" aria-label={t("common.help")} sx={{ display: "inline-flex", verticalAlign: "middle" }}>
-                    <HelpIcon sx={{ fontSize: iconSize.sm }} />
-                  </Link>
+                  {labels.variant(tour.variant)} · {labels.length(tour.length)}
                 </dd>
                 <dt>{t("tournaments.facts.entry")}</dt>
                 <dd>
@@ -611,10 +621,6 @@ export function TournamentDetailScreen({ id }: { id: number }) {
                     {t("tournaments.liveMatches")}
                   </Link>
                 )}
-                <Link component={NextLink} href="/help/tournaments" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, minHeight: 44 }}>
-                  <HelpIcon sx={{ fontSize: iconSize.sm }} />
-                  {t("common.help")}
-                </Link>
               </Stack>
             </Card>
           </Box>
@@ -664,7 +670,6 @@ export function TournamentDetailScreen({ id }: { id: number }) {
           disabledReason={balance === null ? t("common.loading") : offline ?? undefined}
           error={actionError}
           onCheckStatus={() => void checkStatus()}
-          helpHref="/help/tournaments"
         />
       ) : (
         <BottomSheet
@@ -759,6 +764,11 @@ export function TournamentDetailScreen({ id }: { id: number }) {
           </Button>
         </Stack>
       </BottomSheet>
+      {pushOffer && (
+        <Suspense fallback={null}>
+          <PushExplainSheet open onClose={() => setPushOffer(false)} />
+        </Suspense>
+      )}
     </>,
     name.text,
   );

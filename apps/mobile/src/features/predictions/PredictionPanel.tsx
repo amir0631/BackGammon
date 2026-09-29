@@ -14,7 +14,7 @@ import { iconSize, minTouchTarget, radii } from "@bg/design-tokens";
 import { isolate } from "@bg/i18n";
 import type { PredictionRow } from "@bg/protocol";
 import { ChoiceGroup } from "@/components/forms/ChoiceGroup";
-import { CheckIcon, HelpIcon, InfoIcon, SuccessIcon, WarningIcon } from "@/components/icons";
+import { CheckIcon, InfoIcon, SuccessIcon, WarningIcon } from "@/components/icons";
 import { CostConfirmation } from "@/components/money/CostConfirmation";
 import { ValueRows } from "@/components/money/ValueRows";
 import { Avatar } from "@/components/profile/Avatar";
@@ -146,18 +146,11 @@ export function PredictionPanel({ flow, players, ended }: { flow: PredictionFlow
     );
   }
 
-  const help = (
-    <MuiLink component={NextLink} href="/help/predictions" aria-label={t("common.help")} sx={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: minTouchTarget, minHeight: minTouchTarget }}>
-      <HelpIcon sx={{ fontSize: iconSize.sm }} />
-    </MuiLink>
-  );
+  // The inline rule carries the explanation; no "?" link until /help/* exists (review X-01).
   const rule = (
-    <Stack direction="row" sx={{ alignItems: "flex-start", gap: 0.5 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ flex: "1 1 auto", pt: 1.25 }}>
-        {howItWorks}
-      </Typography>
-      {help}
-    </Stack>
+    <Typography variant="body2" color="text.secondary">
+      {howItWorks}
+    </Typography>
   );
   const staticCards = (
     <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 9rem), 1fr))" }}>
@@ -395,7 +388,6 @@ export function PredictionSheets({
         disabledReason={flow.closedWhileEntering ? t("predict.error.closed") : !online && !flow.inFlight ? t("net.offlineAction") : flow.balance === null ? t("common.loading") : undefined}
         error={errorText}
         onCheckStatus={() => void flow.checkStatus()}
-        helpHref="/help/predictions"
       />
       <BottomSheet open={flow.step === "insufficient"} onClose={flow.dismiss} title={t("coins.insufficient.title")}>
         <Stack spacing={2}>

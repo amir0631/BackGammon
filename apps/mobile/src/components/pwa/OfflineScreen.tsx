@@ -9,9 +9,11 @@ import { useOnline } from "@/lib/useOnline";
 import { safeInsetBottom, safeInsetTop } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
 
-// SY-01 Offline (CLAUDE.md §11.5): shown by the service worker in place of a page that couldn't
-// load. "Try again" reloads the address the user asked for (the worker keeps it), and coming back
-// online retries on its own. Local bot play without a connection is a later step.
+// SY-01 Offline (CLAUDE.md §11.5): a connection-lost screen with a retry, shown by the service
+// worker in place of a page that couldn't load. "Try again" reloads the address the user asked for
+// (the worker keeps it), and coming back online retries on its own. Offline bot play is deferred by
+// the user (§11.5, review PW-01), so nothing here offers it. "Go to the lobby" shows only while the
+// browser reports a connection, since the lobby can't load offline either (review PW-03).
 // Plain elements styled from tokens (no MUI Button/Typography): this fallback page stays tiny and
 // doesn't change how the shared UI chunks split (§11.4 budget).
 
@@ -77,7 +79,7 @@ export function OfflineScreen() {
         <Action as="button" type="button" data-primary="true" onClick={() => window.location.reload()}>
           {t("common.retry")}
         </Action>
-        <Action href="/play">{t("offline.home")}</Action>
+        {online && <Action href="/play">{t("offline.home")}</Action>}
       </div>
     </Main>
   );

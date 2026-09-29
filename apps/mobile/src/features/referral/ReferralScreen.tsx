@@ -2,7 +2,6 @@
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import MuiLink from "@mui/material/Link";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import { styled } from "@mui/material/styles";
@@ -11,10 +10,10 @@ import NextLink from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { api, earningDisplay, groupByDay, localDay, referralRules, type ReferralRule } from "@bg/api-client";
-import { feedbackTiming, iconSize, minTouchTarget, radii } from "@bg/design-tokens";
+import { feedbackTiming, minTouchTarget, radii } from "@bg/design-tokens";
 import { formatPercent, isolate } from "@bg/i18n";
 import type { ReferralEarningRow, ReferralSummary } from "@bg/protocol";
-import { CheckIcon, ClockIcon, CloseIcon, CopyIcon, HelpIcon, InfoIcon, SendIcon } from "@/components/icons";
+import { CheckIcon, ClockIcon, CloseIcon, CopyIcon, InfoIcon, SendIcon } from "@/components/icons";
 import { StatusChip } from "@/components/lists/StatusChip";
 import { DetailColumns } from "@/components/profile/AccountLayout";
 import { BottomSheet } from "@/components/sheet/BottomSheet";
@@ -285,9 +284,6 @@ export function ReferralScreen() {
         <Typography id="rf-rules" variant="h5" component="h2">
           {t("referral.rules.title")}
         </Typography>
-        <MuiLink component={NextLink} href="/help/referral" aria-label={t("common.help")} sx={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: minTouchTarget, minHeight: minTouchTarget }}>
-          <HelpIcon sx={{ fontSize: iconSize.sm }} />
-        </MuiLink>
       </Stack>
       {summary === null ? (
         <Stack spacing={1}>

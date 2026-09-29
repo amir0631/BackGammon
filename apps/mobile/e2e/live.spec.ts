@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { ClientEnvelope, LiveMatchRow } from "@bg/protocol";
-import { horizontalOverflow, smallTargets } from "./checks";
+import { horizontalOverflow, setTextScale, smallTargets } from "./checks";
 import { meFixture, mockApi } from "./mocks";
-import { MATCH_ID, playHandlers, playerFixture, stateFixture } from "./play-mocks";
+import { foundFixture, MATCH_ID, playHandlers, playerFixture, stateFixture } from "./play-mocks";
 
 // Smoke test for live.md: LV-01 list and LV-03 spectator view at 390 × 844 in fa. The socket mock
 // answers `spectate.join` with a `spectate.state` for a non-player (`you: null`).
@@ -127,5 +127,135 @@ test("LV-03 spectator view joins read-only with actions in the bottom 40%", asyn
   await expect(page.getByRole("button", { name: /^(انداختن تاس|تأیید حرکت|برگشت حرکت)$/ })).toHaveCount(0);
   const box = await react.boundingBox();
   expect(box && box.y >= 844 * 0.6).toBe(true);
+  expect(await horizontalOverflow(page)).toBe(0);
+});
+
+test("TO-08 reaches a player watching a match (review TO-01)", async ({ page, baseURL }) => {
+  const server: { push?: (env: unknown) => void; joined?: boolean } = {};
+  await page.routeWebSocket(/\/ws$/, (ws) => {
+    server.push = (env) => ws.send(JSON.stringify(env));
+    ws.onMessage((raw) => {
+      const env = JSON.parse(String(raw)) as ClientEnvelope;
+      if (env.type === "auth") ws.send(JSON.stringify({ type: "auth.ok", match_id: null, seq: 0, payload: { username: "tester1" } }));
+      else if (env.type === "spectate.join") {
+        const state = stateFixture({ you: null, players: [playerFixture({ username: "ali_tbz" }), playerFixture({ username: "mina", avatar: "avatar_05" })] });
+        ws.send(JSON.stringify({ type: "spectate.state", match_id: MATCH_ID, seq: 10, payload: state }));
+        server.joined = true;
+      }
+    });
+  });
+  await open(page, baseURL, `/match/${MATCH_ID}`, {
+    [`GET /matches/${MATCH_ID}`]: {
+      status: 200,
+      body: {
+        id: MATCH_ID, variant: "standard_nocube", length: 3, entry: 100, status: "active", is_bot: false,
+        players: [
+          { username: "ali_tbz", avatar: "avatar_08", elo: 1618, is_bot: false, bot_level: null },
+          { username: "mina", avatar: "avatar_05", elo: 1750, is_bot: false, bot_level: null },
+        ],
+        you: null, winner: null, score: [0, 0], end_reason: null, seed_commit: "9b1f", created_at: "2026-09-28T10:00:00+00:00", ended_at: null,
+      },
+    },
+  });
+  await expect(page.getByRole("button", { name: "واکنش تماشاگر" })).toBeVisible({ timeout: 60_000 });
+  const found = foundFixture({
+    match_id: "c0ffee00-0000-4000-8000-000000000009",
+    entry: 0,
+    opponent: playerFixture({ username: "negar_b" }),
+    tournament: { id: 7, name: { fa: "جام پاییز", en: "Autumn Cup" }, round: 2, rounds: 3 },
+  });
+  await expect.poll(() => server.joined === true, { timeout: 30_000 }).toBe(true);
+  server.push!({ type: "match.found", match_id: null, seq: 0, payload: found });
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog.getByRole("heading", { name: "مسابقه‌ی تورنمنت شما آماده است" })).toBeVisible();
+  await expect(dialog.getByText(/ظرف .* وارد شوید/).first()).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "رفتن به مسابقه" })).toBeVisible();
+});
+
+test("LV-07 match-ended card stays readable in landscape (review LV-02)", async ({ page, baseURL }) => {
+  const server: { push?: (env: unknown) => void; joined?: boolean } = {};
+  await page.routeWebSocket(/\/ws$/, (ws) => {
+    server.push = (env) => ws.send(JSON.stringify(env));
+    ws.onMessage((raw) => {
+      const env = JSON.parse(String(raw)) as ClientEnvelope;
+      if (env.type === "auth") ws.send(JSON.stringify({ type: "auth.ok", match_id: null, seq: 0, payload: { username: "tester1" } }));
+      else if (env.type === "spectate.join") {
+        const state = stateFixture({ you: null, players: [playerFixture({ username: "ali_tbz" }), playerFixture({ username: "mina", avatar: "avatar_05" })] });
+        ws.send(JSON.stringify({ type: "spectate.state", match_id: MATCH_ID, seq: 10, payload: state }));
+        server.joined = true;
+      }
+    });
+  });
+  await open(page, baseURL, `/match/${MATCH_ID}`, {
+    [`GET /matches/${MATCH_ID}`]: {
+      status: 200,
+      body: {
+        id: MATCH_ID, variant: "standard_nocube", length: 3, entry: 100, status: "active", is_bot: false,
+        players: [
+          { username: "ali_tbz", avatar: "avatar_08", elo: 1618, is_bot: false, bot_level: null },
+          { username: "mina", avatar: "avatar_05", elo: 1750, is_bot: false, bot_level: null },
+        ],
+        you: null, winner: null, score: [0, 0], end_reason: null, seed_commit: "9b1f", created_at: "2026-09-28T10:00:00+00:00", ended_at: null,
+      },
+    },
+  });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.getByRole("button", { name: "واکنش تماشاگر" })).toBeVisible({ timeout: 60_000 });
+  await expect.poll(() => server.joined === true, { timeout: 30_000 }).toBe(true);
+  server.push!({ type: "match.ended", match_id: MATCH_ID, seq: 11, payload: { winner: 0, score: [3, 1], reason: "points", seed: "ab", elo: null, xp: null, settlement: null } });
+  const card = page.locator("[aria-labelledby=sv-ended]");
+  await expect(card).toBeVisible();
+  const heading = card.getByRole("heading", { level: 2 });
+  const h = await heading.boundingBox();
+  const c = await card.boundingBox();
+  expect(h && c && h.y >= c.y && h.y + h.height <= 390).toBe(true);
+  const another = card.getByRole("link");
+  await another.scrollIntoViewIfNeeded();
+  await expect(another).toBeInViewport();
+
+  // Portrait at 200% text: the card scrolls inside the board region instead of clipping its top.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setTextScale(page, 200);
+  await heading.focus();
+  const h2 = await heading.boundingBox();
+  const c2 = await card.boundingBox();
+  expect(h2 && c2 && h2.y >= c2.y - 1 && h2.y >= 0 && h2.y + h2.height <= 844).toBe(true);
+  const back = card.getByRole("button");
+  await back.scrollIntoViewIfNeeded();
+  await expect(back).toBeInViewport();
+});
+
+test("LV-03 at 1440 × 900 shows two side panels with reactions and the pool untabbed (review LV-01)", async ({ page, baseURL }) => {
+  const server: { joined?: boolean } = {};
+  await page.routeWebSocket(/\/ws$/, (ws) => {
+    ws.onMessage((raw) => {
+      const env = JSON.parse(String(raw)) as ClientEnvelope;
+      if (env.type === "auth") ws.send(JSON.stringify({ type: "auth.ok", match_id: null, seq: 0, payload: { username: "tester1" } }));
+      else if (env.type === "spectate.join") {
+        const state = stateFixture({ you: null, players: [playerFixture({ username: "ali_tbz" }), playerFixture({ username: "mina", avatar: "avatar_05" })] });
+        ws.send(JSON.stringify({ type: "spectate.state", match_id: MATCH_ID, seq: 10, payload: state }));
+        server.joined = true;
+      }
+    });
+  });
+  await open(page, baseURL, `/match/${MATCH_ID}`, {
+    [`GET /matches/${MATCH_ID}`]: {
+      status: 200,
+      body: {
+        id: MATCH_ID, variant: "standard_nocube", length: 3, entry: 100, status: "active", is_bot: false,
+        players: [
+          { username: "ali_tbz", avatar: "avatar_08", elo: 1618, is_bot: false, bot_level: null },
+          { username: "mina", avatar: "avatar_05", elo: 1750, is_bot: false, bot_level: null },
+        ],
+        you: null, winner: null, score: [0, 0], end_reason: null, seed_commit: "9b1f", created_at: "2026-09-28T10:00:00+00:00", ended_at: null,
+      },
+    },
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole("button", { name: "واکنش تماشاگر" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator("aside:visible")).toHaveCount(2);
+  await expect(page.getByRole("tab")).toHaveCount(0);
+  await expect(page.locator("#sv-react-grid button").first()).toBeVisible();
+  await expect(page.locator("#sv-pool")).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
 });

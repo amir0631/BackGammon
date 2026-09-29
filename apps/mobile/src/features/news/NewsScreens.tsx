@@ -1,6 +1,5 @@
 "use client";
 
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import Skeleton from "@mui/material/Skeleton";
@@ -138,7 +137,6 @@ export function NewsListScreen() {
         <LastUpdated at={news.at} fromCache={news.fromCache} />
         {body}
       </Stack>
-      <Box className="detail-context" />
     </DetailColumns>
   );
 }
@@ -209,7 +207,6 @@ export function NewsItemScreen({ id }: { id: number }) {
         <LastUpdated at={news.at} fromCache={news.fromCache} />
         {content}
       </Stack>
-      <Box className="detail-context" />
     </DetailColumns>
   );
 }

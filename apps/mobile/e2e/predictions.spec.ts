@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import type { ClientEnvelope, PredictionRow } from "@bg/protocol";
 import { horizontalOverflow, smallTargets } from "./checks";
 import { meFixture, mockApi, type Handlers } from "./mocks";
-import { MATCH_ID, playerFixture, playHandlers, stateFixture } from "./play-mocks";
+import { clockFixture, MATCH_ID, playerFixture, playHandlers, stateFixture } from "./play-mocks";
 
 // Smoke tests for predictions.md at 390 × 844 in fa: PR-01 → PR-02 shows the stake, balance, and
 // balance after before paying, sends one POST with an Idempotency-Key, and lands on "Your
@@ -72,6 +72,50 @@ test("PR-01/PR-02 places a prediction with the cost shown first", async ({ page,
   expect(posts[0]!.body).toEqual({ match_id: MATCH_ID, side: 1, amount: 100 });
   await expect(page.getByText(/پیش‌بینی شما: ۱۰۰ سکه روی/)).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
+});
+
+test("PR-01 stays open with 'closed, nothing charged' when the pool closes (review PR-01)", async ({ page, baseURL }) => {
+  const server: { push?: (env: unknown) => void } = {};
+  let posts = 0;
+  await page.routeWebSocket(/\/ws$/, (ws) => {
+    server.push = (env) => ws.send(JSON.stringify(env));
+    ws.onMessage((raw) => {
+      const env = JSON.parse(String(raw)) as ClientEnvelope;
+      if (env.type === "auth") ws.send(JSON.stringify({ type: "auth.ok", match_id: null, seq: 0, payload: { username: "tester1" } }));
+      else if (env.type === "spectate.join") {
+        const state = stateFixture({ you: null, players: [playerFixture({ username: "ali_tbz" }), playerFixture({ username: "mina", avatar: "avatar_05" })] });
+        ws.send(JSON.stringify({ type: "spectate.state", match_id: MATCH_ID, seq: 10, payload: state }));
+      }
+    });
+  });
+  await open(page, baseURL, `/match/${MATCH_ID}`, {
+    [`GET /matches/${MATCH_ID}`]: {
+      status: 200,
+      body: {
+        id: MATCH_ID, variant: "standard_nocube", length: 3, entry: 100, status: "active", is_bot: false,
+        players: [
+          { username: "ali_tbz", avatar: "avatar_08", elo: 1618, is_bot: false, bot_level: null },
+          { username: "mina", avatar: "avatar_05", elo: 1750, is_bot: false, bot_level: null },
+        ],
+        you: null, winner: null, score: [0, 0], end_reason: null, seed_commit: "9b1f", created_at: "2026-09-28T10:00:00+00:00", ended_at: null,
+      },
+    },
+    [`GET /predictions/pool/${MATCH_ID}`]: { status: 200, body: { match_id: MATCH_ID, total_a: 800, total_b: 400, open: true, rake_pct: 10, max_stake_per_user: 1000, max_pool_total: 50000, blocked: null, mine: [] } },
+    "POST /predictions": () => {
+      posts += 1;
+      return { status: 500, body: {} };
+    },
+  });
+  const predict = page.getByRole("button", { name: "پیش‌بینی", exact: true });
+  await expect(predict).toBeVisible({ timeout: 60_000 });
+  await predict.click();
+  const sheet = page.getByRole("dialog");
+  await sheet.locator("label").filter({ hasText: "mina" }).click();
+  await sheet.getByLabel("مبلغ پیش‌بینی (سکه)").fill("50");
+  server.push!({ type: "turn.rolled", match_id: MATCH_ID, seq: 11, payload: { player: null, opening: true, dice: [6, 5], throw_seed: 99, legal: [], clock: clockFixture() } });
+  await expect(sheet.getByText("پیش‌بینی پیش از ثبت مبلغ شما بسته شد. هیچ سکه‌ای کسر نشد.")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "ادامه" })).toHaveCount(0);
+  expect(posts).toBe(0);
 });
 
 test("PR-04 groups stakes per match and links to the accuracy board", async ({ page, baseURL }) => {

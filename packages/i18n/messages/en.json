@@ -54,7 +54,9 @@
     "insufficient": {
       "title": "Not enough coins"
     },
-    "getCoins": "Get coins"
+    "getCoins": "Get coins",
+    "balanceUnknown": "Getting your balance…",
+    "balanceError": "Couldn't get your balance."
   },
   "units": {
     "megabytes": "{value} MB"
@@ -2066,6 +2068,10 @@
       "aborted": "Match cancelled before the first roll.",
       "anotherMatch": "Watch another match",
       "title": "Match over"
+    },
+    "panel": {
+      "playerReactions": "Players' reactions",
+      "noReactions": "No reactions yet."
     }
   },
   "predict": {
@@ -2300,7 +2306,9 @@
       "noCountdown": "Join now. If you don't join in time, you lose this match.",
       "go": "Go to match",
       "notNow": "Not now",
-      "opponent": "Opponent: @{username} · Level {level} · Rating {elo}"
+      "opponent": "Opponent: @{username} · Level {level} · Rating {elo}",
+      "inMatch": "Your tournament match is ready. Join within {time}.",
+      "details": "Details"
     },
     "wait": {
       "won": "You won round {round}. Next: {opponent}. Your match opens automatically when they finish.",

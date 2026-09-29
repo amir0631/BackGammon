@@ -240,7 +240,6 @@ export function MatchHistoryScreen() {
           </>
         )}
       </Stack>
-      <Box className="detail-context" />
     </DetailColumns>
   );
 }

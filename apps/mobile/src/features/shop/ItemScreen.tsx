@@ -364,7 +364,6 @@ export function ItemScreen({ itemId }: { itemId: number }) {
         disabledReason={balance === null ? t("common.loading") : !online ? t("net.offlineAction") : undefined}
         error={buyError}
         onCheckStatus={() => void checkStatus()}
-        helpHref="/help/themes"
       />
 
       <BottomSheet

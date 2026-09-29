@@ -85,3 +85,27 @@ test("CO-02 shows support top-up with no packages while purchase is off", async 
   await expect(page.getByRole("radio")).toHaveCount(0);
   expect(await horizontalOverflow(page)).toBe(0);
 });
+
+test("CO-03 never shows balance 0 while the wallet can't be read (review SH-01)", async ({ page, baseURL }) => {
+  let checkouts = 0;
+  await open(page, baseURL, "/shop/coins", {
+    "GET /shop/packages": {
+      status: 200,
+      body: { enabled: true, price_toman: 1000, custom_min_toman: 10000, custom_max_toman: 10000000, results: [{ id: 1, coins: 100, price_toman: 100000, name: { fa: "", en: "" } }], next: null },
+    },
+    "GET /wallet": { status: 500, body: { code: "SERVER_ERROR", message_key: "errors.generic", details: {} } },
+    "POST /shop/checkout": () => {
+      checkouts += 1;
+      return { status: 500, body: {} };
+    },
+  });
+  await page.getByRole("radio").first().check({ force: true });
+  await page.getByRole("button", { name: "ادامه" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("موجودی شما دریافت نشد.")).toBeVisible();
+  const pay = dialog.getByRole("button", { name: /پرداخت .* تومان با کارت بانکی/ });
+  await expect(pay).toBeDisabled();
+  // No "0" balance: the balance and balance-after values are skeletons, not numbers.
+  await expect(dialog.locator("dd").filter({ hasText: /^\s*۰\s*$/ })).toHaveCount(0);
+  expect(checkouts).toBe(0);
+});

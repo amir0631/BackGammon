@@ -27,7 +27,7 @@ const listeners = new Set<() => void>();
 let started = false;
 let registration: Promise<ServiceWorkerRegistration | null> | null = null;
 
-function isStandalone(): boolean {
+export function isStandalone(): boolean {
   return window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
 

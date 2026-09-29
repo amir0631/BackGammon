@@ -16,7 +16,7 @@ import { api, gainDirection, LEADERBOARD_CACHE_MS, LEADERBOARD_SCOPES, myRank, p
 import { avatarSize, iconSize, layout, radii } from "@bg/design-tokens";
 import { formatPercent, isolate } from "@bg/i18n";
 import type { Leaderboard, LeaderboardRow } from "@bg/protocol";
-import { HelpIcon, InfoIcon } from "@/components/icons";
+import { InfoIcon } from "@/components/icons";
 import { Avatar } from "@/components/profile/Avatar";
 import { SignedInShell } from "@/components/shell/SignedInShell";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -315,12 +315,6 @@ export function LeaderboardScreen() {
               {period && <> {period}</>}
             </span>
           </Typography>
-          {scope === "all" && (
-            <Link component={NextLink} href="/help/rating" sx={{ display: "inline-flex", gap: 0.5, alignItems: "center", alignSelf: "flex-start", minHeight: 44 }}>
-              <HelpIcon sx={{ fontSize: iconSize.sm }} />
-              {t("leaderboard.howRatingsWork")}
-            </Link>
-          )}
         </Stack>
         {list}
         {board && (!online || error) && at !== null && <InfoLine>{t("common.lastUpdated", { time: f.relative(new Date(at)) })}</InfoLine>}

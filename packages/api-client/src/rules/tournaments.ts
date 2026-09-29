@@ -182,6 +182,24 @@ export function personalResult(t: TournamentInfo, slots: readonly BracketSlotInf
   return { kind: "playing", slot };
 }
 
+/**
+ * The TO-02 result card of a finished tournament (tournaments.md §3.7 steps 1–2, UX review TO-02):
+ * the server's `my_place` and `my_prize` when given, so 3rd and 4th place show their prize like the
+ * TO-01 card does; the bracket-derived result only as a fallback.
+ */
+export type FinishedResult =
+  | { kind: "place"; place: number; prize: number }
+  | { kind: "out"; round: number }
+  | { kind: "none" };
+
+export function finishedResult(t: TournamentInfo, fallback: PersonalResult): FinishedResult {
+  if (typeof t.my_place === "number" && t.my_place > 0) return { kind: "place", place: t.my_place, prize: Math.max(0, t.my_prize ?? 0) };
+  if (fallback.kind === "champion") return { kind: "place", place: 1, prize: t.prizes[0] ?? 0 };
+  if (fallback.kind === "runnerUp") return { kind: "place", place: 2, prize: t.prizes[1] ?? 0 };
+  if (fallback.kind === "out") return fallback;
+  return { kind: "none" };
+}
+
 /** Champion and runner-up from the final slot, when decided. */
 export function finalists(t: TournamentInfo, slots: readonly BracketSlotInfo[]): { winner: string; runnerUp: string | null } | null {
   const final = slots.find((s) => s.round === t.rounds && s.position === 0);
