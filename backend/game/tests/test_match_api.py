@@ -120,6 +120,7 @@ def test_live_list_shows_human_matches_only(clock, published, django_capture_on_
         create_match(c, None, "standard_cube", 5, bot_level="easy")
     rows = client(c).get("/api/v1/matches/live").json()["results"]
     assert [r["match_id"] for r in rows] == [str(human.id)]
+    assert rows[0]["pool_open"] is False and rows[0]["tournament"] is None
     assert client(c).get("/api/v1/tiers").json()["results"][0]["entry"] == 50
 
 

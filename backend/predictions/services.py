@@ -61,6 +61,15 @@ def pool_payload(pool: PredictionPool) -> dict[str, Any]:
     }
 
 
+def pool_terms(pool: PredictionPool) -> dict[str, Any]:
+    """The pool's snapshotted terms (§14), so the stake sheet states them before confirming."""
+    return {
+        "rake_pct": pool.rake_pct,
+        "max_stake_per_user": pool.max_stake_per_user,
+        "max_pool_total": pool.max_pool_total,
+    }
+
+
 def blocked(user: User, match: Any) -> str | None:
     """Why this user may not predict on this match (§7.5), or None."""
     if user.id in (match.player_a_id, match.player_b_id):

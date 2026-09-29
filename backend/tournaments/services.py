@@ -304,6 +304,7 @@ def _grant_item(user_id: int, item_id: int) -> None:
 
 def tournament_payload(t: Tournament, user: User | None = None) -> dict[str, Any]:
     count = t.entries.count()
+    entry = t.entries.filter(user=user).first() if user else None
     total = t.entry * t.capacity
     pool = total - total * t.rake_pct // 100
     return {
@@ -321,8 +322,13 @@ def tournament_payload(t: Tournament, user: User | None = None) -> dict[str, Any
         "prize_split": t.prize_split,
         # Prizes when full (the tournament only starts full).
         "prizes": [pool * bp // 10_000 for bp in basis_points(t.prize_split)],
-        "joined": bool(user and t.entries.filter(user=user).exists()),
+        "joined": entry is not None,
         "cancel_reason": t.cancel_reason or None,
+        "rake_pct": t.rake_pct,
+        "prize_items": t.prize_items,
+        # The viewer's own result once decided (null until then).
+        "my_place": entry.place if entry else None,
+        "my_prize": entry.prize if entry and entry.place else None,
     }
 
 

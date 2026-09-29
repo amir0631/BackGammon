@@ -339,13 +339,21 @@ def live_rows(params: Any) -> list[dict[str, Any]]:
             }
         )
     pools = {
-        str(match_id): total_a + total_b
-        for match_id, total_a, total_b in PredictionPool.objects.filter(
+        str(match_id): (total_a + total_b, pool_status == PredictionPool.Status.OPEN)
+        for match_id, total_a, total_b, pool_status in PredictionPool.objects.filter(
             match_id__in=[r["match_id"] for r in rows]
-        ).values_list("match_id", "total_a", "total_b")
+        ).values_list("match_id", "total_a", "total_b", "status")
+    }
+    from tournaments.models import Tournament
+    from tournaments.services import rounds
+
+    tournaments = {
+        t.id: {"id": t.id, "name": t.name_i18n, "round": t.round, "rounds": rounds(t)}
+        for t in Tournament.objects.filter(id__in={r["tournament_id"] for r in rows if r["tournament_id"]})
     }
     for row in rows:
-        row["pool"] = pools.get(row["match_id"], 0)
+        row["pool"], row["pool_open"] = pools.get(row["match_id"], (0, False))
+        row["tournament"] = tournaments.get(row["tournament_id"])
     if (tier := params.get("tier") or "").isdigit():
         rows = [r for r in rows if r["entry"] == int(tier)]
     if variant := params.get("variant"):

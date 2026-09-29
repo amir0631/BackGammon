@@ -4,6 +4,7 @@ from predictions import views
 
 urlpatterns = [
     path("predictions/open", views.OpenPoolsView.as_view()),
+    path("predictions/pool/<uuid:match_id>", views.MatchPoolView.as_view()),
     path("predictions", views.PredictionsView.as_view()),
     path("me/predictions", views.MyPredictionsView.as_view()),
 ]

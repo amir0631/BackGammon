@@ -42,12 +42,35 @@ class OpenPoolsView(APIView):
                         ],
                         "entry": p.match.entry,
                         **services.pool_payload(p),
-                        "max_stake_per_user": p.max_stake_per_user,
+                        **services.pool_terms(p),
                         "blocked": services.blocked(user, p.match),
                     }
                     for p in pools
                 ],
                 "next": None,
+            }
+        )
+
+
+class MatchPoolView(APIView):
+    """One match's pool for the spectator panel (§20.4): totals, terms, whether the caller may
+    predict, and the caller's own stakes. PREDICTION_REFUSED (reason no_pool) when it has none."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request: Request, match_id: str) -> Response:
+        user = _user(request)
+        pool = PredictionPool.objects.select_related("match").filter(match_id=match_id).first()
+        if pool is None:
+            raise services.PredictionError(details={"reason": "no_pool"})
+        mine = Prediction.objects.filter(pool=pool, user=user).order_by("created_at")
+        return Response(
+            {
+                "match_id": str(pool.match_id),
+                **services.pool_payload(pool),
+                **services.pool_terms(pool),
+                "blocked": services.blocked(user, pool.match),
+                "mine": [{"side": m.side, "amount": m.amount, "payout": m.payout} for m in mine],
             }
         )
 

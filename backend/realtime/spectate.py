@@ -82,12 +82,14 @@ async def handle(consumer: "GameConsumer", type_: str, match_id: str | None, pay
     try:
         if type_ == "spectate.join":
             if match_id in watching:
-                return
-            state = await database_sync_to_async(_join)(match_id, viewer)
-            watching.add(match_id)
-            await consumer.channel_layer.group_add(
-                live.group_name(match_id, spectators=True), consumer.channel_name
-            )
+                # Already watching (e.g. the client saw a gap): send a fresh state, count unchanged.
+                state = await database_sync_to_async(live.state_envelope)(match_id, None, True)
+            else:
+                state = await database_sync_to_async(_join)(match_id, viewer)
+                watching.add(match_id)
+                await consumer.channel_layer.group_add(
+                    live.group_name(match_id, spectators=True), consumer.channel_name
+                )
             from realtime import delay
 
             if (held := delay.seconds()) > 0 and viewer is not None:

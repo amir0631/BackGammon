@@ -138,6 +138,11 @@ class TestPools:
             HTTP_IDEMPOTENCY_KEY="p1",
         )
         assert res.status_code == 201 and res.json()["amount"] == 25
+        pool = c.get(f"/api/v1/predictions/pool/{m.id}").json()
+        assert pool["total_b"] == 25 and pool["mine"] == [{"side": 1, "amount": 25, "payout": None}]
+        assert pool["rake_pct"] == 10 and pool["max_pool_total"] > 0 and pool["blocked"] is None
+        other = match()
+        assert c.get(f"/api/v1/predictions/pool/{other.id}").json()["details"]["reason"] == "no_pool"
         other = bettor()
         services.place(other, str(m.id), 0, 25, "x")
         services.settle(m, 1)

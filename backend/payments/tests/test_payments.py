@@ -67,6 +67,17 @@ class TestPurchase:
         assert services.reconcile(date.today()) == []
         assert invariants.check() == []
 
+    def test_suspended_account_cannot_check_out(self):
+        registry.set_value("payments.enabled", True)
+        user = make_user()
+        user.status = "suspended"
+        user.save(update_fields=["status"])
+        c = client(user)
+        package = c.get("/api/v1/shop/packages").json()["results"][0]
+        res = checkout(c, {"package_id": package["id"]})
+        assert res.status_code == 403 and res.json()["code"] == "ACCOUNT_SUSPENDED"
+        assert not Payment.objects.exists()
+
     def test_sandbox_never_pays_in_production(self, settings):
         registry.set_value("payments.enabled", True)
         user = make_user()

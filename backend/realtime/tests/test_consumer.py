@@ -142,6 +142,10 @@ def test_players_play_and_spectator_watches(clock):
         await cw.send_json_to({"type": "spectate.join", "match_id": mid, "seq": 0, "payload": {}})
         spect = await until(cw, "spectate.state")
         assert spect["payload"]["you"] is None and spect["payload"]["spectators"] == 1
+        # Joining again (a client re-sync after a gap) resends the state without counting twice.
+        await cw.send_json_to({"type": "spectate.join", "match_id": mid, "seq": 0, "payload": {}})
+        again = await until(cw, "spectate.state")
+        assert again["payload"]["spectators"] == 1 and again["seq"] == spect["seq"]
         # Spectator sockets are read-only.
         await cw.send_json_to({"type": "turn.roll", "match_id": mid, "seq": spect["seq"], "payload": {}})
         err = await until(cw, "error")

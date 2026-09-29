@@ -26,18 +26,24 @@ def _tournament(tournament_id: int) -> Tournament:
 
 
 class TournamentsView(APIView):
-    """?status=scheduled|running|finished|cancelled (default: scheduled and running)."""
+    """?status=scheduled|running|finished|cancelled (default: scheduled and running); ?joined=1 for
+    the caller's own tournaments."""
 
     permission_classes = (IsAuthenticated,)
 
     def get(self, request: Request) -> Response:
         wanted = request.query_params.get("status")
+        user = _user(request)
         qs = Tournament.objects.order_by("starts_at")
-        if wanted:
+        if request.query_params.get("joined") in {"1", "true"}:
+            # "Mine" in one request: every tournament the caller entered, any status.
+            qs = qs.filter(entries__user=user)
+            if wanted:
+                qs = qs.filter(status=wanted)
+        elif wanted:
             qs = qs.filter(status=wanted)
         else:
             qs = qs.filter(status__in=[Tournament.Status.SCHEDULED, Tournament.Status.RUNNING])
-        user = _user(request)
         return Response({"results": [services.tournament_payload(t, user) for t in qs[:100]], "next": None})
 
 

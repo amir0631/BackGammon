@@ -125,6 +125,10 @@ class TestTournament:
         assert Wallet.objects.get(user=a).balance == 500
         listing = client(e).get("/api/v1/tournaments").json()["results"]
         assert listing[0]["prizes"] == [180, 90, 45, 45]  # 4 x 100, 10% rake, 50/25/12.5/12.5
+        assert listing[0]["rake_pct"] == 10 and listing[0]["my_place"] is None
+        mine = client(b).get("/api/v1/tournaments", {"joined": "1"}).json()["results"]
+        assert [r["id"] for r in mine] == [t.id] and mine[0]["joined"] is True
+        assert client(e).get("/api/v1/tournaments", {"joined": "1"}).json()["results"] == []
         assert invariants.check() == []
 
     def test_split_longer_than_capacity_is_refused(self):

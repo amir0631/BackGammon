@@ -76,6 +76,10 @@ def _coins_for(package_id: int | None, custom_toman: int | None) -> tuple[CoinPa
 def checkout(user: User, package_id: int | None, custom_toman: int | None, surface: str, key: str) -> Payment:
     if not registry.get("payments.enabled"):
         raise PaymentsDisabled()
+    if user.status == User.Status.SUSPENDED:
+        from wallet import errors as wallet_errors
+
+        raise wallet_errors.AccountSuspended()  # §12.1: a suspended account spends nothing
     if surface not in SURFACES:
         surface = "m"
     existing = Payment.objects.filter(user=user, idempotency_key=key).first()
