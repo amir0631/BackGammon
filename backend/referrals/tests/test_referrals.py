@@ -82,6 +82,10 @@ class TestCommission:
         assert (
             summary["code"] == referrer.referral_code and summary["referees"] == 1 and summary["earned"] == 1
         )
-        assert summary["link"].endswith(f"/signup?ref={referrer.referral_code}") and summary["held"] == 0
+        # The root domain: it redirects to the right surface with the query kept (§11.0).
+        assert (
+            summary["link"] == f"http://localhost/signup?ref={referrer.referral_code}"
+            and summary["held"] == 0
+        )
         rows = c.get("/api/v1/me/referral/earnings").json()["results"]
         assert rows[0]["amount"] == 1 and rows[0]["status"] == "paid" and "phone" not in str(rows)

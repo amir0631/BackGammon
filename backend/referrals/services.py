@@ -90,7 +90,7 @@ def summary(user: User) -> dict[str, Any]:
 
     return {
         "code": user.referral_code,
-        "link": f"{settings.URL_SCHEME}://m.{settings.BASE_DOMAIN}/signup?ref={user.referral_code}",
+        "link": f"{settings.URL_SCHEME}://{settings.BASE_DOMAIN}/signup?ref={user.referral_code}",
         "held": held["s"] or 0,
         "referees": referees.count(),
         "active_referees": sum(1 for r in referees if active(r)),
