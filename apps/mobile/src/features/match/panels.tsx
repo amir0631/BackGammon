@@ -28,21 +28,9 @@ import { SeedText } from "./parts";
 // history (MA-04), reactions (MA-05), move entry (MA-18), resign options (MA-08). Container
 // queries, not viewport queries, so each fits a sheet or a 320 px panel.
 
-/** Emoji glyphs for the preset reaction keys (the names are i18n keys `reactions.emoji.<key>`). */
-export const EMOJI: Record<string, string> = {
-  smile: "\u{1F642}",
-  laugh: "\u{1F604}",
-  wow: "\u{1F62E}",
-  sad: "\u{1F61E}",
-  angry: "\u{1F620}",
-  thumbs_up: "\u{1F44D}",
-  clap: "\u{1F44F}",
-  fire: "\u{1F525}",
-  think: "\u{1F914}",
-  cool: "\u{1F60E}",
-};
-export const FREE_EMOJIS = Object.keys(EMOJI);
-export const FREE_PHRASES = ["hello", "good_luck", "nice_move", "well_played", "thanks", "oops", "hurry", "good_game"];
+import { EMOJI } from "./emoji";
+
+export { EMOJI, FREE_EMOJIS, FREE_PHRASES } from "./emoji";
 
 export function useNames(v: MatchView | null) {
   const labels = useGameLabels();

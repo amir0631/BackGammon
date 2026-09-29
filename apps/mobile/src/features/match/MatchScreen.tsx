@@ -28,13 +28,15 @@ import { useGameSocket } from "@/lib/socket";
 import { useFormat } from "@/lib/useFormat";
 import { supportsWebGL2 } from "@/lib/webgl";
 import { gutterStyles } from "@/theme/layout";
+import { usePublicConfig } from "@/lib/config";
+import { SpectateUnavailableView, SpectatorView } from "../live/SpectatorView";
 import { useGameLabels } from "../play/labels";
 import { LiveMatch } from "./LiveMatch";
 
 // `/match/[id]` (match.md §3.1): `GET matches/{id}` picks the view: the live game for a player of
 // an active match (MA-01 → MA-02), MA-17 without WebGL2, MA-14 for a finished, aborted, or voided
-// match, the not-found variant, and a summary for non-players (the spectator view comes with
-// live.md). A match this tab just created or joined opens at once.
+// match, the not-found variant, and the spectator view (live.md LV-03) for a non-player of an active
+// human match (`you: null`, live.md §10 Q14). A match this tab just created or joined opens at once.
 
 type Summary = MatchSummary & Partial<MyMatchSummary>;
 
@@ -46,7 +48,10 @@ export function MatchScreen({ matchId, openCancel, forceSummary }: { matchId: st
   const [error, setError] = useState<ApiError | null>(null);
   const [fresh, setFresh] = useState<{ found: MatchFoundOut | null } | null | undefined>(undefined);
   const [webgl, setWebgl] = useState(true);
-  const attached = socket.match?.matchId === matchId;
+  /** `spectate.join` answered `player`: this account plays here after all (live.md §3.2 step 3). */
+  const [forcePlayer, setForcePlayer] = useState(false);
+  const config = usePublicConfig();
+  const attached = socket.match?.matchId === matchId && !socket.spectating;
 
   useEffect(() => {
     setFresh(readFreshMatch(matchId));
@@ -66,7 +71,7 @@ export function MatchScreen({ matchId, openCancel, forceSummary }: { matchId: st
 
   if (fresh === undefined || !me) return null;
 
-  const live = !forceSummary && webgl && (attached || Boolean(fresh) || (summary !== null && summary.you !== null && summary.status === "active"));
+  const live = !forceSummary && webgl && (forcePlayer || attached || Boolean(fresh) || (summary !== null && summary.you !== null && summary.status === "active"));
   if (live) {
     return <LiveMatch key={matchId} matchId={matchId} fresh={Boolean(fresh) && !attached} openCancel={openCancel} header={<LoaderHeader summary={summary} found={fresh?.found ?? null} />} />;
   }
@@ -81,6 +86,13 @@ export function MatchScreen({ matchId, openCancel, forceSummary }: { matchId: st
     );
   }
   if (summary.status === "active" && summary.you !== null && !webgl) return <Unsupported matchId={matchId} inMatch summary={summary} onEnded={load} />;
+  if (summary.status === "active" && summary.you === null && !forceSummary) {
+    // Spectator (live.md LV-03). Bots are never spectated; spectating off or no WebGL2 → LV-06 / MA-17.
+    if (summary.is_bot) return <SpectateUnavailableView kind="notLive" />;
+    if (config && !config.spectating_enabled) return <SpectateUnavailableView kind="disabled" />;
+    if (!webgl) return <Unsupported matchId={matchId} inMatch={false} />;
+    return <SpectatorView key={matchId} matchId={matchId} summary={summary} onPlayer={() => setForcePlayer(true)} onNotLive={load} />;
+  }
   return <FinishedSummary summary={summary} />;
 }
 

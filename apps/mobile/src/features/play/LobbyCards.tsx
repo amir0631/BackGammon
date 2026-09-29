@@ -7,6 +7,7 @@ import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
+import NextLink from "next/link";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { avatarSize, iconSize, minTouchTarget, radii } from "@bg/design-tokens";
@@ -17,8 +18,7 @@ import { Avatar } from "@/components/profile/Avatar";
 import { useFormat } from "@/lib/useFormat";
 import { tokensOf } from "@/theme/theme";
 
-// PL-01 cards (play.md §4). The rank card has no "Leaderboard" link until `/leaderboard` ships
-// (review P-07: no link may lead to a 404). A tier card is one focus stop whose accessible name is `play.tier.label`;
+// PL-01 cards (play.md §4). The rank card links to `/leaderboard` (leaderboard.md §2). A tier card is one focus stop whose accessible name is `play.tier.label`;
 // its "Play" pill is part of the card (the card is the action). Unaffordable cards say so with an
 // icon and text but stay tappable (PL-05 explains). Coin tables and practice have equal weight.
 
@@ -185,6 +185,9 @@ export function RankCard({ elo, level, children }: { elo: number | null; level: 
           </Typography>
         )}
         {children}
+        <Button variant="text" component={NextLink} href="/leaderboard" sx={{ alignSelf: "flex-start", minHeight: minTouchTarget }}>
+          {t("leaderboard")}
+        </Button>
       </Stack>
     </Card>
   );

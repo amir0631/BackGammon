@@ -732,6 +732,8 @@ export interface LeaderboardRow {
   avatar: string;
   level: number;
   value: number;
+  /** Predict board only: settled predictions counted for the accuracy. */
+  count?: number;
 }
 
 export interface Leaderboard {

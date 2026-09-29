@@ -49,10 +49,17 @@ interface SocketValue {
    * first attach, so routes without a match don't carry it (§11.4 JS budget).
    */
   attach: (matchId: string) => Promise<MatchStore>;
-  /** Stop following the attached match (after it ended and the screen closed). */
+  /**
+   * Watch a match as a spectator (live.md §3.2): `spectate.join`, then `spectate.state` and the
+   * players' event stream into the returned store. Replaces any attached match.
+   */
+  spectate: (matchId: string) => Promise<MatchStore>;
+  /** Stop following the attached match (after it ended and the screen closed); spectators send `spectate.leave`. */
   detach: () => void;
   /** The attached match's store, if any. */
   match: MatchStore | null;
+  /** The attached store is a spectator's (read-only). */
+  spectating: boolean;
 }
 
 const SocketContext = createContext<SocketValue | null>(null);
@@ -72,6 +79,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SocketState>("idle");
   const [attempt, setAttempt] = useState(0);
   const [match, setMatch] = useState<MatchStore | null>(null);
+  const [spectating, setSpectating] = useState(false);
+  const spectatingRef = useRef(false);
   const socketRef = useRef<GameSocket | null>(null);
   const matchRef = useRef<MatchStore | null>(null);
   const listeners = useRef(new Set<Listener>());
@@ -82,8 +91,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     const socket = socketRef.current;
     if (store && socket && env.match_id === store.matchId) {
       const { result, seq } = store.handle(env);
-      if (result === "sync") socket.attach(store.matchId, seq);
-      else if (result === "applied") socket.setLastSeq(seq);
+      // A spectator leaves and re-joins for a fresh `spectate.state` (spectators have no
+      // match.sync, and the server ignores a join while already watching).
+      if (result === "sync") {
+        if (spectatingRef.current) {
+          socket.leave();
+          socket.spectate(store.matchId);
+        } else {
+          socket.attach(store.matchId, seq);
+        }
+      } else if (result === "applied") socket.setLastSeq(seq);
     }
     listeners.current.forEach((fn) => fn(env));
   }, []);
@@ -127,7 +144,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socketRef.current?.close();
       socketRef.current = null;
       matchRef.current = null;
+      spectatingRef.current = false;
       setMatch(null);
+      setSpectating(false);
       setStatus("idle");
       setAttempt(0);
     };
@@ -158,6 +177,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       attach: async (matchId) => {
         const [socket, { MatchStore }] = await Promise.all([ensure(), import("./match/store")]);
         let store = matchRef.current;
+        if (spectatingRef.current) {
+          socket.leave();
+          spectatingRef.current = false;
+          setSpectating(false);
+          store = null;
+        }
         if (!store || store.matchId !== matchId) {
           store = new MatchStore(matchId);
           matchRef.current = store;
@@ -168,14 +193,31 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         }
         return store;
       },
+      spectate: async (matchId) => {
+        const [socket, { MatchStore }] = await Promise.all([ensure(), import("./match/store")]);
+        let store = matchRef.current;
+        if (!store || store.matchId !== matchId || !spectatingRef.current) {
+          if (store && !spectatingRef.current) socket.leave();
+          store = new MatchStore(matchId);
+          matchRef.current = store;
+          spectatingRef.current = true;
+          setSpectating(true);
+          setMatch(store);
+        }
+        socket.spectate(matchId);
+        return store;
+      },
       detach: () => {
         socketRef.current?.leave();
         matchRef.current = null;
+        spectatingRef.current = false;
         setMatch(null);
+        setSpectating(false);
       },
       match,
+      spectating,
     }),
-    [status, attempt, ensure, userId, match],
+    [status, attempt, ensure, userId, match, spectating],
   );
 
   return (

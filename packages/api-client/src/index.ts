@@ -351,7 +351,7 @@ export const api = {
 
   matches: {
     tiers: (o?: Opts) => apiRequest<Paginated<Tier>>("/tiers", o),
-    live: (filter: { tier?: number; variant?: string; sort?: "spectators" | "pool" | "elo" } = {}, o?: Opts) =>
+    live: (filter: { tier?: number; variant?: string; tournament?: number; sort?: "spectators" | "pool" | "elo" } = {}, o?: Opts) =>
       apiRequest<Paginated<LiveMatchRow>>(`/matches/live${query(filter)}`, o),
     mine: (cursor?: string, o?: Opts) => apiRequest<Paginated<MyMatchSummary>>(`/me/matches${query({ cursor })}`, o),
     /** The personal fields (elo_delta, xp, coins, games) are present only for the match's players. */

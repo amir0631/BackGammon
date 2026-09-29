@@ -32,7 +32,8 @@
     "shop": "Shop",
     "account": "Account",
     "badge": {
-      "withdrawal": "A withdrawal request has an update"
+      "withdrawal": "A withdrawal request has an update",
+      "tournament": "Your tournament match is ready or starting soon"
     }
   },
   "languages": {
@@ -1142,7 +1143,194 @@
         "safety": "Support will never ask for your password or SMS code.",
         "howTitle": "Get coins from support",
         "copyChannel": "Copy support contact"
+      },
+      "title": "Coins",
+      "rate": "1 coin = {price} toman",
+      "package": "{coins} coins · {price} toman",
+      "packageLabel": "{coins} coins, {price} toman",
+      "packagesLegend": "Coin packages",
+      "custom": "Custom amount",
+      "customLabel": "Amount (toman)",
+      "customHelper": "Between {min} and {max} toman, in steps of {price}",
+      "customResult": "= {count, plural, one {# coin} other {# coins}}",
+      "useAmount": "Use {amount} toman ({coins} coins)",
+      "continue": "Continue",
+      "reason": {
+        "choose": "Choose a package or a custom amount",
+        "amount": "Enter a valid amount"
+      },
+      "confirm": {
+        "title": "Buy {coins} coins",
+        "price": "Price",
+        "receive": "You receive",
+        "balanceAfter": "Balance after payment is confirmed",
+        "leaving": "You'll leave the app to pay on the bank's secure page (Shaparak). Coins are added after the bank confirms the payment.",
+        "cta": "Pay {amount} toman with bank card"
+      },
+      "error": {
+        "disabled": "Online purchase was just turned off. Nothing was charged.",
+        "range": "The amount must be between {min} and {max} toman.",
+        "multiple": "Enter a multiple of {price} toman.",
+        "invalid": "Enter a whole number of toman.",
+        "package": "This package is no longer available.",
+        "gateway": "The bank gateway isn't responding. Try again later. Nothing was charged."
+      },
+      "result": {
+        "title": "Payment result",
+        "steps": {
+          "label": "Payment steps",
+          "returned": "Returned from the bank",
+          "verifying": "Confirming the payment",
+          "added": "Coins added",
+          "done": "done",
+          "current": "in progress",
+          "todo": "to do"
+        },
+        "pending": {
+          "title": "Waiting for the bank",
+          "body": "We haven't heard back from the bank yet. If you completed the payment, it'll be confirmed shortly."
+        },
+        "verifying": {
+          "title": "Confirming your payment",
+          "body": "This usually takes a few seconds."
+        },
+        "verified": {
+          "title": "{coins} coins added"
+        },
+        "reference": "Reference: {ref}",
+        "card": "Card: {mask}",
+        "failed": {
+          "title": "Payment not completed",
+          "body": "No coins were added. If money was taken from your card, the bank returns it automatically, usually within 72 hours. Keep this reference for support: {id}"
+        },
+        "expired": {
+          "title": "Payment expired",
+          "body": "This payment wasn't completed in time. No coins were added."
+        },
+        "notFound": {
+          "title": "We couldn't find this payment",
+          "body": "If money was taken from your card, contact support."
+        },
+        "offline": "You're offline. We'll check again when you're back.",
+        "backToShop": "Back to shop",
+        "support": "Support: {channel}"
       }
+    },
+    "title": "Shop",
+    "segments": "Shop sections",
+    "segment": {
+      "themes": "Themes",
+      "avatars": "Avatars",
+      "packs": "Packs",
+      "coins": "Coins"
+    },
+    "filter": {
+      "label": "Show",
+      "all": "All",
+      "owned": "Owned"
+    },
+    "hint": {
+      "firstVisit": "Some items are free or unlock as you level up. Buying is always optional."
+    },
+    "group": {
+      "boards": "Boards",
+      "checkers": "Checkers",
+      "emoji": "Emoji packs",
+      "phrase": "Phrase packs",
+      "avatars": "Avatars"
+    },
+    "current": {
+      "title": "Your theme",
+      "change": "Change",
+      "summary": "Board: {board} · Checkers: {checkers}"
+    },
+    "kind": {
+      "board_theme": "Board theme",
+      "checker_theme": "Checker theme",
+      "avatar": "Avatar",
+      "emoji_pack": "Emoji pack",
+      "phrase_pack": "Phrase pack"
+    },
+    "state": {
+      "inUse": "In use",
+      "owned": "Owned",
+      "freeOwned": "Free · Owned",
+      "levelLocked": "Unlocks at level {level}",
+      "yourLevel": "You're level {level}",
+      "price": "{count, plural, one {# coin} other {# coins}}",
+      "prize": "Tournament prize"
+    },
+    "card": {
+      "label": "{name}, {kind}, {state}"
+    },
+    "action": {
+      "use": "Use",
+      "useLabel": "Use {name}",
+      "inUse": "In use",
+      "buy": "Buy · {count, plural, one {# coin} other {# coins}}",
+      "priceLabel": "{name}: {price}, view and buy"
+    },
+    "avatars": {
+      "presetNote": "Free avatars are in Edit profile.",
+      "editProfile": "Edit profile"
+    },
+    "packs": {
+      "intro": "Packs add emojis and phrases you can send in matches.",
+      "sample": "Sample: {sample}"
+    },
+    "preview": {
+      "appliesNext": "Applies from your next match.",
+      "opponentCheckers": "Opponent's checkers use their own theme.",
+      "packUsage": "Usable in your matches. When watching, only the free emojis are available.",
+      "phrasesLocale": "Players see phrases in their own language.",
+      "ownedPack": "You own this pack. It's available in your matches.",
+      "locked": "Unlocks at level {level}. You're level {current}.",
+      "loading": "Loading 3D preview…",
+      "load": "Load 3D preview",
+      "error": "Couldn't load the preview.",
+      "no3d": "3D preview isn't available on this device.",
+      "portrait": "Portrait",
+      "landscape": "Landscape",
+      "framing": "Preview framing",
+      "a11y": "Preview of {name} on the board",
+      "inBar": "In a player bar"
+    },
+    "item": {
+      "unavailable": "This item isn't available.",
+      "backToShop": "Back to shop"
+    },
+    "buy": {
+      "title": "Buy {name}",
+      "keep": "Yours to keep. You can switch anytime.",
+      "packUse": "Usable in all your matches.",
+      "noRefund": "Purchases can't be refunded.",
+      "cta": "Pay {price} coins",
+      "paying": "Paying…",
+      "done": "You own {name}",
+      "useNow": "Use now",
+      "notNow": "Not now",
+      "added": "{name} added to your items."
+    },
+    "equip": {
+      "themeDone": "Theme set. It applies from your next match.",
+      "currentMatch": "Your current match keeps its theme.",
+      "avatarDone": "Avatar changed.",
+      "failed": "That didn't work. Try again."
+    },
+    "insufficient": {
+      "owned": "Free and owned items"
+    },
+    "empty": {
+      "owned": "Only the default items so far.",
+      "showAll": "Show all",
+      "none": "Nothing here yet."
+    },
+    "loadError": "Couldn't load the shop.",
+    "error": {
+      "unavailable": "This item is no longer available. Nothing was charged.",
+      "notForSale": "This item isn't for sale anymore. Nothing was charged.",
+      "notOwned": "You don't own this item.",
+      "priceChanged": "The price changed to {price} coins. Nothing was charged."
     }
   },
   "withdrawals": {
@@ -1625,7 +1813,18 @@
       "clap": "Clap",
       "fire": "Fire",
       "think": "Thinking",
-      "cool": "Cool"
+      "cool": "Cool",
+      "party": "Party",
+      "trophy": "Trophy",
+      "crown": "Crown",
+      "rocket": "Rocket",
+      "star": "Star",
+      "gift": "Gift",
+      "tea": "Tea",
+      "rose": "Rose",
+      "pomegranate": "Pomegranate",
+      "saffron": "Saffron",
+      "kite": "Kite"
     },
     "phrase": {
       "hello": "Hello!",
@@ -1749,5 +1948,365 @@
       "title": "Couldn't load the replay"
     },
     "matchSummary": "Match summary"
+  },
+  "live": {
+    "title": "Live matches",
+    "hint": {
+      "firstVisit": "Watch any live match. When a match has just started you may be able to predict the winner."
+    },
+    "filters": {
+      "button": "Filters",
+      "title": "Filter and sort",
+      "tier": "Table",
+      "tierValue": "{entry}-coin table",
+      "any": "Any",
+      "variant": "Variant",
+      "tournament": "Tournament",
+      "sortTitle": "Sort by",
+      "sort": {
+        "spectators": "Most watched",
+        "pool": "Biggest prediction pool",
+        "elo": "Highest rated"
+      },
+      "tournamentFirst": "Tournament matches always come first.",
+      "apply": "Show matches",
+      "clear": "Clear filters",
+      "remove": "Remove filter {name}",
+      "reset": "Some filters were reset.",
+      "tournamentChip": "Tournament: {name}"
+    },
+    "row": {
+      "tournament": "Tournament",
+      "tournamentRound": "Tournament {name} · Round {round}",
+      "score": "{a} – {b}",
+      "game": "Game {n}",
+      "firstTo": "First to {n}",
+      "spectators": "{count, plural, one {# watching} other {# watching}}",
+      "poolOpen": "Predictions open",
+      "yourMatch": "Your match",
+      "ended": "Ended",
+      "levelElo": "Level {level} · Rating {elo}",
+      "label": "{a} vs {b}, {score}, {meta}"
+    },
+    "newList": "New list available · Show",
+    "refresh": "Refresh",
+    "empty": "No live matches right now.",
+    "emptyAction": "Play a match",
+    "emptyFiltered": "No matches for these filters.",
+    "loadError": "Couldn't load live matches.",
+    "offlineWatch": "Connect to the internet to watch.",
+    "preview": {
+      "watch": "Watch",
+      "empty": "Pick a match to see its summary here.",
+      "title": "Match summary"
+    }
+  },
+  "spectate": {
+    "watching": "{count, plural, one {# watching} other {# watching}}",
+    "label": "Watching",
+    "back": "Back to Live",
+    "menuTitle": "Viewing menu",
+    "menu": {
+      "info": "Match info",
+      "moves": "Move history",
+      "showReactions": "Show spectator reactions",
+      "shortcuts": "Keyboard shortcuts: P predict, R react",
+      "leave": "Stop watching"
+    },
+    "info": {
+      "entry": "Table entry: {entry} coins",
+      "seedCommit": "Fair-dice commitment",
+      "tournament": "Tournament match",
+      "delayed": "Delayed by {seconds} s"
+    },
+    "paused": "Paused, reconnecting",
+    "reconnecting": "Reconnecting… (attempt {n})",
+    "retryNow": "Retry now",
+    "playerDisconnected": "@{username} disconnected · {time} until they forfeit",
+    "playerBack": "@{username} is back",
+    "lastTimeout": "One more timeout ends the match",
+    "board": "Game board (view only)",
+    "barLabel": "{name}, {pips} pips, time {time}, time bank {bank}",
+    "turnOf": "@{username}'s turn",
+    "full": {
+      "title": "This match is full",
+      "body": "It has reached its viewer limit. Try again later or watch another match."
+    },
+    "disabled": {
+      "title": "Watching live matches is turned off",
+      "body": "Live viewing isn't available right now."
+    },
+    "notLive": {
+      "title": "This match isn't live",
+      "body": "It may have ended or can't be watched."
+    },
+    "notFound": {
+      "title": "Match not found",
+      "body": "Check the link, or pick a match from the Live list."
+    },
+    "reactions": {
+      "button": "Spectator reaction",
+      "note": "Only other spectators see these.",
+      "wait": "Wait a moment",
+      "cooldown": "{seconds} s until the next reaction",
+      "off": "Spectator reactions are turned off.",
+      "received": "Spectator reaction: {emoji}",
+      "lane": "Spectator reactions",
+      "recent": "{count, plural, one {# recent reaction} other {# recent reactions}}"
+    },
+    "ended": {
+      "won": "@{username} won the match",
+      "score": "Final score {score}",
+      "reason": {
+        "resign": "by resignation",
+        "timeout": "on time",
+        "disconnect": "by disconnection",
+        "normal": "at the table"
+      },
+      "aborted": "Match cancelled before the first roll.",
+      "anotherMatch": "Watch another match",
+      "title": "Match over"
+    }
+  },
+  "predict": {
+    "button": "Predict",
+    "yourPrediction": "Your prediction",
+    "title": "Who will win?",
+    "openUntil": "Open until the first roll",
+    "sideTotal": "{total} coins on this side",
+    "closed": "Predictions closed at the first roll.",
+    "placeholder": "Placing predictions will open here soon. Until then, no coins are taken.",
+    "firstHint": "You can predict the winner until the first roll."
+  },
+  "tournaments": {
+    "unnamed": "Tournament #{id}",
+    "title": "Tournaments",
+    "segments": "Tournament sections",
+    "segment": {
+      "upcoming": "Upcoming",
+      "mine": "Mine",
+      "running": "In progress",
+      "finished": "Finished"
+    },
+    "mine": {
+      "comingUp": "Coming up",
+      "playing": "Playing now",
+      "past": "Past"
+    },
+    "hint": {
+      "firstVisit": "Tournaments start only when full. If one doesn't fill, everyone gets their entry back.",
+      "detail": "Prizes are paid when the tournament ends. If it doesn't fill, everyone gets their entry back."
+    },
+    "status": {
+      "open": "Open for registration",
+      "full": "Full",
+      "starting": "Starting…",
+      "round": "Round {round} of {rounds}",
+      "finished": "Finished",
+      "cancelled": "Cancelled",
+      "registeredCard": "You're registered. Starts {date}",
+      "countdown": "Starts in {time}",
+      "startingNow": "Starting… Your first match opens automatically.",
+      "playing": "Your round {round} match is on.",
+      "watchRunning": "This tournament is in round {round} of {rounds}."
+    },
+    "registered": "Registered",
+    "card": {
+      "entry": "Entry: {count, plural, one {# coin} other {# coins}}",
+      "free": "Free",
+      "firstPrize": "1st prize: {amount} coins",
+      "starts": "Starts {date} ({relative})",
+      "started": "Started {relative}",
+      "places": "{entries} of {capacity} registered",
+      "refunded": "Your entry was refunded",
+      "label": "{name}, {status}, {variant}, {entry}, {start}, {places}"
+    },
+    "empty": {
+      "upcoming": "No tournaments scheduled yet.",
+      "mine": "You haven't registered for a tournament yet.",
+      "mineAction": "See upcoming",
+      "running": "No tournament is running right now.",
+      "finished": "No finished tournaments yet."
+    },
+    "loadError": "Couldn't load tournaments.",
+    "notFound": "This tournament doesn't exist.",
+    "all": "All tournaments",
+    "tab": {
+      "label": "Tournament sections",
+      "overview": "Overview",
+      "bracket": "Bracket"
+    },
+    "facts": {
+      "title": "Details",
+      "start": "Start",
+      "startValue": "{date} ({relative})",
+      "formatLabel": "Format",
+      "format": "{capacity} players · single elimination · {rounds} rounds · seeded by rating",
+      "variant": "Variant",
+      "entry": "Entry",
+      "places": "Places",
+      "rated": "Rated: tournament matches change your rating."
+    },
+    "prizes": {
+      "title": "Prizes",
+      "place": "Place",
+      "share": "Share",
+      "prize": "Prize",
+      "placeN": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "row": "{place} · {share} · {amount} coins",
+      "pool": "Prize pool: {pool} coins from {total} coins of entries, after the {pct} platform fee.",
+      "poolNoPct": "Prize pool: {pool} coins from {total} coins of entries, after the platform fee.",
+      "seedOrder": "Players knocked out in the same round are placed by their starting seed.",
+      "none": "No coin prizes."
+    },
+    "rules": {
+      "title": "Rules",
+      "refund": "If the tournament isn't full at the start time, or is cancelled, your entry is refunded in full.",
+      "leave": "You can leave and get your entry back until it starts.",
+      "presence": "Your first match starts automatically at {time}. If you don't join a match within {grace}, you lose that match.",
+      "presenceNoGrace": "Your first match starts automatically at {time}. If you don't join a match within the joining time, you lose that match.",
+      "grace": "{seconds, plural, one {# second} other {# seconds}}",
+      "noBots": "Bots never play in tournaments.",
+      "noPredictions": "Predictions aren't offered on tournament matches."
+    },
+    "liveMatches": "Live matches of this tournament",
+    "register": {
+      "cta": "Register · {count, plural, one {# coin} other {# coins}}",
+      "ctaFree": "Register · free",
+      "fullReason": "All places are taken",
+      "others": "Other tournaments",
+      "title": "Register for {name}",
+      "summary": "{variant} · First to {n} · {capacity} players, single elimination",
+      "rated": "Tournament matches are rated.",
+      "pay": "Pay {entry} coins and register",
+      "payFree": "Register",
+      "paying": "Registering…",
+      "done": "Registered for {name}",
+      "freeEntry": "Entry: free"
+    },
+    "leave": {
+      "button": "Leave tournament",
+      "title": "Leave {name}?",
+      "body": "{entry} coins go back to your balance.",
+      "bodyFree": "You can register again while places are left.",
+      "confirm": "Leave and get {entry} coins back",
+      "confirmFree": "Leave",
+      "keep": "Stay registered",
+      "done": "You left {name}. {entry} coins were refunded.",
+      "doneFree": "You left {name}."
+    },
+    "prestart": {
+      "banner": "{name} starts in {time}. Your first match opens automatically.",
+      "starting": "{name} is starting. Your first match opens automatically.",
+      "details": "Details"
+    },
+    "ready": {
+      "title": "Your tournament match is ready",
+      "round": "{name} · Round {round} of {rounds}",
+      "countdown": "Join within {time} or you lose this match",
+      "noCountdown": "Join now. If you don't join in time, you lose this match.",
+      "go": "Go to match",
+      "notNow": "Not now",
+      "opponent": "Opponent: @{username} · Level {level} · Rating {elo}"
+    },
+    "wait": {
+      "won": "You won round {round}. Next: {opponent}. Your match opens automatically when they finish.",
+      "winnerOf": "the winner of @{a} vs @{b}",
+      "tbd": "the winner of the other match",
+      "watch": "Watch",
+      "out": "You're out in round {round}. Your final place is set when the tournament ends."
+    },
+    "result": {
+      "won": "You won {name}",
+      "place": "You placed {place}",
+      "outInRound": "Out in round {round}",
+      "prize": "+{amount} coins won",
+      "champion": "Champion: @{winner} · Runner-up: @{runnerUp}"
+    },
+    "cancelled": {
+      "notFilled": "This tournament was cancelled because it wasn't full at the start time ({entries} of {capacity}).",
+      "admin": "This tournament was cancelled by the organizers.",
+      "refunded": "Your entry of {entry} coins was refunded to your wallet.",
+      "announce": "Tournament cancelled. Your entry was refunded.",
+      "viewWallet": "View wallet"
+    },
+    "bracket": {
+      "notYet": "The bracket is drawn when the tournament starts. Players are seeded by rating.",
+      "cancelled": "This tournament was cancelled.",
+      "round": "Round {round}",
+      "final": "Final",
+      "semi": "Semi-finals",
+      "quarter": "Quarter-finals",
+      "tbd": "To be decided",
+      "winner": "winner",
+      "live": "Live",
+      "watch": "Watch",
+      "play": "Play",
+      "you": "You",
+      "jumpToMine": "Jump to my match",
+      "next": "Next round",
+      "previous": "Previous round",
+      "rounds": "Rounds",
+      "slotLabel": "{round}, match {n}: @{a} {scoreA}, @{b} {scoreB}, {status}",
+      "loadError": "Couldn't load the bracket."
+    },
+    "insufficient": {
+      "other": "{name} · entry {entry} coins · {date}"
+    },
+    "error": {
+      "full": "The last place was just taken. Nothing was charged.",
+      "closedJoin": "Registration has closed. Nothing was charged.",
+      "closedLeave": "The tournament has already started, so you can't leave now."
+    }
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "scopes": "Leaderboard scope",
+    "scope": {
+      "all": "Rating",
+      "weekly": "This week",
+      "monthly": "This month",
+      "predict": "Predictions"
+    },
+    "explain": {
+      "all": "Rating (ELO) from rated matches against people. Bots don't count.",
+      "weekly": "Rating gained this week. Resets every week.",
+      "monthly": "Rating gained this month. Resets on the 1st.",
+      "period": "From {start} to {end}",
+      "predict": "Share of your settled predictions that won. At least {min} predictions to appear.",
+      "predictNoMin": "Share of your settled predictions that won. Players need enough settled predictions to appear."
+    },
+    "row": {
+      "rank": "#{rank}",
+      "level": "Level {level}",
+      "predictions": "{count, plural, one {# prediction} other {# predictions}}",
+      "unavailable": "Player unavailable",
+      "label": {
+        "all": "Rank {rank}, @{username}, level {level}, rating {value}",
+        "gain": "Rank {rank}, @{username}, level {level}, {value, select, gained {gained {amount}} lost {lost {amount}} other {no change}}",
+        "predict": "Rank {rank}, @{username}, accuracy {percent}, {count} predictions"
+      }
+    },
+    "me": {
+      "you": "You",
+      "row": "You · #{rank} · {value}",
+      "unrated": "You'll be ranked after your first rated match.",
+      "noWeek": "No rated matches this week yet.",
+      "noMonth": "No rated matches this month yet.",
+      "predict": "Your accuracy appears here once you're on the board.",
+      "predictProgress": "{count} of {needed} settled predictions",
+      "myPredictions": "My predictions",
+      "playRated": "Play a rated match"
+    },
+    "empty": {
+      "all": "No rated matches yet.",
+      "weekly": "No rated matches this week yet.",
+      "monthly": "No rated matches this month yet.",
+      "predict": "No one has enough predictions yet.",
+      "watchLive": "Watch live matches"
+    },
+    "loadError": "Couldn't load the leaderboard.",
+    "howRatingsWork": "How ratings work",
+    "announce": "{scope} leaderboard, {count, plural, one {# player} other {# players}}"
   }
 }
