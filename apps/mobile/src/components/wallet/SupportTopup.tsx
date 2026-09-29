@@ -12,7 +12,7 @@ import { useFormat } from "@/lib/useFormat";
 import { tokensOf } from "@/theme/theme";
 import { CopyButton } from "./CopyButton";
 import { InfoLine } from "./InfoLine";
-import { useSupportContact } from "@/lib/config";
+import { usePublicConfig } from "@/lib/config";
 
 // "Get coins" while online purchase is unavailable (wallet.md §3.3, WA-04; journeys.md J3a;
 // CLAUDE.md §7.9, §7.11). Shared with the step-9 coins page (CO-02) so the wording stays one.
@@ -59,8 +59,9 @@ export function SupportTopupContent({ username, coinPriceToman }: SupportTopupCo
   const t = useTranslations("shop.coins.supportTopup");
   const tSupport = useTranslations("support.contact");
   const f = useFormat();
-  const channel = useSupportContact(tSupport("fallback"));
-  const href = channelHref(channel);
+  // No configured channel: one neutral sentence, no channel line and nothing to copy (W-23).
+  const channel = usePublicConfig()?.support_contact?.trim() || null;
+  const href = channel ? channelHref(channel) : null;
 
   return (
     <Stack spacing={2.5}>
@@ -77,22 +78,26 @@ export function SupportTopupContent({ username, coinPriceToman }: SupportTopupCo
           {t("howTitle")}
         </Typography>
         <Well>
-          <ValueRow>
-            <Typography variant="body2" className="value">
-              {t.rich("how", {
-                channel: isolate(channel),
-                link: (chunks) =>
-                  href ? (
-                    <Link href={href} dir="ltr" sx={{ overflowWrap: "anywhere" }}>
-                      {chunks}
-                    </Link>
-                  ) : (
-                    <bdi dir="ltr">{chunks}</bdi>
-                  ),
-              })}
-            </Typography>
-            <CopyButton value={channel} label={t("copyChannel")} />
-          </ValueRow>
+          {channel ? (
+            <ValueRow>
+              <Typography variant="body2" className="value">
+                {t.rich("how", {
+                  channel: isolate(channel),
+                  link: (chunks) =>
+                    href ? (
+                      <Link href={href} dir="ltr" sx={{ overflowWrap: "anywhere" }}>
+                        {chunks}
+                      </Link>
+                    ) : (
+                      <bdi dir="ltr">{chunks}</bdi>
+                    ),
+                })}
+              </Typography>
+              <CopyButton value={channel} label={t("copyChannel")} />
+            </ValueRow>
+          ) : (
+            <Typography variant="body2">{tSupport("neutral")}</Typography>
+          )}
           <Typography variant="body2" color="text.secondary">
             {t("tell")}
           </Typography>

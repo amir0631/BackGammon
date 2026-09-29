@@ -3,23 +3,22 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
-import MuiLink from "@mui/material/Link";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
-import NextLink from "next/link";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { avatarSize, iconSize, minTouchTarget, radii } from "@bg/design-tokens";
 import type { LeaderboardRow, Tier } from "@bg/protocol";
-import { ChevronForwardIcon, CoinIcon, InfoIcon } from "@/components/icons";
+import { CoinIcon, InfoIcon } from "@/components/icons";
 import { BotIcon, RatedIcon } from "@/components/icons/game";
 import { Avatar } from "@/components/profile/Avatar";
 import { useFormat } from "@/lib/useFormat";
 import { tokensOf } from "@/theme/theme";
 
-// PL-01 cards (play.md §4). A tier card is one focus stop whose accessible name is `play.tier.label`;
+// PL-01 cards (play.md §4). The rank card has no "Leaderboard" link until `/leaderboard` ships
+// (review P-07: no link may lead to a 404). A tier card is one focus stop whose accessible name is `play.tier.label`;
 // its "Play" pill is part of the card (the card is the action). Unaffordable cards say so with an
 // icon and text but stay tappable (PL-05 explains). Coin tables and practice have equal weight.
 
@@ -124,8 +123,9 @@ export function TierCardSkeleton() {
   return <Skeleton variant="rectangular" height="6.5rem" sx={{ borderRadius: `${radii.lg}px` }} />;
 }
 
-export function PracticeCard({ blockedBy, onOpen }: { blockedBy: string | null; onOpen: () => void }) {
+export function PracticeCard({ blockedBy, onOpen, entry = 0 }: { blockedBy: string | null; onOpen: () => void; entry?: number }) {
   const t = useTranslations("play");
+  const f = useFormat();
   return (
     <Card>
       <Stack spacing={1.5}>
@@ -142,7 +142,7 @@ export function PracticeCard({ blockedBy, onOpen }: { blockedBy: string | null; 
           </Box>
         </Stack>
         <Typography variant="body2" color="text.secondary">
-          {t("practice.desc")}
+          {entry > 0 ? t("practice.descPaid", { entry: f.number(entry) }) : t("practice.desc")}
         </Typography>
         <Button
           variant="outlined"
@@ -185,14 +185,6 @@ export function RankCard({ elo, level, children }: { elo: number | null; level: 
           </Typography>
         )}
         {children}
-        <MuiLink
-          component={NextLink}
-          href="/leaderboard"
-          sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, minHeight: minTouchTarget, alignSelf: "flex-start" }}
-        >
-          {t("leaderboard")}
-          <ChevronForwardIcon sx={{ fontSize: iconSize.sm }} />
-        </MuiLink>
       </Stack>
     </Card>
   );

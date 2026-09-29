@@ -180,7 +180,8 @@ export function PlayerBar({ player, side, self, pips, clock, cube, turn, turnTex
 
   return (
     <Bar aria-label={label} data-turn={turn ? "true" : undefined} data-self={self ? "true" : undefined}>
-      <PeekButton onClick={onPeek} aria-label={player.is_bot ? name : t("match.peek.viewProfile") + ": " + isolate(player.username)}>
+      {/* Own avatar opens the match menu, and is named so (M-23, WCAG 2.5.3). */}
+      <PeekButton onClick={onPeek} aria-label={self ? t("match.menu.title") : player.is_bot ? name : t("match.peek.viewProfile") + ": " + isolate(player.username)}>
         <Avatar avatarKey={player.avatar} size={avatarSize.sm} />
       </PeekButton>
       <div className="bar-id">
@@ -193,7 +194,7 @@ export function PlayerBar({ player, side, self, pips, clock, cube, turn, turnTex
         </Typography>
         <div className="bar-meta">
           {!player.is_bot && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography className="bar-rating" variant="caption" color="text.secondary">
               {t("match.bar.levelElo", { level: f.number(player.level), elo: f.number(player.elo) })}
             </Typography>
           )}
@@ -286,7 +287,9 @@ export function DiceChips({ dice, used, unusable }: { dice: number[]; used: bool
               border: 1,
               borderColor: isUsed ? "tokens.outlineSubtle" : "tokens.outline",
               bgcolor: isUsed ? "transparent" : "tokens.surfaceRaised",
-              color: isUsed ? "text.disabled" : "text.primary",
+              // Used dice are information, not disabled controls: secondary text (≥ 4.5:1 on the
+              // action bar surface in both schemes, M-05), struck through, and "used" for readers.
+              color: isUsed ? "tokens.textSecondary" : "text.primary",
               textDecoration: isUsed ? "line-through" : "none",
               typography: "label",
             }}
@@ -302,5 +305,25 @@ export function DiceChips({ dice, used, unusable }: { dice: number[]; used: bool
         );
       })}
     </Box>
+  );
+}
+
+// ---- Seed / commitment text ----------------------------------------------------------------------
+
+/** A hex seed or commitment shortened in the middle ("first 8 … last 8"); the full value is the
+ * accessible name and what the copy button copies (M-20). */
+export function SeedText({ value, label }: { value: string; label: string }) {
+  const short = value.length > 20 ? `${value.slice(0, 8)}…${value.slice(-8)}` : value;
+  return (
+    <Typography
+      variant="caption"
+      component="span"
+      dir="ltr"
+      role="img"
+      aria-label={`${label}: ${value}`}
+      sx={{ fontFamily: "ui-monospace, monospace", whiteSpace: "nowrap", minWidth: 0, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis" }}
+    >
+      <span aria-hidden>{short}</span>
+    </Typography>
   );
 }

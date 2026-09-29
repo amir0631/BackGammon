@@ -2,7 +2,7 @@
 
 import InputAdornment from "@mui/material/InputAdornment";
 import { useTheme } from "@mui/material/styles";
-import TextField from "@mui/material/TextField";
+import { TextInput as TextField } from "@/components/forms/TextInput";
 import { useTranslations } from "next-intl";
 import { useId, useLayoutEffect, useRef } from "react";
 import { FieldError, FieldSuccess } from "@/components/forms/FieldText";

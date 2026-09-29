@@ -147,3 +147,35 @@ export const HistoryIcon = /*#__PURE__*/ createIcon({
   ),
 });
 
+
+// ---- Replay media controls (history-replay.md RP-01). Media controls never mirror (P§11). ----
+
+export const MediaPlayIcon = /*#__PURE__*/ createIcon({
+  name: "MediaPlay",
+  body: <path d="M8 5.5v13l10.5-6.5z" />,
+});
+
+export const MediaPauseIcon = /*#__PURE__*/ createIcon({
+  name: "MediaPause",
+  body: <path d="M8.5 5.5v13M15.5 5.5v13" />,
+});
+
+export const StepBackIcon = /*#__PURE__*/ createIcon({
+  name: "StepBack",
+  body: (
+    <>
+      <path d="M6.5 6v12" />
+      <path d="M18 6.5v11L9.5 12z" />
+    </>
+  ),
+});
+
+export const StepForwardIcon = /*#__PURE__*/ createIcon({
+  name: "StepForward",
+  body: (
+    <>
+      <path d="M17.5 6v12" />
+      <path d="M6 6.5v11l8.5-5.5z" />
+    </>
+  ),
+});

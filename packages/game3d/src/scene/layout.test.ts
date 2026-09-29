@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BAR, OFF, initialPosition } from "@bg/game-core";
 import { DIMS, locate, locations, pointX, slotFor } from "./geometry";
-import { bestOrientation, checkerPx, fitCamera } from "./framing";
+import { bestOrientation, checkerPx, fitCamera, pointHitPx } from "./framing";
 
 describe("board geometry", () => {
   it("numbers points from the viewer's home board, bottom right, counter-clockwise", () => {
@@ -59,5 +59,24 @@ describe("framing", () => {
     expect(sizes[0]).toBeGreaterThanOrEqual(30);
     expect(sizes[2]).toBeGreaterThanOrEqual(sizes[0]!);
     console.info("checker px at 360/390/430 portrait:", sizes.join(", "));
+  });
+
+  // CLAUDE.md §11.1 (amended for UX review M-01): checkers ≥ 32 CSS px at 360 × 800 portrait; each
+  // point's hit area ≥ 44 px along and ≥ 32 px across. The board region is the canvas the match
+  // screen leaves: 360 × 800 minus the top strip (48), two bars (2 × 56), and the action bar with
+  // dice chips (≈ 120); 844 × 390 minus the start (≤ 12rem) and action (≤ 8.5rem) columns.
+  it("meets the board target sizes at 360 × 800 portrait", () => {
+    // The match screen passes a 4 px margin (apps/mobile BoardStage).
+    const f = fitCamera(360, 800 - 48 - 112 - 120, "portrait", 15, 4);
+    expect(checkerPx(f)).toBeGreaterThanOrEqual(32);
+    const hit = pointHitPx(f);
+    expect(hit.along).toBeGreaterThanOrEqual(44);
+    expect(hit.across).toBeGreaterThanOrEqual(32);
+  });
+
+  it("keeps landscape phones at ≥ 28 px checkers with the narrowed side columns (M-06)", () => {
+    const f = fitCamera(844 - 192 - 136, 390, bestOrientation(844 - 192 - 136, 390, 15, 1.15), 15, 4);
+    expect(checkerPx(f)).toBeGreaterThanOrEqual(28);
+    expect(pointHitPx(f).across).toBeGreaterThanOrEqual(28);
   });
 });

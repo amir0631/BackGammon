@@ -41,11 +41,13 @@ export interface InsufficientOptionsProps {
   balance: number | null;
   onTier: (tier: Tier) => void;
   onBot: () => void;
+  /** The bot entry when the admin enabled one (no "free" wording then, play.md §3.6 step 7). */
+  botEntry?: number;
   /** Omit after a loss (no shop link, P§9). */
   onGetCoins?: () => void;
 }
 
-export function InsufficientOptions({ tiers, entry, balance, onTier, onBot, onGetCoins }: InsufficientOptionsProps) {
+export function InsufficientOptions({ tiers, entry, balance, onTier, onBot, botEntry = 0, onGetCoins }: InsufficientOptionsProps) {
   const t = useTranslations();
   const f = useFormat();
   const lower = balance === null ? [] : tiers.filter((tier) => tier.entry < entry && tier.entry <= balance);
@@ -67,7 +69,7 @@ export function InsufficientOptions({ tiers, entry, balance, onTier, onBot, onGe
         <Row onClick={onBot}>
           <BotIcon sx={{ fontSize: iconSize.md, flex: "none" }} />
           <Typography variant="body1" component="span" sx={{ flex: "1 1 auto", minWidth: 0 }}>
-            {t("play.insufficient.bot")}
+            {botEntry > 0 ? t("play.insufficient.botPaid", { entry: f.number(botEntry) }) : t("play.insufficient.bot")}
           </Typography>
           <ChevronForwardIcon sx={{ fontSize: iconSize.sm, flex: "none" }} />
         </Row>

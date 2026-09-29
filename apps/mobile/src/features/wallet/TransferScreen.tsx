@@ -2,7 +2,7 @@
 
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
+import { TextInput as TextField } from "@/components/forms/TextInput";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -572,9 +572,12 @@ export function TransferScreen({ to }: { to: string | null }) {
               disabledReason={
                 valid && !serverAmountError
                   ? null
-                  : stored.amount && (serverAmountError || problem)
-                    ? (serverAmountError ?? amountText(problem!))
-                    : t("transfer.amount.disabled")
+                  : amountError
+                    ? // The rule is already under the field: a short pointer here (W-24).
+                      t("transfer.amount.disabledFix")
+                    : stored.amount && problem
+                      ? amountText(problem)
+                      : t("transfer.amount.disabled")
               }
               onBlockedClick={() => {
                 // W-06: the specific rule shows on Continue, not only on blur.

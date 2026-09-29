@@ -11,7 +11,7 @@ import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { api } from "@bg/api-client";
+import { api, ApiRequestError } from "@bg/api-client";
 import { avatarSize, iconSize, layout, minTouchTarget, radii, zIndex } from "@bg/design-tokens";
 import { gamePoints, isBeforeFirstRoll, resignPreview, type ClockReading, type MatchView, type Player, type TurnBuilder } from "@bg/game-core";
 import type { GameResultOut, MatchEndedOut, MatchRulesOut, Tier, UserPrefs } from "@bg/protocol";
@@ -24,6 +24,7 @@ import { Avatar } from "@/components/profile/Avatar";
 import { BottomSheet } from "@/components/sheet/BottomSheet";
 import { CopyButton } from "@/components/wallet/CopyButton";
 import { InfoLine } from "@/components/wallet/InfoLine";
+import { usePublicConfig } from "@/lib/config";
 import { markFreshMatch } from "@/lib/match/fresh";
 import type { HistoryItem } from "@/lib/match/store";
 import { useGameSocket } from "@/lib/socket";
@@ -34,7 +35,7 @@ import { tokensOf } from "@/theme/theme";
 import { InsufficientOptions } from "../play/InsufficientOptions";
 import { useGameLabels } from "../play/labels";
 import { Choice, MatchInfo, MoveEntry, MoveHistory, ReactionPicker, useNames, type ReactionsProps } from "./panels";
-import { ClockDisplay } from "./parts";
+import { ClockDisplay, SeedText } from "./parts";
 
 // Sheets, dialogs, and overlays of the match screen (match.md MA-03 … MA-19). One sheet at a time
 // (P§1): the sheet kinds swap content inside one BottomSheet. MA-07 (double offered), MA-10
@@ -76,6 +77,8 @@ export interface MatchOverlaysProps {
   reactions: ReactionsProps;
   lastMoveText: string | null;
   suspended: boolean;
+  /** Haptic for a countdown mark (MA-10). */
+  onWarn: () => void;
 }
 
 
@@ -100,12 +103,29 @@ export function MatchOverlays(props: MatchOverlaysProps) {
   const doubleOffered = Boolean(view && active && view.phase === "cube_offered" && you !== null && view.turn !== you);
   const matchOver = Boolean(props.ended) || view?.phase === "match_over";
   const blocking = doubleOffered || props.reconnecting || matchOver;
-  const sheetOpen = sheet !== null && !blocking && view !== null;
+  // MA-09 also opens before the first state (the MA-01 loader's Cancel on a fresh match, M-10): its
+  // wording needs no state.
+  const sheetOpen = sheet !== null && !blocking && (view !== null || sheet === "leave");
 
   let title: ReactNode = "";
   let body: ReactNode = null;
   let footer: ReactNode = null;
   let dismissible = true;
+
+  if (sheetOpen && !view && sheet === "leave") {
+    title = t("match.leaveSheet.title");
+    body = <Typography>{t("match.leaveSheet.body")}</Typography>;
+    footer = (
+      <>
+        <Button ref={stayRef} variant="contained" size="large" fullWidth onClick={() => setSheet(null)} autoFocus>
+          {t("match.leaveSheet.stay")}
+        </Button>
+        <Button variant="outlined" fullWidth onClick={() => router.push("/play")}>
+          {t("match.leaveSheet.leave")}
+        </Button>
+      </>
+    );
+  }
 
   if (sheetOpen && view) {
     switch (sheet) {
@@ -227,11 +247,21 @@ export function MatchOverlays(props: MatchOverlaysProps) {
                 {between ? (
                   t("match.resign.gameUnavailable")
                 ) : preview ? (
+                  // One sentence per line (M-22).
                   <>
-                    {preview.points !== null &&
-                      t("match.resign.gameBody", { username: oppName, points: preview.points, kind: t(`match.kind.${preview.kind}`), cube: f.number(view.cubeValue) })}{" "}
-                    {t("match.resign.scoreAfter", { self: f.number(preview.scoreAfter[0]), opp: f.number(preview.scoreAfter[1]) })}
-                    {preview.endsMatch && ` ${t("match.resign.endsMatch", { username: oppName })}`}
+                    {preview.points !== null && (
+                      <Box component="span" sx={{ display: "block" }}>
+                        {t("match.resign.gameBody", { username: oppName, points: preview.points, kind: t(`match.kind.${preview.kind}`), cube: f.number(view.cubeValue) })}
+                      </Box>
+                    )}
+                    <Box component="span" sx={{ display: "block" }}>
+                      {t("match.resign.scoreAfter", { self: f.number(preview.scoreAfter[0]), opp: f.number(preview.scoreAfter[1]) })}
+                    </Box>
+                    {preview.endsMatch && (
+                      <Box component="span" sx={{ display: "block" }}>
+                        {t("match.resign.endsMatch", { username: oppName })}
+                      </Box>
+                    )}
                   </>
                 ) : null}
               </Choice>
@@ -244,7 +274,9 @@ export function MatchOverlays(props: MatchOverlaysProps) {
               <Choice selected={resignChoice === "match"} onClick={() => setResignChoice("match")} title={t("match.resign.match")}>
                 {t("match.resign.matchBody", { username: oppName })}{" "}
                 {bot
-                  ? t("match.resign.practice")
+                  ? view.entry > 0
+                    ? t("match.resign.practicePaid", { entry: f.number(view.entry) })
+                    : t("match.resign.practice")
                   : view.entry > 0 && rules
                     ? `${t("match.resign.matchCoins", { entry: f.number(view.entry), username: oppName, payout: f.number(rules.payout) })} ${t("match.resign.matchRated")}`
                     : t("match.resign.matchRated")}
@@ -316,6 +348,7 @@ export function MatchOverlays(props: MatchOverlaysProps) {
           now={props.now}
           attempt={props.attempt}
           onRetry={props.onRetryNow}
+          onWarn={props.onWarn}
         />
       )}
       {view && matchOver && <ResultSheet {...props} />}
@@ -379,7 +412,8 @@ function DoubleDialog({
         {reading && <ClockDisplay reading={reading} running={reading.actor === you} bank={view.clock.bank[you] ?? 0} />}
         <InfoLine>{t("timeoutNote")}</InfoLine>
         <Stack direction="row" spacing={1}>
-          <Button variant="contained" size="large" fullWidth disabled={inFlight} onClick={() => onAnswer(true)}>
+          {/* Equal size and weight: the UI never steers the cube decision (match.md AC 11, M-08). */}
+          <Button variant="outlined" size="large" fullWidth disabled={inFlight} onClick={() => onAnswer(true)}>
             {t("takeCta", { value: f.number(next) })}
           </Button>
           <Button variant="outlined" size="large" fullWidth disabled={inFlight} onClick={() => onAnswer(false)}>
@@ -401,6 +435,7 @@ function ReconnectOverlay({
   now,
   attempt,
   onRetry,
+  onWarn,
 }: {
   view: MatchView;
   you: Player | null;
@@ -409,6 +444,8 @@ function ReconnectOverlay({
   now: number;
   attempt: number;
   onRetry: () => void;
+  /** Haptic at the 30 s and 10 s marks (match.md §3.10 step 3). */
+  onWarn: () => void;
 }) {
   const t = useTranslations("match.reconnect");
   const tMatch = useTranslations("match");
@@ -417,6 +454,14 @@ function ReconnectOverlay({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const left = graceSeconds !== null && from !== null ? Math.max(0, Math.ceil((from + graceSeconds * 1000 - now) / 1000)) : null;
   const status = left === null ? null : left === 0 ? t("expired") : left <= 10 ? t("warning10") : left <= 30 ? t("warning30") : null;
+  const bucket = left === null || left === 0 ? null : left <= 10 ? 10 : left <= 30 ? 30 : null;
+  const warned = useRef<number | null>(null);
+  useEffect(() => {
+    if (bucket !== null && warned.current !== bucket) {
+      warned.current = bucket;
+      onWarn();
+    }
+  }, [bucket, onWarn]);
   return (
     <Dialog
       open
@@ -451,9 +496,12 @@ function ReconnectOverlay({
         <Button variant="contained" size="large" onClick={onRetry}>
           {t("retryNow")}
         </Button>
-        <Button variant="text" onClick={() => router.push("/play")}>
+        <Button variant="text" onClick={() => router.push("/play")} aria-describedby="reconnect-leave-note">
           {tMatch("leave")}
         </Button>
+        <Typography id="reconnect-leave-note" variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+          {t("leaveNote")}
+        </Typography>
       </Stack>
     </Dialog>
   );
@@ -567,6 +615,7 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
   const names = useNames(view);
   const wallet = useWallet();
   const socket = useGameSocket();
+  const config = usePublicConfig();
   const [tiers, setTiers] = useState<Tier[] | null>(null);
   const [botInFlight, setBotInFlight] = useState(false);
   const [botError, setBotError] = useState<string | null>(null);
@@ -580,6 +629,7 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
   const reasonRaw = ended?.reason ?? view.endReason ?? "";
   const aborted = reasonRaw.startsWith("aborted") || (ended !== null && ended.winner === null);
   const youWon = winner !== null && winner === you;
+  const lost = !aborted && !youWon;
   const score = ended?.score ?? view.score;
   const self = you ?? 0;
   const seed = ended?.seed ?? view.seed;
@@ -589,7 +639,13 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
   const xp = ended?.xp?.[side];
   const balance = wallet.summary?.balance ?? null;
   const entry = view.entry;
-  const unaffordable = !bot && !aborted && entry > 0 && balance !== null && balance < entry;
+  const needsBalance = !bot && !aborted && entry > 0;
+  // Only a balance the app has read decides affordability (P-06): while it is unknown, "Play
+  // again" waits; if the read failed, the lobby checks again before anything is charged.
+  const balancePending = needsBalance && balance === null && !wallet.failed;
+  const unaffordable = needsBalance && balance !== null && balance < entry;
+  // After a loss the lobby never offers "Get coins" (P§9, play.md §3.7 step 3).
+  const lossQuery = lost ? "&from=loss" : "";
 
   const headline = aborted ? t("match.result.cancelled") : youWon ? t("match.result.youWon") : t("match.result.theyWon", { username: oppName });
   const reason = aborted
@@ -608,13 +664,15 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
             : t("match.result.reason.disconnectYours")
           : t("match.result.reason.points");
 
+  // Signs plus plain words, true for each row (M-12): what was paid in is a debit with no "lost".
   const coinRows: ValueRow[] = [];
   if (settlement && !bot && "pot" in settlement) {
     const sign = (n: number, won: boolean) => (won ? t("match.result.signWon", { amount: f.number(n) }) : t("match.result.signLost", { amount: f.number(n) }));
-    coinRows.push({ label: t("match.result.entry"), value: sign(settlement.entry ?? entry, false) });
+    const debit = (n: number) => t("match.result.debit", { amount: f.number(n) });
+    coinRows.push({ label: t("match.result.entry"), value: debit(settlement.entry ?? entry) });
     if (youWon) {
       coinRows.push({ label: t("match.result.pot"), value: settlement.pot ?? 0, coins: true });
-      coinRows.push({ label: t("match.result.fee"), value: sign(settlement.rake ?? 0, false) });
+      coinRows.push({ label: t("match.result.fee"), value: debit(settlement.rake ?? 0) });
       coinRows.push({ label: t("match.result.received"), value: sign(settlement.payout ?? 0, true), emphasis: true });
       coinRows.push({ label: t("match.result.net"), value: sign((settlement.payout ?? 0) - (settlement.entry ?? entry), true), emphasis: true, divider: true });
     } else {
@@ -626,19 +684,27 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
     socket.detach();
     router.push(to);
   };
+  const level = (oppInfo?.bot_level as "easy" | "medium" | "hard" | null) ?? "easy";
+  const botSetup = `/play?bot=${view.variant}:${view.length}:${level}${lossQuery}`;
   const playAgainBot = async () => {
+    // A bot entry is a coin spend: PL-04 shows its cost block first (P-03, §9).
+    if (config?.bot_entry.enabled) {
+      leave(botSetup);
+      return;
+    }
     setBotInFlight(true);
     setBotError(null);
     try {
-      const created = await api.matches.startBot(
-        (oppInfo?.bot_level as "easy" | "medium" | "hard") ?? "easy",
-        view.variant,
-        view.length,
-      );
+      const created = await api.matches.startBot(level, view.variant, view.length, 0);
       markFreshMatch(created.match_id, null);
       socket.detach();
       router.push(`/match/${created.match_id}`);
-    } catch {
+    } catch (error) {
+      // The entry was switched on meanwhile: nothing was charged; show the cost in PL-04.
+      if (error instanceof ApiRequestError && error.body.code === "BOT_ENTRY_CHANGED") {
+        leave(botSetup);
+        return;
+      }
       setBotError(t("errors.generic"));
       setBotInFlight(false);
     }
@@ -646,6 +712,7 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
   const again = `${entry}:${view.variant}:${view.length}`;
   if (unaffordable && tiers === null) void api.matches.tiers().then((p) => setTiers(p.results)).catch(() => setTiers([]));
 
+  const suspendedReason = suspended ? t("account.suspended.actionBlocked") : null;
   const footer = (
     <>
       {botError && (
@@ -654,20 +721,27 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
         </Typography>
       )}
       {aborted ? (
-        <ActionButton disabledReason={suspended ? t("account.suspended.actionBlocked") : null} onClick={() => leave(`/play?again=${again}`)}>
+        <ActionButton disabledReason={suspendedReason} onClick={() => leave(`/play?again=${again}`)}>
           {t("match.result.searchAgain")}
         </ActionButton>
       ) : bot ? (
-        <ActionButton disabledReason={suspended ? t("account.suspended.actionBlocked") : null} loading={botInFlight} onClick={() => void playAgainBot()}>
+        <ActionButton disabledReason={suspendedReason} loading={botInFlight} onClick={() => void playAgainBot()}>
           {t("match.result.playAgain")}
         </ActionButton>
       ) : (
         <ActionButton
-          disabledReason={suspended ? t("account.suspended.actionBlocked") : unaffordable ? t("match.result.playAgainUnaffordable") : null}
-          onClick={() => leave(`/play?again=${again}`)}
+          disabledReason={suspendedReason ?? (unaffordable ? t("match.result.playAgainUnaffordable") : null)}
+          loading={balancePending}
+          loadingLabel={t("common.loading")}
+          onClick={() => leave(`/play?again=${again}${lossQuery}`)}
         >
           {t("match.result.playAgain")}
         </ActionButton>
+      )}
+      {suspended && (
+        <Button variant="text" fullWidth component={NextLink} href="/account/status" onClick={() => socket.detach()}>
+          {t("account.suspended.details")}
+        </Button>
       )}
       {!aborted && (
         <Button variant="outlined" fullWidth onClick={() => leave(`/replay/${matchId}`)}>
@@ -710,7 +784,7 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
             {t("match.result.refunded", { refund: f.number(settlement.refund ?? entry) })}
           </InfoLine>
         )}
-        {bot && !aborted && <InfoLine icon={BotIcon}>{t("match.result.practice")}</InfoLine>}
+        {bot && !aborted && <InfoLine icon={BotIcon}>{entry > 0 ? t("match.result.practicePaid") : t("match.result.practice")}</InfoLine>}
         {coinRows.length > 0 && <ValueRows rows={coinRows} label={t("match.result.coinsTitle")} />}
         {!bot && !aborted && typeof elo === "number" && (
           <Typography variant="body1">
@@ -723,8 +797,9 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
             tiers={tiers}
             entry={entry}
             balance={balance}
-            onTier={(tier) => leave(`/play?setup=${tier.id}:${view.variant}:${view.length}`)}
-            onBot={() => leave(`/play?bot=${view.variant}:${view.length}`)}
+            botEntry={config?.bot_entry.enabled ? config.bot_entry.entry : 0}
+            onTier={(tier) => leave(`/play?setup=${tier.id}:${view.variant}:${view.length}${lossQuery}`)}
+            onBot={() => leave(`/play?bot=${view.variant}:${view.length}${lossQuery}`)}
           />
         )}
         {seed && !aborted && (
@@ -735,9 +810,7 @@ function ResultSheet({ matchId, view, you, ended, rules, suspended }: MatchOverl
             </Typography>
             <Typography variant="body2">{t("match.result.seedBody")}</Typography>
             <Stack direction="row" sx={{ alignItems: "center", gap: 0.5, minWidth: 0 }}>
-              <Typography variant="caption" dir="ltr" sx={{ fontFamily: "ui-monospace, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "1 1 auto" }}>
-                {seed}
-              </Typography>
+              <SeedText value={seed} label={t("match.result.seedTitle")} />
               <CopyButton value={seed} label={t("match.result.seedCopy")} />
             </Stack>
             <MuiLink component={NextLink} href={`/replay/${matchId}?verify=1`} sx={{ minHeight: minTouchTarget, display: "inline-flex", alignItems: "center", alignSelf: "flex-start" }} onClick={() => socket.detach()}>

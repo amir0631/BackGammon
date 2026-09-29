@@ -1,28 +1,18 @@
 // The store module only (not the package index): keeps the move generator and replay verifier out
 // of the root layout, which every route loads (§11.4 JS budget).
-import { apply, type MatchView } from "@bg/game-core/src/store";
-import type {
-  CubeUpdateOut,
-  GameEndedOut,
-  MatchRulesOut,
-  MatchStateOut,
-  ServerEnvelope,
-  TurnMovedOut,
-} from "@bg/protocol";
+import { historyFromState, historyItem, type HistoryItem } from "@bg/game-core/src/history";
+import { apply } from "@bg/game-core/src/store";
+import type { MatchRulesOut, MatchStateOut, ServerEnvelope } from "@bg/protocol";
+import type { MatchView } from "@bg/game-core/src/store";
 
 // View state of the match this client is attached to (match.md §3.3). Server events are applied
 // with game-core `apply` in seq order; this adds only what the screen needs around it: when the
 // clock was received (for `timeLeft`), the rules and grace deadlines from the last full state, the
-// move history seen in this session, and the last timeout limit. Nothing here decides moves,
+// move history (the current game's turns from the full state, then every event seen), and the last
+// timeout limit. Nothing here decides moves,
 // dice, timers, or results (CLAUDE.md §2 rule 1).
 
-export type HistoryItem =
-  | { kind: "game"; gameNo: number }
-  | { kind: "opening"; dice: [number, number] }
-  | { kind: "move"; player: number; dice: [number, number] | null; moves: number[][]; hits: boolean[]; auto: TurnMovedOut["auto"] }
-  | { kind: "pass"; player: number; dice: [number, number] | null }
-  | { kind: "cube"; player: number; action: CubeUpdateOut["action"]; value: number }
-  | { kind: "result"; result: GameEndedOut };
+export type { HistoryItem };
 
 export interface MatchSnapshot {
   matchId: string;
@@ -34,7 +24,7 @@ export interface MatchSnapshot {
   rules: MatchRulesOut | null;
   /** Reconnect-grace deadline per player, in local epoch ms; null when connected. */
   grace: (number | null)[];
-  /** Newest last. Only what this client saw; a full state starts it again. */
+  /** Newest last. A full state rebuilds it from `history` (the current game's turns, M-24). */
   history: HistoryItem[];
   /** Consecutive-timeout limit from the last `turn.timeout` (or the rules). */
   timeoutLimit: number | null;
@@ -107,7 +97,7 @@ export class MatchStore {
             const g = s.grace[i];
             return g === null || g === undefined ? null : g - offset;
           }),
-          history: [],
+          history: s.history ? historyFromState(s) : [],
           timeoutLimit: s.rules.max_consecutive_timeouts,
           stateKey: prev.stateKey + 1,
         };
@@ -135,33 +125,5 @@ export class MatchStore {
     if (item) next = { ...next, history: [...next.history, item] };
     this.set(next);
     return { result: "applied", seq: view.seq };
-  }
-}
-
-function historyItem(env: ServerEnvelope, before: MatchView | null): HistoryItem | null {
-  switch (env.type) {
-    case "game.started":
-      return { kind: "game", gameNo: env.payload.game_no };
-    case "turn.rolled":
-      return env.payload.opening && env.payload.dice[0] !== env.payload.dice[1]
-        ? { kind: "opening", dice: [env.payload.dice[0]!, env.payload.dice[1]!] }
-        : null;
-    case "turn.moved":
-      return {
-        kind: "move",
-        player: env.payload.player,
-        dice: before?.dice ?? null,
-        moves: env.payload.moves,
-        hits: env.payload.hits,
-        auto: env.payload.auto,
-      };
-    case "turn.passed":
-      return { kind: "pass", player: env.payload.player, dice: before?.dice ?? null };
-    case "cube.update":
-      return { kind: "cube", player: env.payload.player, action: env.payload.action, value: env.payload.value };
-    case "game.ended":
-      return { kind: "result", result: env.payload };
-    default:
-      return null;
   }
 }

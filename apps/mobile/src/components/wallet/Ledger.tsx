@@ -154,8 +154,15 @@ const RowButton = styled(ButtonBase)(({ theme }) => {
     },
     "&[aria-current='true'] .tx-icon, &[aria-current='true'] .tx-chevron": { color: "inherit" },
     "&.Mui-focusVisible": { outlineOffset: -2 },
-    // Narrow rows (xs at 200% text): the amount moves under the label.
-    "@container (max-width: 16rem)": { flexWrap: "wrap", "& .tx-amount": { flexBasis: "100%", paddingInlineStart: iconSize.md + space.md } },
+    // Narrow rows (xs at 200% text, narrow columns): icon, label, and chevron stay on the first
+    // line with the label at least 8rem wide; the amount takes its own line (W-21).
+    "@container (max-width: 16rem)": {
+      flexWrap: "wrap",
+      "& .tx-main": { flex: "1 1 0", minWidth: "8rem", order: 1 },
+      "& .tx-icon": { order: 0 },
+      "& .tx-chevron": { order: 2 },
+      "& .tx-amount": { order: 3, flexBasis: "100%", paddingInlineStart: iconSize.md + space.md },
+    },
   };
 }) as typeof ButtonBase;
 

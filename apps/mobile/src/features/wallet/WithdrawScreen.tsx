@@ -83,6 +83,8 @@ const EMPTY: Stored = { amount: "", key: null, keyFor: null };
 type Unavailable = "bonus" | "belowMin" | "limit" | "blocked";
 
 function unavailable(s: WalletSummary): Unavailable | null {
+  // An open anti-fraud flag blocks withdrawals (§7.12): say so before the form (W-20).
+  if (s.withdraw.blocked) return "blocked";
   if (s.withdrawable < s.withdraw.min && s.bonus_locked > 0) return "bonus";
   if (s.withdrawable < s.withdraw.min) return "belowMin";
   if (s.withdraw.remaining < s.withdraw.min) return "limit";
@@ -552,9 +554,12 @@ export function WithdrawScreen() {
               disabledReason={
                 valid && !serverAmountError
                   ? null
-                  : stored.amount && (serverAmountError || problem)
-                    ? (serverAmountError ?? amountText(problem!))
-                    : t("withdraw.amount.disabled")
+                  : amountError
+                    ? // The rule is already under the field: a short pointer here (W-24).
+                      t("withdraw.amount.disabledFix")
+                    : stored.amount && problem
+                      ? amountText(problem)
+                      : t("withdraw.amount.disabled")
               }
               onBlockedClick={() => {
                 // W-06: the specific rule shows on Continue, not only on blur.

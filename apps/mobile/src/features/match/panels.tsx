@@ -22,6 +22,7 @@ import type { HistoryItem } from "@/lib/match/store";
 import { useFormat } from "@/lib/useFormat";
 import { tokensOf } from "@/theme/theme";
 import { useGameLabels } from "../play/labels";
+import { SeedText } from "./parts";
 
 // Content shared by bottom sheets (phones) and side panels (md/lg): match info (MA-03), move
 // history (MA-04), reactions (MA-05), move entry (MA-18), resign options (MA-08). Container
@@ -88,7 +89,6 @@ export function MoveHistory({ view, history, you }: { view: MatchView | null; hi
   return (
     <Stack spacing={2}>
       {pips && <Typography variant="body2">{pips}</Typography>}
-      <InfoLine>{t("match.history.sessionNote")}</InfoLine>
       {games.every((g) => g.items.length === 0) ? (
         <Typography variant="body2" color="text.secondary">
           {t("match.history.empty")}
@@ -162,13 +162,7 @@ export function MatchInfo({ view, payout }: { view: MatchView; payout: number | 
           {t("match.menu.seedCommit")}
         </Typography>
         <Stack direction="row" sx={{ alignItems: "center", gap: 0.5, minWidth: 0 }}>
-          <Typography
-            variant="caption"
-            dir="ltr"
-            sx={{ fontFamily: "ui-monospace, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "1 1 auto" }}
-          >
-            {view.seedCommit}
-          </Typography>
+          <SeedText value={view.seedCommit} label={t("match.menu.seedCommit")} />
           <CopyButton value={view.seedCommit} label={t("common.copy")} />
         </Stack>
       </Box>

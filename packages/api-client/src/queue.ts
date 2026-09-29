@@ -51,6 +51,9 @@ export class QueueFlow {
   private current: QueueState = { kind: "idle" };
   private cancelled: { req: QueueRequest; at: number } | null = null;
   private leaving = false;
+  /** Why the search is paused: the socket dropped (it re-joins itself) or only the browser went
+   * offline while the socket stayed open (this flow re-joins when it comes back). */
+  private pausedBy: "socket" | "network" | null = null;
   private timer: unknown = null;
   private readonly now: () => number;
   private readonly setTimer: (fn: () => void, ms: number) => unknown;
@@ -112,7 +115,31 @@ export class QueueFlow {
   socketStatus(status: SocketStatus): void {
     const s = this.current;
     if (status === "reconnecting" && s.kind === "waiting") {
+      this.pausedBy = "socket";
       this.set({ kind: "offline", req: s.req, elapsed: this.now() - s.since });
+    } else if (status === "reconnecting" && s.kind === "offline") {
+      this.pausedBy = "socket";
+    }
+  }
+
+  /**
+   * The browser's connectivity (`navigator.onLine`), which can change before the socket notices
+   * (play.md §3.4 step 4). Offline pauses the search at once; back online with the socket still
+   * open, the same `queue.join` is sent again (the server replaces the entry), so the search
+   * resumes with "Searching again". A dropped socket re-joins by itself.
+   */
+  network(online: boolean, socket: SocketStatus | "idle"): void {
+    const s = this.current;
+    if (!online) {
+      if (s.kind === "waiting") {
+        this.pausedBy = "network";
+        this.set({ kind: "offline", req: s.req, elapsed: this.now() - s.since });
+      }
+      return;
+    }
+    if (s.kind === "offline" && this.pausedBy === "network" && socket === "open") {
+      this.pausedBy = null;
+      this.o.send("queue.join", s.req);
     }
   }
 
@@ -123,7 +150,10 @@ export class QueueFlow {
       const p = env.payload;
       if (p.state === "waiting") {
         if (s.kind === "joining") this.set({ kind: "waiting", req: s.req, since: this.now(), again: false });
-        else if (s.kind === "offline") this.set({ kind: "waiting", req: s.req, since: this.now(), again: true });
+        else if (s.kind === "offline") {
+          this.pausedBy = null;
+          this.set({ kind: "waiting", req: s.req, since: this.now(), again: true });
+        }
       } else if (p.state === "left") {
         if (this.leaving) {
           this.leaving = false;

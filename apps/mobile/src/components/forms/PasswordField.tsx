@@ -3,7 +3,7 @@
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import { styled } from "@mui/material/styles";
-import TextField, { type TextFieldProps } from "@mui/material/TextField";
+import { TextInput as TextField, type TextInputProps as TextFieldProps } from "@/components/forms/TextInput";
 import Typography from "@mui/material/Typography";
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";

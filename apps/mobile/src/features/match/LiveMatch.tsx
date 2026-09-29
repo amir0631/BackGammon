@@ -4,6 +4,8 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import { styled } from "@mui/material/styles";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useRouter } from "next/navigation";
@@ -14,11 +16,11 @@ import { feedbackTiming, iconSize, layout, zIndex } from "@bg/design-tokens";
 import { canDouble, encode, initialPosition, isWaitingForOpponent, pipCount, readClock, toViewerPoint, TurnBuilder, type Player } from "@bg/game-core";
 import { isolate } from "@bg/i18n";
 import type { MatchEndedOut, PhraseText, ServerEnvelope } from "@bg/protocol";
-import { BackIcon, EyeIcon, WarningIcon } from "@/components/icons";
+import { BackIcon, EyeIcon, OfflineIcon, WarningIcon } from "@/components/icons";
 import { CubeIcon, MenuIcon, ReactionIcon, UndoIcon } from "@/components/icons/game";
 import { useActiveMatch } from "@/lib/activeMatch";
 import { clearFreshMatch } from "@/lib/match/fresh";
-import { usePrefs } from "@/lib/prefs";
+import { useDevicePref, usePrefs } from "@/lib/prefs";
 import { useSession } from "@/lib/session";
 import { useGameSocket, useMatchSnapshot } from "@/lib/socket";
 import { useFormat } from "@/lib/useFormat";
@@ -44,38 +46,56 @@ import { useSceneLabels } from "./useSceneLabels";
 // actions in an end column. Wide screens: the board with an end panel (moves, reactions, info),
 // plus a start panel from 1280 px.
 
+const LANDSCAPE_PHONE = `@media (orientation: landscape) and (max-height: ${layout.compactHeight - 0.02}px)`;
+const WIDE = `@media (min-width: 900px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`;
+const WIDEST = `@media (min-width: 1280px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`;
+
 const Screen = styled("div")(({ theme }) => {
   const t = tokensOf(theme);
   return {
     display: "grid",
     height: "100dvh",
     width: "100%",
-    overflow: "hidden",
+    // The board keeps a minimum size (M-02); when bars and actions need more room than is left
+    // (200% text, very short screens), the rest of the screen scrolls, never the board away.
+    overflowX: "hidden",
+    overflowY: "auto",
     backgroundColor: t.background,
     gridTemplateColumns: "minmax(0, 1fr)",
-    gridTemplateRows: "auto auto minmax(0, 1fr) auto auto",
+    gridTemplateRows: "auto auto minmax(min(45svh, 100vw), 1fr) auto auto",
     gridTemplateAreas: `"top" "opp" "board" "own" "actions"`,
+    // Header and both bars: laid out by the grid in portrait, one scrolling column in landscape.
+    "& .m-info": { display: "contents" },
     "& .m-top": { gridArea: "top" },
     "& .m-opp": { gridArea: "opp", minWidth: 0, containerType: "inline-size", containerName: "pbar" },
     "& .m-board": { gridArea: "board", minHeight: 0, minWidth: 0, position: "relative" },
     "& .m-own": { gridArea: "own", minWidth: 0, containerType: "inline-size", containerName: "pbar" },
     "& .m-actions": { gridArea: "actions" },
     "& .m-start, & .m-end": { display: "none" },
-    // Landscape phones: header and bars on the start side, actions on the end side.
-    [`@media (orientation: landscape) and (max-height: ${layout.compactHeight - 0.02}px)`]: {
-      gridTemplateColumns: "minmax(12rem, 16rem) minmax(0, 1fr) minmax(9rem, 11rem)",
-      gridTemplateRows: "auto auto auto minmax(0, 1fr)",
-      gridTemplateAreas: `"top board actions" "opp board actions" "own board actions" ". board actions"`,
-      "& .m-actions": { borderBlockStart: 0, borderInlineStart: `1px solid ${t.outlineSubtle}` },
+    // Large text (≥ 150 %, M-02): bars keep one line for the name (level, rating, and pips are in
+    // MA-03 and MA-15), and side actions show their icon with the label as the accessible name.
+    "&[data-large-text='true']": {
+      "& .bar-rating, & .bar-pips": { display: "none" },
+      "& .m-side .m-label": { ...visuallyHidden },
+    },
+    // Landscape phones: the board is height-limited and gets the width (M-06); header and bars on
+    // the start side, actions on the end side, each column scrolling on its own.
+    [LANDSCAPE_PHONE]: {
+      overflowY: "hidden",
+      gridTemplateColumns: "minmax(min(10rem, 22vw), min(12rem, 24vw)) minmax(55vw, 1fr) minmax(min(7.5rem, 17vw), min(8.5rem, 20vw))",
+      gridTemplateRows: "minmax(0, 1fr)",
+      gridTemplateAreas: `"info board actions"`,
+      "& .m-info": { display: "flex", flexDirection: "column", gridArea: "info", minHeight: 0, minWidth: 0, overflowY: "auto", overflowX: "hidden" },
+      "& .m-actions": { borderBlockStart: 0, borderInlineStart: `1px solid ${t.outlineSubtle}`, minHeight: 0, overflowY: "auto" },
     },
     // Wide landscape (tablets in landscape, desktop browsers): board + end panel.
-    [`@media (min-width: 900px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`]: {
+    [WIDE]: {
       gridTemplateColumns: `minmax(0, 1fr) ${layout.sidePanelWidth}px`,
-      gridTemplateRows: "auto auto minmax(0, 1fr) auto auto",
+      gridTemplateRows: "auto auto minmax(min(45svh, 60vw), 1fr) auto auto",
       gridTemplateAreas: `"top end" "opp end" "board end" "own end" "actions end"`,
       "& .m-end": { display: "flex", gridArea: "end", borderInlineStart: `1px solid ${t.outlineSubtle}` },
     },
-    [`@media (min-width: 1280px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`]: {
+    [WIDEST]: {
       gridTemplateColumns: `${layout.sidePanelWidth}px minmax(0, 1fr) ${layout.sidePanelWidth}px`,
       gridTemplateAreas: `"start top end" "start opp end" "start board end" "start own end" "start actions end"`,
       maxWidth: layout.shellMaxWidth,
@@ -123,15 +143,21 @@ const ActionBar = styled("div")(({ theme }) => {
       overflowWrap: "normal",
       wordBreak: "normal",
       "& .MuiButton-startIcon": { margin: 0 },
+      "& .m-label": { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
     },
-    "& .m-primary": { minHeight: 56 },
-    // Landscape phones: a vertical column, primary in the lower half, reactions below it.
-    [`@media (orientation: landscape) and (max-height: ${layout.compactHeight - 0.02}px)`]: {
+    // The primary may take two lines at large text, but never breaks inside a word (M-02).
+    "& .m-primary": { minHeight: 56, whiteSpace: "normal", overflowWrap: "normal", wordBreak: "keep-all", hyphens: "none" },
+    "& .m-caption": { display: "flex", alignItems: "center", justifyContent: "center", gap: theme.spacing(0.5), textAlign: "center" },
+    // Landscape phones: one column, the primary in the lower half; the dice sit in one row right
+    // above it (M-06), reactions below.
+    [LANDSCAPE_PHONE]: {
       justifyContent: "flex-end",
-      "& .m-slots": { gridTemplateColumns: "minmax(0, 1fr)", gridAutoFlow: "row" },
+      "& .m-slots": { display: "contents" },
+      "& .m-caption": { order: 0 },
       "& .m-slot-start": { order: 1 },
-      "& .m-slot-center": { order: 2 },
-      "& .m-slot-end": { order: 3 },
+      "& .m-chips": { order: 2 },
+      "& .m-slot-center": { order: 3 },
+      "& .m-slot-end": { order: 4 },
     },
   };
 });
@@ -164,6 +190,33 @@ const Caption = styled("div")(({ theme }) => {
     pointerEvents: "none",
   };
 });
+
+/** CSS px per rem, re-measured when the root text size changes (browser or OS text scaling). */
+function useRemPx(): [number, (el: HTMLSpanElement | null) => void] {
+  const [px, setPx] = useState(16);
+  const observer = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: HTMLSpanElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el) return;
+    const read = () => setPx(el.getBoundingClientRect().width || 16);
+    read();
+    observer.current = new ResizeObserver(read);
+    observer.current.observe(el);
+  }, []);
+  return [px, ref];
+}
+
+/**
+ * Shortcuts act only when focus is on the page, the board region, or the action bar itself, never
+ * on a focused control: Space on "Match menu" opens the menu, not a roll (M-07, WCAG 2.1.4).
+ */
+function shortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return true;
+  if (target === document.body || target === document.documentElement) return true;
+  if (target.closest("button, a, input, textarea, select, [contenteditable=true], [role=button], [role=radio], [role=tab], [role=switch], [role=menuitem], [role=slider], [role=checkbox]")) return false;
+  return Boolean(target.closest("[data-shortcuts='true']"));
+}
 
 export interface LiveMatchProps {
   matchId: string;
@@ -201,6 +254,9 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
   const names = useNames(view);
   const notation = useNotation();
   const wideEnd = useMediaQuery(`(min-width: 900px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`);
+  const widest = useMediaQuery(`(min-width: 1280px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`);
+  /** End panel tab while the start panel is hidden (900–1279 px, M-21): moves, reactions, info. */
+  const [endTab, setEndTab] = useState(0);
 
   const [sceneReady, setSceneReady] = useState(false);
   const [sceneLoaded, setSceneLoaded] = useState(false);
@@ -215,7 +271,9 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
   const [notice, setNotice] = useState<Record<number, string | null>>({});
   const [warn, setWarn] = useState<Record<number, boolean>>({});
   const [cooldownUntil, setCooldownUntil] = useState(0);
-  const [showOpp, setShowOpp] = useState(true);
+  const [showOpp, setShowOpp] = useDevicePref("showOpponentReactions", true);
+  const [remPx, remProbe] = useRemPx();
+  const largeText = remPx >= 24;
   const [ended, setEnded] = useState<MatchEndedOut | null>(null);
   const [announce, setAnnounce] = useState("");
   const [lastOppMove, setLastOppMove] = useState<{ moves: number[][]; hits: boolean[]; player: number; key: string } | null>(null);
@@ -226,6 +284,8 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
   const [attachedAt, setAttachedAt] = useState<number | null>(null);
   const [liteSuggested, setLiteSuggested] = useState(false);
   const toastKey = useRef(0);
+  /** The last grace warning announced per player (30 or 10 s), so each is said once (M-09). */
+  const graceWarned = useRef<Record<number, 30 | 10 | null>>({});
   const reconnectFrom = useRef<number | null>(null);
   const wasReconnecting = useRef(false);
 
@@ -477,6 +537,7 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
         }
         case "opponent.disconnected":
           if (env.payload.player !== me_) {
+            graceWarned.current[env.payload.player] = null;
             setAnnounce(t("match.opponent.disconnectedAnnounce", { username: name(env.payload.player), time: f.clock(env.payload.grace_seconds) }));
           }
           break;
@@ -616,8 +677,8 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (document.querySelector("[role=dialog]")) return;
+      if (e.altKey || !shortcutTarget(e.target)) return;
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
       if (e.key === " " && yourTurnRoll) {
         e.preventDefault();
         roll();
@@ -627,6 +688,8 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         undo();
+      } else if (e.ctrlKey || e.metaKey) {
+        return;
       } else if (e.key.toLowerCase() === "d" && canDbl) offerDouble();
       else if (e.key.toLowerCase() === "r") setSheet("reactions");
       else if (e.key.toLowerCase() === "m") setSheet("menu");
@@ -635,6 +698,27 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // Opponent away (MA-11, M-09): announce once when 30 s and once when 10 s are left.
+  useEffect(() => {
+    if (!view || view.status !== "active") return;
+    for (const p of [0, 1] as Player[]) {
+      const info = view.players[p];
+      const at = snap.grace[p] ?? null;
+      if (p === view.you || !info || info.is_bot || info.connected || at === null) {
+        graceWarned.current[p] = null;
+        continue;
+      }
+      const left = Math.max(0, Math.ceil((at - now) / 1000));
+      const bucket = left <= 10 ? 10 : left <= 30 ? 30 : null;
+      if (bucket !== null && graceWarned.current[p] !== bucket && left > 0) {
+        graceWarned.current[p] = bucket;
+        const pl = view.players[p];
+        const who = pl ? (pl.is_bot ? labels.botName(pl.bot_level) : isolate(pl.username)) : "";
+        setAnnounce(t("match.opponent.warning", { seconds: f.number(bucket), username: who }));
+      }
+    }
+  }, [now, view, snap.grace, labels, t, f]);
 
   // ---- Derived view ------------------------------------------------------------------------------
 
@@ -718,6 +802,12 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
 
   // ---- Action bar (MA-02 table) ------------------------------------------------------------------
 
+  // MA-19: waiting for a human opponent to join before the first roll.
+  const waitingJoin = Boolean(
+    view && isWaitingForOpponent(view, oppInfo ?? null, snap.history.filter((h) => h.kind !== "game").length),
+  );
+
+
   const phase = view?.phase;
   const myTurn = view?.turn === you && you !== null;
   const forcedOrNone = Boolean(view && myTurn && phase === "move" && view.legal.length <= 1);
@@ -729,10 +819,10 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
         const next = f.number(view.cubeValue * 2);
         start = (
           <Button className="m-side" variant="outlined" onClick={offerDouble} loading={inFlight === "double"} startIcon={<CubeIcon />} aria-label={t("match.action.double", { value: next })}>
-            <Box component="span" sx={{ display: "inline", [mqXs]: { display: "none" } }}>
+            <Box component="span" className="m-label" sx={{ display: "inline", [mqXs]: { display: "none" } }}>
               {t("match.action.double", { value: next })}
             </Box>
-            <Box component="span" sx={{ display: "none", [mqXs]: { display: "inline" } }}>
+            <Box component="span" className="m-label" sx={{ display: "none", [mqXs]: { display: "inline" } }}>
               {t("match.action.doubleShort", { value: next })}
             </Box>
           </Button>
@@ -745,8 +835,15 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
       );
     } else if (phase === "move" && myTurn && !forcedOrNone && builder) {
       start = (
-        <Button className="m-side" variant="outlined" onClick={undo} disabled={!builder.steps.length || inFlight !== null} startIcon={<UndoIcon />}>
-          {t("match.action.undo")}
+        <Button
+          className="m-side"
+          variant="outlined"
+          onClick={undo}
+          disabled={!builder.steps.length || inFlight !== null}
+          startIcon={<UndoIcon />}
+          aria-label={t("match.action.undo")}
+        >
+          <span className="m-label">{t("match.action.undo")}</span>
         </Button>
       );
       center = (
@@ -760,7 +857,7 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
       center = <Typography variant="body2" sx={{ textAlign: "center" }}>{t("match.turn.theirs", { username: oppName })}</Typography>;
     } else if (phase === "move" && turnIsOpp) {
       center = <Typography variant="body2" sx={{ textAlign: "center" }}>{isBot ? t("match.turn.botThinking") : t("match.turn.moving", { username: oppName })}</Typography>;
-    } else if (phase === "opening") {
+    } else if (phase === "opening" && !waitingJoin) {
       center = <Typography variant="body2" sx={{ textAlign: "center" }}>{t("match.opening.title")}</Typography>;
     }
   }
@@ -773,12 +870,13 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
       aria-label={cooldown > 0 ? t("match.reactions.cooldown", { seconds: f.number(cooldown) }) : t("match.action.reactions")}
       disabled={ended !== null}
     >
-      {cooldown > 0 ? <bdi dir="ltr">{f.number(cooldown)}</bdi> : t("match.action.reactions")}
+      <span className="m-label">{cooldown > 0 ? <bdi dir="ltr">{f.number(cooldown)}</bdi> : t("match.action.reactions")}</span>
     </Button>
   );
 
   // Dice chips: every die of the roll; used ones struck through (not color alone).
   let chips: ReactNode = null;
+  let unusableCaption: ReactNode = null;
   if (builder && view?.dice) {
     const all = view.dice[0] === view.dice[1] ? [view.dice[0], view.dice[0], view.dice[0], view.dice[0]] : [...view.dice];
     const remaining = [...builder.remainingDice];
@@ -790,7 +888,22 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
       }
       return true;
     });
-    chips = <DiceChips dice={all} used={used} unusable={builder.complete && builder.remainingDice.length > 0} />;
+    const unusable = builder.complete && builder.remainingDice.length > 0;
+    chips = (
+      <div className="m-chips">
+        <DiceChips dice={all} used={used} unusable={unusable} />
+      </div>
+    );
+    // A die that can't be used is said in words above the bar, not only by an icon (M-19).
+    if (unusable) {
+      const values = [...new Set(builder.remainingDice)];
+      unusableCaption = (
+        <Typography className="m-caption" variant="body2" component="p" sx={{ m: 0 }}>
+          <WarningIcon sx={{ fontSize: iconSize.sm, color: "tokens.warning" }} aria-hidden />
+          {values.map((d) => t("match.dice.unusable", { value: f.number(d) })).join(t("common.listSep"))}
+        </Typography>
+      );
+    }
   }
 
   // ---- Bars ---------------------------------------------------------------------------------------
@@ -806,13 +919,12 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
     const graceLeft = graceAt !== null ? Math.max(0, Math.ceil((graceAt - now) / 1000)) : null;
     const status: ReactNode[] = [];
     if (disconnected && !waitingJoin) {
+      // One line with the countdown; it switches to the warning style under 30 s (M-09). The
+      // 30 s and 10 s announcements come from the effect below.
+      const warnNow = graceLeft !== null && graceLeft <= 30;
       status.push(
-        <StatusLine key="dc" tone="warning">
-          {graceLeft !== null
-            ? graceLeft <= 30
-              ? `${t("match.opponent.disconnected", { time: `⁦${f.clock(graceLeft)}⁩` })} · ${t("match.opponent.warning", { seconds: f.number(graceLeft), username: names(p) })}`
-              : t("match.opponent.disconnected", { time: `⁦${f.clock(graceLeft)}⁩` })
-            : t("match.opponent.disconnectedNoTime")}
+        <StatusLine key="dc" tone={warnNow ? "warning" : "info"} icon={warnNow ? WarningIcon : OfflineIcon}>
+          {graceLeft !== null ? t("match.opponent.disconnected", { time: `⁦${f.clock(graceLeft)}⁩` }) : t("match.opponent.disconnectedNoTime")}
         </StatusLine>,
       );
     }
@@ -847,20 +959,23 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
             <Box
               role="presentation"
               sx={{
+                // Inside the bar's end area, over the clock for its 3 s, never over the board (M-15).
                 position: "absolute",
                 insetInlineEnd: 8,
-                insetBlockStart: p === you ? "auto" : "100%",
-                insetBlockEnd: p === you ? "100%" : "auto",
+                insetBlockStart: "50%",
+                transform: "translateY(-50%)",
                 zIndex: zIndex.hud + 1,
-                mt: 0.5,
-                mb: 0.5,
+                maxHeight: "calc(100% - 8px)",
+                overflow: "hidden",
                 px: 1.5,
                 py: 0.75,
                 borderRadius: "12px",
                 bgcolor: "tokens.inverseSurface",
                 color: "tokens.onInverseSurface",
                 typography: "body2",
-                maxWidth: "70%",
+                maxWidth: "60%",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
                 boxShadow: 3,
                 animation: reduced ? "none" : "bgBubbleIn 200ms ease-out",
                 "@keyframes bgBubbleIn": { from: { opacity: 0 }, to: { opacity: 1 } },
@@ -874,10 +989,6 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
     );
   };
 
-  // MA-19: waiting for a human opponent to join before the first roll.
-  const waitingJoin = Boolean(
-    view && isWaitingForOpponent(view, oppInfo ?? null, snap.history.filter((h) => h.kind !== "game").length),
-  );
 
   // MA-13a: between games.
   const lastResult = view?.phase === "game_over" && ended === null ? view.results[view.results.length - 1] : null;
@@ -887,31 +998,80 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
   const loading = !sceneReady || !view;
   const scoreText = view && you !== null ? t("match.score", { self: f.number(view.score[you] ?? 0), opp: f.number(view.score[opp] ?? 0) }) : "";
 
+  const reactionPicker = (
+    <ReactionPicker
+      emojis={[...FREE_EMOJIS, ...owned.emojis.filter((k) => !FREE_EMOJIS.includes(k))]}
+      phrases={[...FREE_PHRASES, ...owned.phrases.filter((k) => !FREE_PHRASES.includes(k))]}
+      phraseText={(k) => phrases.find((x) => x.key === k)?.text[f.locale] ?? (t.has(`reactions.phrase.${k}`) ? t(`reactions.phrase.${k}`) : k)}
+      onSend={sendReaction}
+      cooldown={cooldown}
+    />
+  );
   const panelContent = view ? (
-    <>
-      <section aria-labelledby="panel-info">
-        <Typography id="panel-info" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
-          {t("match.panel.info")}
-        </Typography>
-        <MatchInfo view={view} payout={rules?.payout ?? null} />
-      </section>
-      <section aria-labelledby="panel-react">
-        <Typography id="panel-react" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
-          {t("match.panel.reactions")}
-        </Typography>
-        <ReactionPicker
-          emojis={[...FREE_EMOJIS, ...owned.emojis.filter((k) => !FREE_EMOJIS.includes(k))]}
-          phrases={[...FREE_PHRASES, ...owned.phrases.filter((k) => !FREE_PHRASES.includes(k))]}
-          phraseText={(k) => phrases.find((x) => x.key === k)?.text[f.locale] ?? (t.has(`reactions.phrase.${k}`) ? t(`reactions.phrase.${k}`) : k)}
-          onSend={sendReaction}
-          cooldown={cooldown}
-        />
-      </section>
-    </>
+    widest ? (
+      <>
+        <section aria-labelledby="panel-info">
+          <Typography id="panel-info" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
+            {t("match.panel.info")}
+          </Typography>
+          <MatchInfo view={view} payout={rules?.payout ?? null} />
+        </section>
+        <section aria-labelledby="panel-react">
+          <Typography id="panel-react" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1 }}>
+            {t("match.panel.reactions")}
+          </Typography>
+          {reactionPicker}
+        </section>
+      </>
+    ) : (
+      <>
+        <Tabs value={endTab} onChange={(_, v: number) => setEndTab(v)} variant="fullWidth" aria-label={t("match.panel.info")}>
+          <Tab label={t("match.panel.moves")} id="end-tab-0" aria-controls="end-panel" />
+          <Tab label={t("match.panel.reactions")} id="end-tab-1" aria-controls="end-panel" />
+          <Tab label={t("match.panel.info")} id="end-tab-2" aria-controls="end-panel" />
+        </Tabs>
+        <div role="tabpanel" id="end-panel" aria-labelledby={`end-tab-${endTab}`}>
+          {endTab === 0 ? (
+            <MoveHistory view={view} history={snap.history} you={you} />
+          ) : endTab === 1 ? (
+            reactionPicker
+          ) : (
+            <MatchInfo view={view} payout={rules?.payout ?? null} />
+          )}
+        </div>
+      </>
+    )
   ) : null;
 
+  // MA-01 Cancel on a fresh match (M-10): attach at once so the opponent isn't left waiting on a
+  // player who wants out, and open MA-09 (its wording needs no state). If attaching fails, go back
+  // to the lobby, where PL-08 shows the match.
+  const cancelLoading = () => {
+    if (view?.status === "active") {
+      setSheet("leave");
+      return;
+    }
+    if (fresh || !view) {
+      if (!store) {
+        socket
+          .attach(matchId)
+          .then((s) => {
+            setStore(s);
+            setAttachedAt((a) => a ?? Date.now());
+            clearFreshMatch(matchId);
+          })
+          .catch(() => router.push("/play"));
+      }
+      setSheet("leave");
+      return;
+    }
+    router.back();
+  };
+
   return (
-    <Screen>
+    <Screen data-large-text={largeText ? "true" : undefined}>
+      <span ref={remProbe} aria-hidden style={{ position: "absolute", width: "1rem", height: 0, overflow: "hidden", visibility: "hidden", pointerEvents: "none" }} />
+      <div className="m-info">
       <TopStrip className="m-top">
         <IconButton aria-label={t("match.leave")} onClick={() => (view?.status === "active" ? setSheet("leave") : router.push("/play"))}>
           <BackIcon />
@@ -946,8 +1106,10 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
       </TopStrip>
 
       <div className="m-opp">{view && barFor(opp)}</div>
+      <div className="m-own">{view && you !== null && barFor(you)}</div>
+      </div>
 
-      <div className="m-board">
+      <div className="m-board" data-shortcuts="true">
         <BoardStage
           label={t("match.board.label")}
           onKeyboardEntry={() => setSheet("moveEntry")}
@@ -983,7 +1145,9 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
             </Caption>
           )}
           {view && view.variant === "standard_cube" && view.cubeOwner === null && view.status === "active" && (
-            <Box sx={{ position: "absolute", insetInlineStart: 8, insetBlockEnd: 8, zIndex: zIndex.hud }}>
+            // Anchored to the board's side edge, vertically centered, with a physical side: the board
+            // never mirrors, so neither does the cube (§11.1, P§11, M-14).
+            <Box sx={{ position: "absolute", left: 4, top: "50%", transform: "translateY(-50%)", zIndex: zIndex.hud }}>
               <CubeChip
                 value={view.cubeValue}
                 label={t("match.cube.centered", { value: f.number(view.cubeValue) })}
@@ -1022,16 +1186,15 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
               header={header}
               stage={!sceneLoaded ? 0 : !physicsReady ? 1 : !sceneReady ? 2 : 3}
               fresh={fresh}
-              onCancel={() => (view?.status === "active" || fresh ? setSheet("leave") : router.back())}
+              onCancel={cancelLoading}
               onRetry={() => window.location.reload()}
             />
           )}
         </BoardStage>
       </div>
 
-      <div className="m-own">{view && you !== null && barFor(you)}</div>
-
-      <ActionBar className="m-actions">
+      <ActionBar className="m-actions" data-shortcuts="true">
+        {unusableCaption}
         {chips}
         <div className="m-slots">
           <div className="m-slot-start">{start}</div>
@@ -1098,6 +1261,7 @@ export function LiveMatch({ matchId, fresh, openCancel, header }: LiveMatchProps
         }}
         lastMoveText={lastOppMove ? t("match.move.summary", { username: names(lastOppMove.player), moves: notation(lastOppMove.moves, lastOppMove.hits) }) : null}
         suspended={me?.status === "suspended"}
+        onWarn={() => vibrate([80, 60, 80])}
       />
     </Screen>
   );

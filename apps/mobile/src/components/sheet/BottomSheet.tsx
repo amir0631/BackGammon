@@ -20,6 +20,9 @@ import { tokensOf } from "@/theme/theme";
 //
 // Focus: moves to the title on open, returns to the trigger on close; trapped while open.
 // Dismiss: drag down, scrim, Escape, back, close button — all disabled while `dismissible` is false.
+// Footer: sticky below the scrolling body by default; `footerMode="inline"` keeps it in the flow
+// after the content, so a money confirmation's primary can never cover its cost block or timing
+// note (P§2.1; play.md PL-03; the same rule as TaskFlow on TR-03 and WD-04).
 
 const Handle = styled("div")(({ theme }) => ({
   position: "absolute",
@@ -64,6 +67,12 @@ const Footer = styled("div")(({ theme }) => ({
   paddingBlockStart: theme.spacing(1.5),
   borderBlockStart: `1px solid ${tokensOf(theme).outlineSubtle}`,
   containerType: "inline-size",
+  // Inline: part of the scrolling body, after the content (the body supplies the side padding).
+  "&[data-inline='true']": {
+    paddingInline: 0,
+    paddingBlockStart: theme.spacing(2),
+    marginBlockStart: theme.spacing(1),
+  },
 }));
 
 export interface BottomSheetProps {
@@ -80,6 +89,8 @@ export interface BottomSheetProps {
   closeOnBack?: boolean;
   /** Focus this element instead of the title on open (the safe option of a confirmation, P§3). */
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** `inline`: the footer follows the content inside the scrolling body (money confirmations). */
+  footerMode?: "sticky" | "inline";
 }
 
 export function BottomSheet({
@@ -92,6 +103,7 @@ export function BottomSheet({
   hideCloseButton = false,
   closeOnBack = true,
   initialFocusRef,
+  footerMode = "sticky",
 }: BottomSheetProps) {
   const t = useTranslations("common");
   const theme = useTheme();
@@ -126,8 +138,13 @@ export function BottomSheet({
           </IconButton>
         )}
       </Header>
-      <Body>{children}</Body>
-      {footer && (
+      <Body>
+        {children}
+        {footer && footerMode === "inline" && (
+          <Footer data-inline="true">{footer}</Footer>
+        )}
+      </Body>
+      {footer && footerMode === "sticky" && (
         <Footer
           sx={{
             paddingBlockEnd: wide ? 2.5 : `calc(${theme.spacing(2)} + ${safeInsetBottom})`,
@@ -136,7 +153,7 @@ export function BottomSheet({
           {footer}
         </Footer>
       )}
-      {!footer && !wide && <div style={{ paddingBlockEnd: safeInsetBottom }} />}
+      {(!footer || footerMode === "inline") && !wide && <div style={{ paddingBlockEnd: safeInsetBottom }} />}
     </>
   );
 

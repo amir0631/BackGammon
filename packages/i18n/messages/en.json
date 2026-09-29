@@ -118,7 +118,8 @@
       },
       "cta": "Continue",
       "disabled": "Enter a valid amount.",
-      "tomanPreview": "Equals {amount} toman"
+      "tomanPreview": "Equals {amount} toman",
+      "disabledFix": "Fix the amount above"
     },
     "review": {
       "title": "Review and confirm",
@@ -206,7 +207,8 @@
         "limitNext": "More becomes available from {time}."
       },
       "cta": "Continue",
-      "disabled": "Enter a valid amount."
+      "disabled": "Enter a valid amount.",
+      "disabledFix": "Fix the amount above"
     },
     "review": {
       "title": "Review your request",
@@ -461,7 +463,8 @@
   },
   "support": {
     "contact": {
-      "fallback": "our support team"
+      "fallback": "our support team",
+      "neutral": "Contact support from the Account tab."
     }
   },
   "auth": {
@@ -849,7 +852,8 @@
     "practice": {
       "title": "Practice",
       "desc": "Free · unrated · no XP",
-      "button": "Play vs bot"
+      "button": "Play vs bot",
+      "descPaid": "Entry {entry} coins · unrated · no XP"
     },
     "rank": {
       "title": "Your rank",
@@ -901,7 +905,9 @@
       "balanceAfterWhen": "Balance after the match starts",
       "timing": "Your entry is taken when an opponent is found. If the match is cancelled before the first roll, you get it back in full. Cancelling the search costs nothing.",
       "cta": "Pay {entry} coins and search",
-      "connecting": "Connecting…"
+      "connecting": "Connecting…",
+      "balanceUnknown": "Getting your balance…",
+      "balanceError": "Couldn't get your balance."
     },
     "queue": {
       "title": "Finding an opponent",
@@ -949,11 +955,16 @@
       },
       "info": "Practice match: free, no rating change, no XP.",
       "cta": "Start practice match",
-      "row": "Bot · {level}"
+      "row": "Bot · {level}",
+      "prize": "Prize if you win",
+      "needs": "You need {entry} coins for this match.",
+      "infoPaid": "Bot match: no rating change, no XP. The entry is taken when the match starts.",
+      "ctaPay": "Pay {entry} coins and start"
     },
     "insufficient": {
       "lowerTier": "{entry}-coin table · winner receives {payout}",
-      "bot": "Practice vs bot (free)"
+      "bot": "Practice vs bot (free)",
+      "botPaid": "Practice vs bot ({entry}-coin entry)"
     },
     "error": {
       "inProgress": "You already have a match in progress.",
@@ -1396,7 +1407,8 @@
       "warning30": "30 seconds until you forfeit the match",
       "warning10": "10 seconds until you forfeit the match",
       "expired": "The time to reconnect has run out. We'll show the result when you're back online.",
-      "done": "Reconnected"
+      "done": "Reconnected",
+      "leaveNote": "Leaving doesn't stop the countdown."
     },
     "opponent": {
       "disconnected": "Disconnected · {time} until they forfeit",
@@ -1439,7 +1451,6 @@
       "opening": "Opening roll: {a}–{b}",
       "you": "You",
       "gameResult": "{winner} won · {points, plural, one {# point} other {# points}}",
-      "sessionNote": "Moves seen since this screen was opened.",
       "bar": "bar",
       "off": "off",
       "sep": ", "
@@ -1468,7 +1479,8 @@
       "matchRated": "Your rating changes as for a loss.",
       "practice": "Practice match: no coins or rating involved.",
       "ctaGame": "Resign game",
-      "ctaMatch": "Resign match"
+      "ctaMatch": "Resign match",
+      "practicePaid": "Bot match: you lose your entry of {entry} coins; your rating doesn't change."
     },
     "kind": {
       "single": "Single",
@@ -1541,7 +1553,9 @@
       "viewReplay": "View replay",
       "backToLobby": "Back to lobby",
       "gameWinnerYou": "You",
-      "coinsTitle": "Coins"
+      "coinsTitle": "Coins",
+      "debit": "−{amount}",
+      "practicePaid": "Bot match: no rating or XP changes."
     },
     "summary": {
       "title": "Match summary",
@@ -1623,5 +1637,117 @@
       "hurry": "A bit faster, please",
       "good_game": "Good game!"
     }
+  },
+  "history": {
+    "title": "Match history",
+    "intro": "Your matches, newest first.",
+    "row": {
+      "result": {
+        "won": "Won",
+        "lost": "Lost",
+        "cancelled": "Cancelled",
+        "voided": "Voided",
+        "active": "In progress"
+      },
+      "returnToMatch": "Return to match",
+      "table": "{entry}-coin table",
+      "practice": "Practice",
+      "tournament": "Tournament",
+      "today": "Today, {time}",
+      "yesterday": "Yesterday, {time}",
+      "unknownPlayer": "Player",
+      "label": "{result} against {opponent}, {score}, {meta}, {date}"
+    },
+    "empty": "You haven't played yet.",
+    "emptyAction": "Play vs bot",
+    "loadError": "Couldn't load your match history.",
+    "loadMoreError": "Couldn't load more."
+  },
+  "replay": {
+    "title": "Replay",
+    "subtitle": "@{username} · {date}",
+    "private": {
+      "title": "This replay is private",
+      "body": "This replay is only available to the two players of the match."
+    },
+    "privateNote": "Only you and @{username} can watch this replay.",
+    "loading": "Loading replay",
+    "menu": "Replay menu",
+    "controls": "Replay controls",
+    "info": "Match info",
+    "bar": {
+      "label": "{name}, {pips} pips"
+    },
+    "play": "Play",
+    "pause": "Pause",
+    "stepBack": "Previous move",
+    "stepForward": "Next move",
+    "speed": "Speed {speed}",
+    "speedValue": "{value}×",
+    "position": "Move {i} of {n} · Game {g}",
+    "scrubber": "Replay position",
+    "game": {
+      "selector": "Game {g} of {m}",
+      "itemYou": "Game {g} · you +{points} ({kind})",
+      "itemThem": "Game {g} · @{username} +{points} ({kind})"
+    },
+    "moves": "Moves",
+    "now": "Now",
+    "note": {
+      "timeout": "@{username} ran out of time ({count} of {limit})",
+      "disconnected": "@{username} disconnected",
+      "back": "@{username} returned",
+      "reaction": "@{username}: {text}"
+    },
+    "showReactions": "Show reactions",
+    "end": {
+      "title": "End of the match",
+      "again": "Replay from start"
+    },
+    "hint": {
+      "verify": "You can check that every roll came from the dice fixed before the match."
+    },
+    "renderError": "The board couldn't be drawn. The move list is still available.",
+    "verify": {
+      "title": "Verify dice",
+      "explain": "Before the match, the server fixed a secret seed and showed both players its fingerprint (the commitment). Now the seed is published. Your device recomputes every roll from the seed and checks both.",
+      "commit": "Commitment (before the match)",
+      "seed": "Seed (after the match)",
+      "count": "{n, plural, one {# roll to check} other {# rolls to check}}",
+      "run": "Verify now",
+      "again": "Verify again",
+      "progress": "Checking roll {i} of {n}",
+      "stop": "Stop",
+      "commitOk": "The seed matches the commitment shown before the match.",
+      "commitBad": "The published seed doesn't match the commitment.",
+      "allOk": "{n, plural, one {The roll matches the seed.} other {All # rolls match the seed.}}",
+      "someBad": "{k} of {n} rolls don't match.",
+      "mismatchRow": "Roll {i} · Game {g}: recorded {a}–{b}, computed {c}–{d}",
+      "support": "This shouldn't happen. Please contact support with this reference: {id}",
+      "unsupported": "This browser can't run the check. Try an up-to-date browser.",
+      "howTitle": "How to check it yourself",
+      "howSteps": "1. SHA-256 of the seed bytes must equal the commitment. 2. Rolls are numbered from 0, counting opening rolls and ties. 3. For roll n, compute HMAC-SHA256 keyed with the seed over the text \"match_id:n:k\" for k = 0, 1, …. 4. Accept each byte below 252; die = (byte mod 6) + 1; the first two dice are the roll.",
+      "matchId": "Match id"
+    },
+    "notFound": {
+      "title": "Replay not found",
+      "body": "Check the link, or open your match history."
+    },
+    "active": {
+      "title": "The match is still going",
+      "body": "The replay will be available when the match ends."
+    },
+    "aborted": {
+      "title": "Nothing to replay",
+      "body": "This match ended before the first roll."
+    },
+    "purged": {
+      "title": "This replay is no longer available",
+      "body": "Old replays are removed after a while. The match result is still in your history."
+    },
+    "loadError": {
+      "title": "Couldn't load the replay"
+    },
+    "matchSummary": "Match summary"
   }
 }

@@ -67,6 +67,11 @@ for (const mode of colorModes) {
       expectContrast(c.outline, c.surfaceSunken, UI, `${mode} outline/surfaceSunken`);
     });
 
+    it("draws used dice chips (information, not disabled controls) at 4.5:1 on the action bar", () => {
+      // match.md MA-02, review M-05: the chip digit is textSecondary on the action bar's surface.
+      expectContrast(c.textSecondary, c.surface, TEXT, `${mode} used die/action bar surface`);
+    });
+
     it("keeps the two player markers distinguishable from each other and the surface", () => {
       expectContrast(c.playerLight, c.playerDark, UI, `${mode} player markers`);
       expectContrast(c.playerLightRim, c.playerLight, UI, `${mode} light marker rim`);

@@ -1,6 +1,6 @@
 "use client";
 
-import TextField, { type TextFieldProps } from "@mui/material/TextField";
+import { TextInput as TextField, type TextInputProps as TextFieldProps } from "@/components/forms/TextInput";
 import { useTheme } from "@mui/material/styles";
 import { useTranslations } from "next-intl";
 import { useState, type ChangeEvent } from "react";

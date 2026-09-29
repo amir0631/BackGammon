@@ -80,7 +80,7 @@ export function MatchScreen({ matchId, openCancel, forceSummary }: { matchId: st
       </Frame>
     );
   }
-  if (summary.status === "active" && summary.you !== null && !webgl) return <Unsupported matchId={matchId} inMatch />;
+  if (summary.status === "active" && summary.you !== null && !webgl) return <Unsupported matchId={matchId} inMatch summary={summary} onEnded={load} />;
   return <FinishedSummary summary={summary} />;
 }
 
@@ -215,23 +215,64 @@ function FinishedSummary({ summary }: { summary: Summary }) {
 }
 
 /** MA-17 device not supported (match.md §4): no WebGL2, so nothing 3D is downloaded. */
-export function Unsupported({ matchId, inMatch }: { matchId: string; inMatch: boolean }) {
+export function Unsupported({
+  matchId,
+  inMatch,
+  summary,
+  onEnded,
+}: {
+  matchId: string;
+  inMatch: boolean;
+  summary?: Summary | null;
+  /** The match ended (after a resignation or otherwise): reload the summary to show MA-14 (M-11). */
+  onEnded?: () => void;
+}) {
   const t = useTranslations();
+  const f = useFormat();
+  const labels = useGameLabels();
   const router = useRouter();
   const socket = useGameSocket();
   const [confirm, setConfirm] = useState(false);
   const [sending, setSending] = useState(false);
+  const [payout, setPayout] = useState<number | null>(null);
 
   useEffect(
     () =>
       socket.subscribe((env) => {
         if (env.type === "match.ended" && env.match_id === matchId) {
           socket.detach();
-          router.push("/play");
+          setSending(false);
+          setConfirm(false);
+          if (onEnded) onEnded();
+          else router.push("/play");
         }
       }),
-    [socket, matchId, router],
+    [socket, matchId, router, onEnded],
   );
+
+  // What the opponent receives, from the table the match was played at (the attached match's rules
+  // replace it once known).
+  const entry = summary?.entry ?? 0;
+  useEffect(() => {
+    if (!inMatch || !summary || summary.is_bot || entry <= 0) return;
+    api.matches
+      .tiers()
+      .then((page) => setPayout(page.results.find((tier) => tier.entry === entry)?.payout ?? null))
+      .catch(() => undefined);
+  }, [inMatch, summary, entry]);
+  const rulesPayout = socket.match?.matchId === matchId ? socket.match.getSnapshot().rules?.payout : undefined;
+  const shownPayout = typeof rulesPayout === "number" && rulesPayout > 0 ? rulesPayout : payout;
+
+  const opp = summary && summary.you !== null ? summary.players[1 - summary.you] : null;
+  const oppName = opp ? (opp.is_bot ? labels.botName(opp.bot_level) : isolate(opp.username ?? "")) : "";
+  // The MA-08 match wording: who wins, and the coins, before the tap (P§2).
+  const body = !summary
+    ? t("match.resign.matchRated")
+    : summary.is_bot
+      ? `${t("match.resign.matchBody", { username: oppName })} ${entry > 0 ? t("match.resign.practicePaid", { entry: f.number(entry) }) : t("match.resign.practice")}`
+      : entry > 0 && shownPayout !== null
+        ? `${t("match.resign.matchBody", { username: oppName })} ${t("match.resign.matchCoins", { entry: f.number(entry), username: oppName, payout: f.number(shownPayout) })} ${t("match.resign.matchRated")}`
+        : `${t("match.resign.matchBody", { username: oppName })} ${t("match.resign.matchRated")}`;
 
   return (
     <Frame>
@@ -263,7 +304,7 @@ export function Unsupported({ matchId, inMatch }: { matchId: string; inMatch: bo
         confirmLabel={t("match.resign.ctaMatch")}
         inFlight={sending}
       >
-        {t("match.resign.matchRated")}
+        {body}
       </ConfirmDialog>
     </Frame>
   );

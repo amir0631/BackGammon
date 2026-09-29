@@ -115,3 +115,15 @@ export function bestOrientation(width: number, height: number, tiltDeg: number, 
 export function checkerPx(f: Framing): number {
   return f.pxPerUnit * BOARD.checkerDiameter;
 }
+
+/**
+ * Size in CSS px of one point's hit area for a framing (§11.1: ≥ 44 px along the point and ≥ 32 px
+ * across at 360 × 800 portrait). The hit area is the whole point strip plus half the middle gap
+ * (`locate` in geometry.ts), so it is larger than the checkers.
+ */
+export function pointHitPx(f: Framing): { along: number; across: number } {
+  return {
+    along: f.pxPerUnit * (BOARD.pointLength + BOARD.midGap / 2),
+    across: f.pxPerUnit * BOARD.pitch,
+  };
+}

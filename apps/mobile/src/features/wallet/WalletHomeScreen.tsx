@@ -67,7 +67,8 @@ const Frame = styled("div")(({ theme }) => ({
   "& .wallet-detail": { display: "none" },
   [`@container wallet (min-width: ${WIDE})`]: {
     "& .wallet-grid": {
-      gridTemplateColumns: "minmax(17.5rem, 22.5rem) minmax(0, 1fr)",
+      // The history column never gets under 18rem, so ledger rows stay readable (W-21).
+      gridTemplateColumns: "minmax(16rem, 1fr) minmax(18rem, 1.25fr)",
       alignItems: "start",
     },
     [TALL]: { "& .wallet-summary": { position: "sticky", insetBlockStart: theme.spacing(10) } },

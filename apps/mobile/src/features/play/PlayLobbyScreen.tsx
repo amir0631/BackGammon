@@ -11,6 +11,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api } from "@bg/api-client";
 import type { ApiError, ErrorOut, LeaderboardRow, MatchFoundOut, Tier } from "@bg/protocol";
 import { Banner } from "@/components/feedback/Banner";
+import { OfflineIcon, WarningIcon } from "@/components/icons";
+import { InfoLine } from "@/components/wallet/InfoLine";
 import { useToast } from "@/components/feedback/Toast";
 import { BottomSheet } from "@/components/sheet/BottomSheet";
 import { SignedInShell } from "@/components/shell/SignedInShell";
@@ -26,11 +28,11 @@ import { useFormat } from "@/lib/useFormat";
 import { useOnline } from "@/lib/useOnline";
 import { useWallet } from "@/lib/wallet";
 import { supportsWebGL2 } from "@/lib/webgl";
-import { gutterStyles, mqLgUp, mqMdUp, mqRail } from "@/theme/layout";
-import { isVariant, useGameLabels, type BotLevel, type Variant } from "./labels";
+import { gutterStyles, mqMdUp } from "@/theme/layout";
+import { isBotLevel, isVariant, useGameLabels, type BotLevel, type Variant } from "./labels";
 import { Card, PlayAgainCard, PracticeCard, RankCard, TierCard, TierCardSkeleton, TopPlayers } from "./LobbyCards";
 import { MatchmakingOverlay } from "./MatchmakingOverlay";
-import { PlaySheet, type SheetState } from "./PlaySheet";
+import { PlaySheet, type BotEntry, type SheetState } from "./PlaySheet";
 import { usePlayQueue, type QueueRequest } from "./usePlayQueue";
 
 // PL-01 Play lobby `/play` (play.md §3.1, §4): tier cards, practice, rank, "Play again", and the
@@ -52,28 +54,30 @@ const Layout = styled("div")(({ theme }) => ({
   paddingBlock: theme.spacing(2, 4),
   gridTemplateColumns: "minmax(0, 1fr)",
   gridTemplateAreas: `"top" "online" "side"`,
+  // md: the tier cards (the primary action) keep the room; the side column stays narrow (P-05).
   [mqMdUp]: {
-    gridTemplateColumns: "minmax(0, 1fr) minmax(16rem, 20rem)",
+    gridTemplateColumns: "minmax(0, 1fr) minmax(15rem, 17.5rem)",
     gridTemplateAreas: `"top top" "online side"`,
     alignItems: "start",
   },
   "& .lobby-top": { gridArea: "top", display: "grid", gap: theme.spacing(2) },
-  "& .lobby-online": { gridArea: "online", minWidth: 0 },
+  "& .lobby-online": { gridArea: "online", minWidth: 0, containerType: "inline-size", containerName: "tiers" },
   "& .lobby-side": { gridArea: "side", display: "grid", gap: theme.spacing(2), minWidth: 0 },
 }));
 
+/**
+ * One column until every card gets at least 13rem; then as many as fit (4-up in the 1280 shell).
+ * Measured on the section (a named container), not the viewport, so the side column and the rail
+ * never squeeze a card (P-05, P-11).
+ */
 const TierGrid = styled("ul")(({ theme }) => ({
   listStyle: "none",
   margin: 0,
   padding: 0,
   display: "grid",
   gap: theme.spacing(1.5),
-  gridTemplateColumns: "minmax(0, 1fr)",
+  gridTemplateColumns: "repeat(auto-fill, minmax(min(13rem, 100%), 1fr))",
   "& > li": { containerType: "inline-size", containerName: "tiercard", minWidth: 0 },
-  // Landscape phones and md: 2-up; lg: up to 4-up as width allows.
-  [mqRail]: { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
-  [mqLgUp]: { gridTemplateColumns: "repeat(auto-fill, minmax(15rem, 1fr))" },
-  "@media (max-width: 599.98px) and (orientation: portrait)": { gridTemplateColumns: "minmax(0, 1fr)" },
 }));
 
 interface CachedTiers {
@@ -112,8 +116,13 @@ export function PlayLobbyScreen() {
   const [last, setLast] = useState<QueueRequest | null>(null);
   const [hintSeen, setHintSeen] = useState(true);
   const [top, setTop] = useState<LeaderboardRow[] | null>(null);
+  /** The server's current bot entry after BOT_ENTRY_CHANGED (newer than the config read). */
+  const [botEntryNow, setBotEntryNow] = useState<BotEntry | null>(null);
+  /** Opened from a lost match (MA-13b `from=loss`): no "Get coins" in this visit (P§9, P-06). */
+  const [afterLoss, setAfterLoss] = useState(false);
 
   const balance = wallet.summary?.balance ?? null;
+  const botEntry: BotEntry | null = botEntryNow ?? config?.bot_entry ?? null;
   const userId = me?.id ?? null;
 
   // ---- Data ----------------------------------------------------------------------------------
@@ -266,12 +275,13 @@ export function PlayLobbyScreen() {
 
   // ---- Bot ------------------------------------------------------------------------------------
 
-  const startBot = async (level: BotLevel, variant: Variant, length: number) => {
+  const startBot = async (level: BotLevel, variant: Variant, length: number, entry: number) => {
     if (botInFlight) return;
     setBotInFlight(true);
     setBotError(null);
     try {
-      const created = await api.matches.startBot(level, variant, length);
+      const created = await api.matches.startBot(level, variant, length, entry);
+      if (entry > 0) void wallet.refresh();
       markFreshMatch(created.match_id, null);
       void refreshActive();
       // Navigate with the sheet still open: closing it first would pop its history entry and race
@@ -296,6 +306,15 @@ export function PlayLobbyScreen() {
             </Button>
           </>,
         );
+      } else if (e.code === "BOT_ENTRY_CHANGED") {
+        // Nothing was charged: show the new cost and let the player confirm again (§9).
+        const now = typeof e.details.entry === "number" ? e.details.entry : 0;
+        const prize = typeof e.details.prize === "number" ? e.details.prize : 0;
+        setBotEntryNow({ enabled: now > 0, entry: now, prize: now > 0 ? prize : 0 });
+        setBotError(t("errors.match.botEntryChanged"));
+      } else if (e.code === "WALLET_INSUFFICIENT") {
+        setBotError(t("errors.wallet.insufficient"));
+        void wallet.refresh();
       } else if (e.code === "ACCOUNT_SUSPENDED") {
         setBotError(t("account.suspended.actionBlocked"));
         void reloadMe();
@@ -324,6 +343,7 @@ export function PlayLobbyScreen() {
     const parse = (value: string | null) => value?.split(":") ?? null;
     const again = parse(params.get("again"));
     const bot = parse(params.get("bot"));
+    if (params.get("from") === "loss") setAfterLoss(true);
     if (again && again.length === 3) {
       const [tierId, variant, length] = [Number(again[0]), again[1] ?? "", Number(again[2])];
       if (tierById(tierId) && isVariant(variant) && Number.isInteger(length)) setSheet({ step: "confirm", tierId, variant, length });
@@ -332,8 +352,10 @@ export function PlayLobbyScreen() {
       const variant = s[1] ?? "";
       setSheet({ step: "setup", tierId: Number(s[0]) || null, variant: isVariant(variant) ? variant : null, length: Number(s[2]) || null });
     } else if (bot) {
+      // `bot=variant:length[:level]`: MA-13b "Play again" opens PL-04 at its cost step (P-03).
       const variant = bot[0] ?? "";
-      setSheet({ step: "bot", level: null, variant: isVariant(variant) ? variant : null, length: Number(bot[1]) || null });
+      const level = bot[2] ?? "";
+      setSheet({ step: "bot", level: isBotLevel(level) ? level : null, variant: isVariant(variant) ? variant : null, length: Number(bot[1]) || null });
     } else {
       return;
     }
@@ -364,13 +386,19 @@ export function PlayLobbyScreen() {
           {t("play.unsupported.reason")}
         </Banner>
       )}
+      {/* The shell already shows the suspension and offline banners (with "Details"): here only the
+          reason, as the aria-describedby target of the play buttons (P-09). */}
       {blockedKind === "suspended" && (
-        <Banner severity="warning" action={{ label: t("account.suspended.details"), href: "/account/status" }}>
+        <InfoLine icon={WarningIcon} tone="primary">
           {t("account.suspended.actionBlocked")}
-        </Banner>
+        </InfoLine>
       )}
       {blockedKind === "inMatch" && <Banner severity="info">{t("play.inMatch.reason")}</Banner>}
-      {blockedKind === "offline" && <Banner severity="offline">{t("net.offlineAction")}</Banner>}
+      {blockedKind === "offline" && (
+        <InfoLine icon={OfflineIcon} tone="primary">
+          {t("net.offlineAction")}
+        </InfoLine>
+      )}
     </div>
   );
 
@@ -472,7 +500,7 @@ export function PlayLobbyScreen() {
           </div>
           {onlineSection}
           <div className="lobby-side">
-            <PracticeCard blockedBy={blockedId} onOpen={() => openBot()} />
+            <PracticeCard blockedBy={blockedId} onOpen={() => openBot()} entry={botEntry?.enabled ? botEntry.entry : 0} />
             <RankCard elo={me?.elo ?? null} level={me?.level ?? null}>
               {lg && <TopPlayers rows={top} />}
             </RankCard>
@@ -488,6 +516,10 @@ export function PlayLobbyScreen() {
         }}
         tiers={tiers ?? []}
         balance={balance}
+        balanceFailed={wallet.failed && balance === null}
+        onRetryBalance={() => void wallet.refresh()}
+        botEntry={botEntry}
+        afterLoss={afterLoss}
         coinPriceToman={wallet.summary?.coin_price_toman ?? config?.coin_price_toman ?? null}
         username={me?.username ?? null}
         botLengths={botLengths ?? config?.allowed_lengths ?? []}
@@ -498,7 +530,7 @@ export function PlayLobbyScreen() {
         joinBlocked={joinBlocked}
         botInFlight={botInFlight}
         botError={botError}
-        onStartBot={(level, variant, length) => void startBot(level, variant, length)}
+        onStartBot={(level, variant, length, entry) => void startBot(level, variant, length, entry)}
         botBlocked={botBlocked}
       />
 

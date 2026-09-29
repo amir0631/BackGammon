@@ -70,6 +70,7 @@ const TITLES: Record<string, { key: string; back: boolean }> = {
   "/me": { key: "profile.hub.title", back: false },
   "/me/edit": { key: "profile.edit.title", back: true },
   "/me/sessions": { key: "sessions.title", back: true },
+  "/me/matches": { key: "history.title", back: true },
   "/settings": { key: "settings.title", back: true },
 };
 

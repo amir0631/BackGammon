@@ -13,7 +13,8 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { api, GameSocket, type SocketStatus } from "@bg/api-client";
+import { api, type SocketStatus } from "@bg/api-client";
+import type { GameSocket } from "@bg/api-client/src/socket";
 import type { ClientMessageType, ClientMessages, ServerEnvelope } from "@bg/protocol";
 import { useToast } from "@/components/feedback/Toast";
 import type { MatchSnapshot, MatchStore } from "./match/store";
@@ -25,7 +26,9 @@ import { useSession } from "./session";
 // re-attach by last seq, and queue re-join; this provider only exposes it to React and keeps the
 // attached match's view (MatchStore, game-core `apply`).
 //
-// Connects lazily: the first screen that needs the socket calls `connect()`.
+// Connects lazily: the first screen that needs the socket calls `connect()`. The GameSocket module
+// itself loads on that first call, so routes that never connect (wallet, account) don't carry it
+// in their first-load JS (§11.4 budget, wallet review W-22).
 
 export type SocketState = SocketStatus | "idle";
 
@@ -54,6 +57,16 @@ interface SocketValue {
 
 const SocketContext = createContext<SocketValue | null>(null);
 
+type SocketModule = typeof import("@bg/api-client/src/socket");
+let socketModule: Promise<SocketModule> | null = null;
+function loadSocketModule(): Promise<SocketModule> {
+  socketModule ??= import("@bg/api-client/src/socket").catch((error: unknown) => {
+    socketModule = null; // a failed chunk load is retried on the next connect
+    throw error;
+  });
+  return socketModule;
+}
+
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { status: sessionStatus, me } = useSession();
   const [status, setStatus] = useState<SocketState>("idle");
@@ -75,25 +88,42 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     listeners.current.forEach((fn) => fn(env));
   }, []);
 
-  const ensure = useCallback((): GameSocket => {
-    if (socketRef.current) return socketRef.current;
-    const socket = new GameSocket({
-      onMessage,
-      onStatus: (s) => {
-        setStatus(s);
-        if (s === "open") setAttempt(0);
-        else if (s === "reconnecting") setAttempt((n) => n + 1);
-      },
-      getToken: () => api.auth.wsToken().then((r) => r.token),
+  const pending = useRef<Promise<GameSocket> | null>(null);
+  /** Bumped when the user changes, so a module load that finishes late creates nothing. */
+  const generation = useRef(0);
+
+  const ensure = useCallback((): Promise<GameSocket> => {
+    if (socketRef.current) return Promise.resolve(socketRef.current);
+    if (pending.current) return pending.current;
+    const gen = generation.current;
+    const run = loadSocketModule().then(({ GameSocket: Socket }) => {
+      if (gen !== generation.current) throw new Error("socket: user changed");
+      if (socketRef.current) return socketRef.current;
+      const socket = new Socket({
+        onMessage,
+        onStatus: (s) => {
+          setStatus(s);
+          if (s === "open") setAttempt(0);
+          else if (s === "reconnecting") setAttempt((n) => n + 1);
+        },
+        getToken: () => api.auth.wsToken().then((r) => r.token),
+      });
+      socketRef.current = socket;
+      socket.connect();
+      return socket;
     });
-    socketRef.current = socket;
-    socket.connect();
-    return socket;
+    pending.current = run;
+    run.catch(() => undefined).finally(() => {
+      if (pending.current === run) pending.current = null;
+    });
+    return run;
   }, [onMessage]);
 
   // A different user (or none): drop the socket and the attached match.
   useEffect(() => {
     return () => {
+      generation.current += 1;
+      pending.current = null;
       socketRef.current?.close();
       socketRef.current = null;
       matchRef.current = null;
@@ -108,9 +138,13 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       status,
       attempt,
       connect: () => {
-        if (userId !== null) ensure();
+        if (userId !== null) void ensure().catch(() => undefined);
       },
-      send: (type, payload) => ensure().send(type, payload),
+      send: (type, payload) => {
+        const socket = socketRef.current;
+        if (socket) socket.send(type, payload);
+        else void ensure().then((s) => s.send(type, payload), () => undefined);
+      },
       subscribe: (fn) => {
         listeners.current.add(fn);
         return () => listeners.current.delete(fn);
@@ -122,8 +156,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         socket.connect();
       },
       attach: async (matchId) => {
-        const socket = ensure();
-        const { MatchStore } = await import("./match/store");
+        const [socket, { MatchStore }] = await Promise.all([ensure(), import("./match/store")]);
         let store = matchRef.current;
         if (!store || store.matchId !== matchId) {
           store = new MatchStore(matchId);

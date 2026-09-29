@@ -59,7 +59,7 @@ export function useCostConfirmationParts({
   error,
   onCheckStatus,
   helpHref,
-}: Omit<CostConfirmationProps, "open" | "title">): { body: ReactNode; footer: ReactNode } {
+}: Omit<CostConfirmationProps, "open" | "title">): { body: ReactNode; footer: ReactNode; footerMode: "inline" } {
   const t = useTranslations("common");
   const reasonId = useId();
   const [slow, setSlow] = useState(false);
@@ -152,14 +152,16 @@ export function useCostConfirmationParts({
       )}
     </Stack>
   );
-  return { body, footer };
+  // The footer always follows the cost block and the facts (P§2.1: the primary is never reachable
+  // before the whole cost is seen).
+  return { body, footer, footerMode: "inline" };
 }
 
 export function CostConfirmation(props: CostConfirmationProps) {
   const { open, onCancel, title, inFlight = false } = props;
-  const { body, footer } = useCostConfirmationParts(props);
+  const { body, footer, footerMode } = useCostConfirmationParts(props);
   return (
-    <BottomSheet open={open} onClose={onCancel} title={title} footer={footer} dismissible={!inFlight}>
+    <BottomSheet open={open} onClose={onCancel} title={title} footer={footer} footerMode={footerMode} dismissible={!inFlight}>
       {body}
     </BottomSheet>
   );

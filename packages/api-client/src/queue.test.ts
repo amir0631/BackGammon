@@ -133,4 +133,28 @@ describe("QueueFlow", () => {
     expect(c.cb.onJoinError).toHaveBeenCalledWith(error, REQ);
     expect(c.flow.state).toEqual({ kind: "idle" });
   });
+
+  it("pauses when the browser goes offline before the socket notices, and re-joins when it is back", () => {
+    const { flow, sent, states } = setup();
+    flow.join(REQ);
+    flow.handle(status("waiting"));
+    flow.network(false, "open");
+    expect(flow.state.kind).toBe("offline");
+    // Back online with the socket still open: the flow sends the same join again.
+    flow.network(true, "open");
+    expect(sent).toEqual(["queue.join", "queue.join"]);
+    flow.handle(status("waiting"));
+    expect(states.at(-1)).toMatchObject({ kind: "waiting", again: true });
+  });
+
+  it("leaves the re-join to the socket when the socket itself dropped", () => {
+    const { flow, sent } = setup();
+    flow.join(REQ);
+    flow.handle(status("waiting"));
+    flow.network(false, "open");
+    flow.socketStatus("reconnecting");
+    flow.network(true, "reconnecting");
+    flow.network(true, "open");
+    expect(sent).toEqual(["queue.join"]);
+  });
 });

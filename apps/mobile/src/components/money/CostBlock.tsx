@@ -1,11 +1,13 @@
 "use client";
 
+import Skeleton from "@mui/material/Skeleton";
 import { styled } from "@mui/material/styles";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { iconSize, radii } from "@bg/design-tokens";
 import { CoinIcon } from "@/components/icons";
 import { useFormat, type Amount } from "@/lib/useFormat";
+import { visuallyHidden } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
 
 // Cost block of every money confirmation (patterns.md §2.1 item 3). Always shown in full; rows
@@ -13,6 +15,8 @@ import { tokensOf } from "@/theme/theme";
 // component formats, it never computes.
 //
 // At narrow container widths (a sheet at 200% text) each row stacks label over value (§13).
+// A balance the app has not read yet is `null`: its rows show a skeleton, never a made-up 0
+// (play.md P-01); the caller keeps the primary disabled until it arrives.
 
 const List = styled("dl")(({ theme }) => {
   const t = tokensOf(theme);
@@ -70,8 +74,8 @@ const Secondary = styled("span")(({ theme }) => ({
 export interface CostBlockProps {
   /** Coins charged or moved. */
   cost: Amount;
-  /** "cost" for purchases and entries, "amount" for transfers and withdrawals. */
-  costLabel?: "cost" | "amount";
+  /** "cost" for purchases and entries, "amount" for transfers and withdrawals, "entry" for a bot entry. */
+  costLabel?: "cost" | "amount" | "entry";
   /** Toman equivalent under the cost (patterns.md §2.1, open question 6). */
   tomanEquivalent?: Amount;
   /** Fee in coins (transfer, withdrawal; shown even when 0). */
@@ -80,12 +84,15 @@ export interface CostBlockProps {
   feeLabel?: string;
   /** Coins the winner receives (table entry, play.md PL-03). */
   winnerReceives?: Amount;
+  /** Fixed prize for winning a bot match with an entry (play.md §3.6 step 7). */
+  prize?: Amount;
   /** Coins the recipient receives (transfer). */
   recipientReceives?: Amount;
   /** Toman paid to the user's bank account (withdrawal). */
   youReceiveToman?: Amount;
-  balance: Amount;
-  balanceAfter: Amount;
+  /** `null` while the wallet has not been read (skeleton row). */
+  balance: Amount | null;
+  balanceAfter: Amount | null;
   /** "Balance after the match starts" when the charge happens later (play.md §3.3). */
   balanceAfterLabel?: string;
 }
@@ -97,6 +104,7 @@ export function CostBlock({
   fee,
   feeLabel,
   winnerReceives,
+  prize,
   recipientReceives,
   youReceiveToman,
   balance,
@@ -106,17 +114,23 @@ export function CostBlock({
   const t = useTranslations();
   const f = useFormat();
 
-  const coins = (value: Amount): ReactNode => (
-    <Value>
-      <CoinIcon sx={{ fontSize: iconSize.sm }} />
-      {f.coins(value)}
-    </Value>
-  );
+  const coins = (value: Amount | null): ReactNode =>
+    value === null ? (
+      <>
+        <Skeleton variant="text" width="6rem" sx={{ display: "inline-block" }} aria-hidden />
+        <span style={visuallyHidden}>{t("common.loading")}</span>
+      </>
+    ) : (
+      <Value>
+        <CoinIcon sx={{ fontSize: iconSize.sm }} />
+        {f.coins(value)}
+      </Value>
+    );
 
   return (
     <List>
       <Row data-emphasis="true">
-        <dt>{t(costLabel === "cost" ? "coins.cost" : "coins.amount")}</dt>
+        <dt>{t(costLabel === "cost" ? "coins.cost" : costLabel === "entry" ? "play.join.entry" : "coins.amount")}</dt>
         <dd>
           {coins(cost)}
           {tomanEquivalent !== undefined && (
@@ -134,6 +148,12 @@ export function CostBlock({
         <Row data-emphasis="true">
           <dt>{t("play.join.payout")}</dt>
           <dd>{coins(winnerReceives)}</dd>
+        </Row>
+      )}
+      {prize !== undefined && (
+        <Row data-emphasis="true">
+          <dt>{t("play.bot.prize")}</dt>
+          <dd>{coins(prize)}</dd>
         </Row>
       )}
       {recipientReceives !== undefined && (

@@ -2,7 +2,7 @@
 
 import InputAdornment from "@mui/material/InputAdornment";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
+import { TextInput as TextField } from "@/components/forms/TextInput";
 import { useId, type ReactNode, type Ref } from "react";
 import { iconSize } from "@bg/design-tokens";
 import { FieldError } from "@/components/forms/FieldText";
