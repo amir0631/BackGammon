@@ -13,11 +13,11 @@ import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, SPECTATOR_LANE, SPECTATOR_REACTION_COOLDOWN_MS, spectateJoinOutcome, type SpectateUnavailable } from "@bg/api-client";
+import { SPECTATOR_LANE, SPECTATOR_REACTION_COOLDOWN_MS, spectateJoinOutcome, type SpectateUnavailable } from "@bg/api-client";
 import { avatarSize, feedbackTiming, iconSize, layout, radii, zIndex } from "@bg/design-tokens";
 import { initialPosition, pipCount, readClock, toViewerPoint, type Player } from "@bg/game-core";
 import { isolate } from "@bg/i18n";
-import type { MatchEndedOut, MatchSummary, PoolUpdateOut, ServerEnvelope } from "@bg/protocol";
+import type { MatchEndedOut, MatchSummary, ServerEnvelope } from "@bg/protocol";
 import { SwitchRow } from "@/components/forms/SwitchRow";
 import { BackIcon, CoinIcon, EyeIcon, InfoIcon, OfflineIcon, TournamentsIcon, WarningIcon } from "@/components/icons";
 import { MenuIcon, ReactionIcon, ShieldIcon } from "@/components/icons/game";
@@ -40,13 +40,15 @@ import { MoveHistory } from "../match/panels";
 import { ClockDisplay, PlayerBar, SeedText, StatusLine } from "../match/parts";
 import { useSceneLabels } from "../match/useSceneLabels";
 import { useGameLabels } from "../play/labels";
+import { PredictionPanel, PredictionSheets, useMatchLine, type PredictionPlayer } from "../predictions/PredictionPanel";
+import { usePredictionFlow } from "../predictions/usePredictionFlow";
 
 // LV-03 Spectator view on `/match/[id]` (live.md §3.2–§3.6, §4). Read-only: the board gets no input,
 // and no roll, confirm, undo, cube, or resign control exists here. Joins with `spectate.join`
 // through the shared socket; `spectate.state` and the players' events drive the same game-core
 // store the player view uses. Player A sits at the bottom (§10 Q9), matching the list and score
-// order. Predictions: a read-only placeholder while the pool is open (the placing flow comes in a
-// later step, predictions.md).
+// order. Predictions (predictions.md PR-01 … PR-03): a sheet at `sm`, the first side-panel tab at
+// `md`/`lg`, PR-02 as a sheet / centered dialog, and the result inside the match-ended card.
 
 const LANDSCAPE_PHONE = `@media (orientation: landscape) and (max-height: ${layout.compactHeight - 0.02}px)`;
 const WIDE = `@media (min-width: 900px) and (min-height: ${layout.compactHeight}px) and (min-aspect-ratio: 1/1)`;
@@ -154,7 +156,7 @@ const Panel = styled("aside")(({ theme }) => ({
   containerType: "inline-size",
 }));
 
-type SheetKind = "menu" | "reactions" | "predict" | "peek";
+type SheetKind = "menu" | "reactions" | "peek";
 
 interface LaneEntry {
   id: number;
@@ -176,6 +178,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   const router = useRouter();
   const labels = useGameLabels();
   const sceneLabels = useSceneLabels();
+  const matchLine = useMatchLine();
   const reduced = useReducedMotion();
   const online = useOnline();
   const config = usePublicConfig();
@@ -194,7 +197,6 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   const [peek, setPeek] = useState<number>(0);
   const [endTab, setEndTab] = useState(1);
   const [ended, setEnded] = useState<MatchEndedOut | null>(null);
-  const [pool, setPool] = useState<PoolUpdateOut | null>(null);
   const [lane, setLane] = useState<LaneEntry[]>([]);
   const [recent, setRecent] = useState(0);
   const [reactionsOff, setReactionsOff] = useState(config ? !config.spectator_reactions_enabled : false);
@@ -241,18 +243,16 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
       .catch(() => setPhysicsReady(true));
   }, [prefs.graphics_lite]);
 
-  // The pool, when predictions are on: this match's entry in the open list (§3.4 step 1).
-  const loadPool = useCallback(() => {
-    if (!predictionsOn) return;
-    api.predictions
-      .open()
-      .then((page) => {
-        const p = page.results.find((x) => x.match_id === matchId);
-        setPool(p ? { total_a: p.total_a, total_b: p.total_b, open: p.open } : null);
-      })
-      .catch(() => undefined);
-  }, [predictionsOn, matchId]);
-  useEffect(loadPool, [loadPool]);
+  // The pool, when predictions are on (predictions.md §3.1; live.md §3.4 step 1).
+  const flow = usePredictionFlow({
+    matchId,
+    enabled: predictionsOn,
+    ended: ended !== null,
+    errorText: (code) => `${t("errors.generic")} (${t("common.errorCode", { code })})`,
+  });
+  const loadPool = flow.reload;
+  const applyPool = flow.applyPool;
+  const closePool = flow.closeNow;
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 250);
@@ -303,12 +303,12 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
           loadPool();
           break;
         case "pool.update":
-          setPool(env.payload);
+          applyPool(env.payload);
           if (!env.payload.open) setAnnounce(t("predict.closed"));
           break;
         case "turn.rolled": {
           const p = env.payload;
-          if (p.opening) setPool((x) => (x && x.open ? { ...x, open: false } : x));
+          if (p.opening) closePool();
           if (p.player !== null) setAnnounce(t("match.rolled.theirs", { username: nameOf(p.player), a: f.number(p.dice[0] ?? 0), b: f.number(p.dice[1] ?? 0) }));
           break;
         }
@@ -354,7 +354,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
           break;
       }
     },
-    [matchId, onPlayer, onNotLive, join, socket, loadPool, t, f, nameOf, showToast],
+    [matchId, onPlayer, onNotLive, join, socket, loadPool, applyPool, closePool, t, f, nameOf, showToast],
   );
   const handleRef = useRef(handle);
   handleRef.current = handle;
@@ -391,7 +391,13 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
     if (!wide) setSheet(null);
   };
 
-  const poolOpen = Boolean(predictionsOn && pool?.open && view?.status === "active" && ended === null);
+  const poolOpen = Boolean(predictionsOn && flow.totals?.open && view?.status === "active" && ended === null && flow.blocked !== "player");
+  // The panel stays reachable after the close when the viewer has a stake ("Your prediction").
+  const poolVisible = Boolean(predictionsOn && flow.entry && ended === null && flow.blocked !== "player" && (poolOpen || flow.own));
+  const openPredict = () => {
+    if (wide) setEndTab(0);
+    else flow.openPanel();
+  };
   const reconnecting = (socket.status === "reconnecting" || !online) && ended === null && unavailable === null;
 
   // Keyboard (§6): P predictions, R reactions; no game shortcuts for spectators.
@@ -400,12 +406,13 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
       if (document.querySelector("[role=dialog]") || e.altKey || e.ctrlKey || e.metaKey) return;
       const target = e.target as HTMLElement | null;
       if (target?.closest("input, textarea, [contenteditable=true]")) return;
-      if (e.key.toLowerCase() === "p" && poolOpen) setSheet("predict");
+      if (e.key.toLowerCase() === "p" && poolVisible) openPredict();
       else if (e.key.toLowerCase() === "r" && !reactionsOff) setSheet("reactions");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [poolOpen, reactionsOff]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poolVisible, reactionsOff, wide]);
 
   const leave = () => router.push("/live");
 
@@ -505,7 +512,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   const score = view ? t("live.row.score", { a: f.number(view.score[0] ?? 0), b: f.number(view.score[1] ?? 0) }) : "";
   const count = view?.spectators ?? 0;
   const loading = !sceneReady || !view;
-  const tabValue = endTab === 0 && !poolOpen ? 1 : endTab;
+  const tabValue = endTab === 0 && !poolVisible ? 1 : endTab;
 
   const reactionGrid = (
     <Stack spacing={1.5}>
@@ -534,9 +541,12 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
     </Stack>
   );
 
-  const poolPanel = (
-    <PoolPlaceholder names={[view?.players[0]?.username ?? "", view?.players[1]?.username ?? ""]} avatars={[view?.players[0]?.avatar ?? "", view?.players[1]?.avatar ?? ""]} pool={pool} />
-  );
+  const predictPlayers: [PredictionPlayer, PredictionPlayer] = [0, 1].map((i) => ({
+    username: view?.players[i]?.username ?? summary?.players[i]?.username ?? "",
+    avatar: view?.players[i]?.avatar ?? "",
+    elo: view?.players[i]?.elo ?? 0,
+  })) as [PredictionPlayer, PredictionPlayer];
+  const poolPanel = <PredictionPanel flow={flow} players={predictPlayers} ended={ended} />;
 
   const infoPanel = view ? (
     <Stack spacing={1.5}>
@@ -639,7 +649,9 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
               </Typography>
             </Box>
           )}
-          {ended && view && <EndedCard ended={ended} names={[view.players[0]?.username ?? "", view.players[1]?.username ?? ""]} onBack={leave} />}
+          {ended && view && (
+            <EndedCard ended={ended} names={[view.players[0]?.username ?? "", view.players[1]?.username ?? ""]} onBack={leave} prediction={predictionsOn && flow.own ? poolPanel : null} />
+          )}
           {loading && (
             <MatchLoader
               header={
@@ -670,9 +682,9 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
         )}
         <div className="s-buttons">
           <span className="s-grow" />
-          {poolOpen && (
-            <Button variant="contained" size="large" startIcon={<CoinIcon />} onClick={() => setSheet("predict")} sx={{ minHeight: 48 }}>
-              {t("predict.button")}
+          {poolVisible && (
+            <Button variant={poolOpen && !flow.own ? "contained" : "outlined"} size="large" startIcon={<CoinIcon />} onClick={openPredict} sx={{ minHeight: 48 }}>
+              {flow.own ? t("predict.yourPrediction") : t("predict.button")}
             </Button>
           )}
           {!reactionsOff && (
@@ -694,7 +706,7 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
       {wide && (
         <Panel className="s-end" aria-label={t("spectate.menu.info")}>
           <Tabs value={tabValue} onChange={(_, v: number) => setEndTab(v)} variant="fullWidth" aria-label={t("spectate.menu.info")}>
-            {poolOpen && <Tab value={0} label={t("predict.button")} />}
+            {poolVisible && <Tab value={0} label={flow.own ? t("predict.yourPrediction") : t("predict.button")} />}
             <Tab value={1} label={t("spectate.menu.moves")} />
             <Tab value={2} label={t("spectate.reactions.lane")} />
             <Tab value={3} label={t("spectate.menu.info")} />
@@ -755,9 +767,17 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
         {reactionGrid}
       </BottomSheet>
 
-      <BottomSheet open={sheet === "predict"} onClose={() => setSheet(null)} title={t("predict.title")}>
+      <BottomSheet open={flow.step === "panel" && !wide && poolVisible} onClose={flow.dismiss} title={t("predict.title")}>
         {poolPanel}
       </BottomSheet>
+      {view && (
+        <PredictionSheets
+          flow={flow}
+          players={predictPlayers}
+          matchLine={matchLine(predictPlayers[0].username, predictPlayers[1].username, view.variant, view.length)}
+          entry={view.entry}
+        />
+      )}
 
       <BottomSheet open={sheet === "peek"} onClose={() => setSheet(null)} title={view?.players[peek]?.username ?? ""}>
         {view?.players[peek] && (
@@ -778,37 +798,8 @@ export function SpectatorView({ matchId, summary, onPlayer, onNotLive }: Spectat
   );
 }
 
-/** PR-01 read-only placeholder while the pool is open: both totals, no stake input (predictions.md builds the flow). */
-function PoolPlaceholder({ names, avatars, pool }: { names: [string, string]; avatars: [string, string]; pool: PoolUpdateOut | null }) {
-  const t = useTranslations();
-  const f = useFormat();
-  return (
-    <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        {pool?.open ? t("predict.openUntil") : t("predict.closed")}
-      </Typography>
-      <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 9rem), 1fr))" }}>
-        {[0, 1].map((side) => (
-          <Stack key={side} spacing={1} sx={{ p: 1.5, borderRadius: `${radii.lg}px`, border: 1, borderColor: "tokens.outline", minHeight: 72 }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
-              {avatars[side] && <Avatar avatarKey={avatars[side]!} size={32} />}
-              <Typography variant="label" sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
-                <bdi dir="ltr">{names[side]}</bdi>
-              </Typography>
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              {t("predict.sideTotal", { total: f.number(side === 0 ? (pool?.total_a ?? 0) : (pool?.total_b ?? 0)) })}
-            </Typography>
-          </Stack>
-        ))}
-      </Box>
-      <InfoLine icon={InfoIcon}>{t("predict.placeholder")}</InfoLine>
-    </Stack>
-  );
-}
-
 /** LV-07 (live.md §4): over the lower part of the board; no replay link, no share. */
-function EndedCard({ ended, names, onBack }: { ended: MatchEndedOut; names: [string, string]; onBack: () => void }) {
+function EndedCard({ ended, names, onBack, prediction }: { ended: MatchEndedOut; names: [string, string]; onBack: () => void; prediction: ReactNode }) {
   const t = useTranslations();
   const f = useFormat();
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -856,6 +847,7 @@ function EndedCard({ ended, names, onBack }: { ended: MatchEndedOut; names: [str
         <Typography variant="body2" color="text.secondary">
           {reasonText}
         </Typography>
+        {prediction}
         <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
           <Button variant="contained" onClick={onBack}>
             {t("spectate.back")}

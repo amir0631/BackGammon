@@ -24,8 +24,8 @@ import { gutterStyles } from "@/theme/layout";
 import { TournamentCard, TournamentCardSkeleton } from "./TournamentCard";
 
 // TO-01 Tournament list `/tournaments` (tournaments.md §3.1, §4). Segments in `?segment=` (kept for
-// the session). Server order; refresh every 30 s while visible and online. "Mine" is built from
-// the four status lists until the API has a joined filter (§10 Q3).
+// the session). Server order; refresh every 30 s while visible and online. "Mine" is one
+// `?joined=1` request (the caller's tournaments of any status).
 
 const SEGMENT_KEY = "bg.tournaments.segment";
 const hintKey = (userId: number) => `bg.tournaments.hintSeen.${userId}`;
@@ -39,13 +39,13 @@ const Grid = styled("ul")(({ theme }) => ({
   gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 20rem), 1fr))",
 }));
 
-type Lists = Partial<Record<TournamentInfo["status"], TournamentInfo[]>>;
+type Lists = Partial<Record<TournamentInfo["status"] | "mine", TournamentInfo[]>>;
 
-const STATUSES: Record<TournamentSegment, TournamentInfo["status"][]> = {
+const STATUSES: Record<TournamentSegment, (TournamentInfo["status"] | "mine")[]> = {
   upcoming: ["scheduled"],
   running: ["running"],
   finished: ["finished", "cancelled"],
-  mine: ["scheduled", "running", "finished", "cancelled"],
+  mine: ["mine"],
 };
 
 export function TournamentListScreen() {
@@ -80,7 +80,7 @@ export function TournamentListScreen() {
   const load = useCallback(async () => {
     try {
       const statuses = STATUSES[segment];
-      const pages = await Promise.all(statuses.map((s) => api.tournaments.list(s)));
+      const pages = await Promise.all(statuses.map((s) => (s === "mine" ? api.tournaments.mine() : api.tournaments.list(s))));
       setLists((prev) => {
         const next = { ...prev };
         statuses.forEach((s, i) => {
@@ -134,7 +134,7 @@ export function TournamentListScreen() {
       </div>
     );
   } else if (segment === "mine") {
-    const groups = mineGroups([...(lists.scheduled ?? []), ...(lists.running ?? []), ...(lists.finished ?? []), ...(lists.cancelled ?? [])]);
+    const groups = mineGroups(lists.mine ?? []);
     const sections = [
       { key: "comingUp", list: groups.comingUp },
       { key: "playing", list: groups.playing },

@@ -724,6 +724,9 @@ export interface LiveMatchRow {
   pool: number;
   avg_elo: number;
   tournament_id: number | null;
+  /** The prediction pool is open (predictions can be placed). */
+  pool_open: boolean;
+  tournament: { id: number; name: Record<Lang, string>; round: number; rounds: number } | null;
 }
 
 export interface LeaderboardRow {
@@ -813,6 +816,23 @@ export interface OpenPool {
   /** Why the caller may not predict here, or null. */
   /** review: the account is under anti-fraud review (§12.2 chip_dumping). */
   blocked: "player" | "linked" | "referral" | "review" | null;
+  /** The pool's snapshotted fee percent (§14). */
+  rake_pct: number;
+  max_pool_total: number;
+}
+
+/** GET predictions/pool/{match_id}: one match's pool for the spectator panel. No pool → 409 PREDICTION_REFUSED {reason: "no_pool"}. */
+export interface MatchPool {
+  match_id: string;
+  total_a: number;
+  total_b: number;
+  open: boolean;
+  rake_pct: number;
+  max_stake_per_user: number;
+  max_pool_total: number;
+  blocked: OpenPool["blocked"];
+  /** The caller's own stakes on this pool, oldest first. */
+  mine: { side: 0 | 1; amount: number; payout: number | null }[];
 }
 
 export interface PredictionRow {
@@ -848,6 +868,13 @@ export interface TournamentInfo {
   prizes: number[];
   joined: boolean;
   cancel_reason: string | null;
+  rake_pct: number;
+  /** Shop item id granted per place (null: coins only). */
+  prize_items: (number | null)[];
+  /** The caller's final place once decided. */
+  my_place: number | null;
+  /** Coins the caller won for that place. */
+  my_prize: number | null;
 }
 
 export interface AdminTournamentCreate {

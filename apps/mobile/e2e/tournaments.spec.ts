@@ -24,6 +24,10 @@ const tour = (over: Partial<TournamentInfo>): TournamentInfo => ({
   prizes: [360, 180, 90, 90],
   joined: false,
   cancel_reason: null,
+  rake_pct: 10,
+  prize_items: [],
+  my_place: null,
+  my_prize: null,
   ...over,
 });
 

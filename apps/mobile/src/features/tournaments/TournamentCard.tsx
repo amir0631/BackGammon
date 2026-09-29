@@ -126,6 +126,14 @@ export function TournamentCard({ tour, now }: { tour: TournamentInfo; now: numbe
             <LinearProgress variant="determinate" value={Math.min(100, (tour.entries / Math.max(1, tour.capacity)) * 100)} sx={{ mt: 0.5, borderRadius: 1 }} />
           </Box>
         )}
+        {tour.status === "finished" && tour.my_place !== null && tour.my_place !== undefined && (
+          <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <CheckIcon sx={{ fontSize: iconSize.sm }} />
+            {(tour.my_prize ?? 0) > 0
+              ? t("card.myPlacePrize", { place: f.number(tour.my_place), prize: f.number(tour.my_prize ?? 0) })
+              : t("card.myPlace", { place: f.number(tour.my_place) })}
+          </Typography>
+        )}
         {tour.status === "cancelled" && tour.joined && tour.entry > 0 && (
           <Typography variant="caption" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <InfoIcon sx={{ fontSize: iconSize.sm }} />

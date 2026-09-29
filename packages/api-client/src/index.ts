@@ -49,6 +49,7 @@ import type {
   BracketSlotInfo,
   OpenPool,
   PredictionRow,
+  MatchPool,
   ReferralSummary,
   ReferralEarningRow,
   ItemKind,
@@ -324,6 +325,8 @@ export const api = {
 
   predictions: {
     open: (o?: Opts) => apiRequest<Paginated<OpenPool>>("/predictions/open", o),
+    /** One match's pool with the caller's stakes; 409 PREDICTION_REFUSED {reason: "no_pool"} when it has none. */
+    pool: (matchId: string, o?: Opts) => apiRequest<MatchPool>(`/predictions/pool/${encodeURIComponent(matchId)}`, o),
     place: (matchId: string, side: 0 | 1, amount: number, idempotencyKey: string) =>
       apiRequest<PredictionRow>("/predictions", { method: "POST", body: { match_id: matchId, side, amount }, idempotencyKey }),
     mine: (cursor?: string, o?: Opts) => apiRequest<Paginated<PredictionRow>>(`/me/predictions${query({ cursor })}`, o),
@@ -332,6 +335,8 @@ export const api = {
   tournaments: {
     list: (status?: TournamentInfo["status"], o?: Opts) =>
       apiRequest<Paginated<TournamentInfo>>(`/tournaments${query({ status })}`, o),
+    /** The caller's tournaments of any status. */
+    mine: (o?: Opts) => apiRequest<Paginated<TournamentInfo>>(`/tournaments${query({ joined: "1" })}`, o),
     get: (id: number, o?: Opts) => apiRequest<TournamentInfo>(`/tournaments/${id}`, o),
     join: (id: number, idempotencyKey: string) =>
       apiRequest<TournamentInfo>(`/tournaments/${id}/join`, { method: "POST", idempotencyKey }),

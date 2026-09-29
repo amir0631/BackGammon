@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { ActiveMatchProvider } from "@/lib/activeMatch";
 import { useTrackInAppNavigation } from "@/lib/inAppNav";
 import { LocaleSwitchProvider } from "@/lib/locale";
@@ -14,6 +14,9 @@ import { WalletProvider } from "@/lib/wallet";
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   useTrackInAppNavigation();
+  // The PWA runtime (worker registration, install state) loads after first paint (§11.5); the
+  // install prompt is caught earlier by the inline script in the root layout.
+  useEffect(() => void import("@/lib/pwa").then((m) => m.startPwa()), []);
   return (
     <LocaleSwitchProvider>
       <SessionProvider>

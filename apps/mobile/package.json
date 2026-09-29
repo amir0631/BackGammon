@@ -25,6 +25,7 @@
     "@mui/material": "^6.5.0",
     "@mui/material-nextjs": "^6.5.0",
     "@mui/stylis-plugin-rtl": "^7.3.10",
+    "@serwist/next": "^9.5.12",
     "next": "^15.5.26",
     "next-intl": "^4.14.7",
     "react": "^19.3.0",
@@ -39,6 +40,7 @@
     "@types/stylis": "^4.2.7",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.26",
+    "serwist": "^9.5.12",
     "typescript": "~5.9.3"
   }
 }

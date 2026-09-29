@@ -66,11 +66,14 @@ export const DetailColumns = styled("div")(({ theme }) => ({
   },
 }));
 
-const TITLES: Record<string, { key: string; back: boolean }> = {
+const TITLES: Record<string, { key: string; back: boolean; href?: string }> = {
   "/me": { key: "profile.hub.title", back: false },
   "/me/edit": { key: "profile.edit.title", back: true },
   "/me/sessions": { key: "sessions.title", back: true },
   "/me/matches": { key: "history.title", back: true },
+  "/me/predictions": { key: "predict.mine.title", back: true },
+  "/me/referral": { key: "referral.title", back: true },
+  "/news": { key: "news.title", back: true },
   "/settings": { key: "settings.title", back: true },
 };
 
@@ -78,10 +81,10 @@ export function AccountLayout({ children }: { children: ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname() ?? "/me";
   const { me } = useRequireUser();
-  const route = TITLES[pathname] ?? TITLES["/me"]!;
+  const route = TITLES[pathname] ?? (pathname.startsWith("/news/") ? { key: "news.title", back: true, href: "/news" } : TITLES["/me"]!);
 
   return (
-    <SignedInShell topBar={{ title: t(route.key), leading: route.back ? "back" : "brand", href: route.back ? "/me" : undefined }}>
+    <SignedInShell topBar={{ title: t(route.key), leading: route.back ? "back" : "brand", href: route.back ? (route.href ?? "/me") : undefined }}>
       <Frame>
         <div className="account-grid">
           <nav className="account-hub-col" aria-label={t("profile.hub.title")}>

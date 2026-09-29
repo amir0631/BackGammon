@@ -3,7 +3,7 @@
 import Box from "@mui/material/Box";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { OfflineBanner, SuspensionBanner } from "@/components/feedback/StatusBanners";
 import { ResumeMatchBanner } from "@/components/play/ResumeMatchBanner";
 import { TournamentPrestartBanner, TournamentReadyDialog } from "@/features/tournaments/TournamentAlerts";
@@ -22,6 +22,9 @@ import { TopBar, type TopBarProps } from "./TopBar";
 //   suspension banner on every screen; offline shows the offline banner.
 // - The balance chip shows the available balance from the shared wallet summary (ia.md §3.2);
 //   task flows hide it (the cost block shows the balance there, wallet.md §4).
+
+// Lobby banners load after the shell (news.md §3.1: low priority; they never block first paint).
+const LobbyBanners = lazy(() => import("./LobbyBanners"));
 
 export interface SignedInShellProps {
   topBar: TopBarProps;
@@ -59,6 +62,11 @@ export function SignedInShell({ topBar, children, hideNav, isStatusPage = false,
           {me && <TournamentPrestartBanner />}
           {me && <TournamentReadyDialog />}
           <OfflineBanner />
+          {me && (
+            <Suspense fallback={null}>
+              <LobbyBanners />
+            </Suspense>
+          )}
         </>
       }
     >

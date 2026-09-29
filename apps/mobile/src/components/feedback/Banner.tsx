@@ -80,11 +80,15 @@ export interface BannerProps {
   action?: BannerAction;
   /** Renders a close button; omit for status banners that clear on their own. */
   onClose?: () => void;
+  /** Accessible name of the close button (default "Close"). */
+  closeLabel?: string;
+  /** Icon override (e.g. a megaphone for announcements). */
+  icon?: ComponentType<IconProps>;
 }
 
-export function Banner({ severity = "info", title, children, action, onClose }: BannerProps) {
+export function Banner({ severity = "info", title, children, action, onClose, closeLabel, icon }: BannerProps) {
   const t = useTranslations("common");
-  const Icon = icons[severity];
+  const Icon = icon ?? icons[severity];
   const assertive = severity === "error";
 
   return (
@@ -120,7 +124,7 @@ export function Banner({ severity = "info", title, children, action, onClose }: 
           ))}
       </div>
       {onClose && (
-        <IconButton onClick={onClose} aria-label={t("close")} sx={{ color: "inherit", flex: "none", mt: -0.5 }}>
+        <IconButton onClick={onClose} aria-label={closeLabel ?? t("close")} sx={{ color: "inherit", flex: "none", mt: -0.5 }}>
           <CloseIcon />
         </IconButton>
       )}

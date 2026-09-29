@@ -48,3 +48,9 @@ graphify-out/
 
 # local redis snapshots
 dump.rdb
+
+# Service worker built by @serwist/next (apps/mobile next.config.ts)
+apps/mobile/public/sw.js
+apps/mobile/public/sw.js.map
+apps/mobile/public/swe-worker-*.js
+apps/mobile/public/swe-worker-*.js.map

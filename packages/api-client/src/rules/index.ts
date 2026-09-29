@@ -4,3 +4,7 @@ export * from "./live";
 export * from "./shop";
 export * from "./tournaments";
 export * from "./leaderboard";
+export * from "./predictions";
+export * from "./referral";
+export * from "./news";
+export * from "./install";

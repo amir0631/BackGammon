@@ -11,7 +11,14 @@ import { AppProviders } from "./AppProviders";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("app");
-  return { title: t("name"), description: t("tagline") };
+  return {
+    title: t("name"),
+    description: t("tagline"),
+    // §11.5: `m.` is installable; the manifest is localized by the locale cookie.
+    manifest: "/manifest.webmanifest",
+    icons: { icon: "/icons/icon.svg", apple: "/icons/apple-touch-icon.png" },
+    appleWebApp: { capable: true, title: t("name"), statusBarStyle: "black-translucent" },
+  };
 }
 
 export const viewport: Viewport = {
@@ -33,6 +40,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={locale} dir={dir} className={fontVariables} suppressHydrationWarning>
       <body>
         <InitColorSchemeScript attribute="data" defaultMode={defaultColorMode} modeStorageKey="bg-color-mode" />
+        {/* §11.5: keep Chromium's install prompt for the custom banner until lib/pwa.ts loads. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bgInstallPrompt=e});",
+          }}
+        />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeRegistry direction={dir} script={locale}>
             <AppProviders>{children}</AppProviders>

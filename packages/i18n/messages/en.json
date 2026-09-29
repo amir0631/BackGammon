@@ -365,7 +365,7 @@
       "gatewayUnavailable": "The payment gateway is unavailable. Try again later."
     },
     "predictions": {
-      "refused": "You can't place this prediction."
+      "refused": "This prediction wasn't placed. Nothing was charged."
     },
     "queue": {
       "invalid": "That table isn't available."
@@ -2076,7 +2076,98 @@
     "sideTotal": "{total} coins on this side",
     "closed": "Predictions closed at the first roll.",
     "placeholder": "Placing predictions will open here soon. Until then, no coins are taken.",
-    "firstHint": "You can predict the winner until the first roll."
+    "firstHint": "You can predict the winner until the first roll.",
+    "howItWorks": "Winners split the whole pool, minus a {pct}% fee, in proportion to their stakes. If nobody picks one side, everyone gets their stake back.",
+    "yourSide": "Your side",
+    "otherSideLocked": "You already predicted on @{username}. You can add to that side only.",
+    "stake": {
+      "label": "Stake (coins)",
+      "helper": "Up to {remaining} coins more on this match · Your balance: {balance}",
+      "invalid": "Enter a whole number of coins."
+    },
+    "balance": "Your balance: {balance} coins",
+    "estimate": "estimate, changes as others predict",
+    "estimateLine": "If @{username} wins, you'd get about {estimate} coins",
+    "estimateOneSided": "If nobody predicts on @{username}, every stake is refunded.",
+    "continue": "Continue",
+    "reason": {
+      "chooseSide": "Choose a player",
+      "enterStake": "Enter a stake"
+    },
+    "confirm": {
+      "title": "Predict on @{username}",
+      "match": "@{a} vs @{b} · {variant} · first to {n}",
+      "stake": "Stake",
+      "poolNow": "Pool now: @{a}: {totalA} · @{b}: {totalB}",
+      "final": "A stake can't be taken back once placed. Predictions close at the first roll.",
+      "cta": "Pay {amount} coins on @{username}"
+    },
+    "placed": "Prediction placed: {amount} coins on @{username}",
+    "staked": "Your prediction: {amount} coins on @{username}",
+    "addMore": "Add to your prediction",
+    "error": {
+      "closed": "Predictions closed before your stake was placed. Nothing was charged.",
+      "otherSide": "You already predicted on the other player. You can add to that side only.",
+      "maxStake": "You can add up to {remaining} more coins on this match.",
+      "maxStakeReached": "You've reached the limit for this match.",
+      "poolFull": "This match's prediction pool is full. Nothing was charged."
+    },
+    "blocked": {
+      "player": "Players can't predict on their own match.",
+      "linked": "Predictions on this match aren't available for your account.",
+      "referral": "You can't predict on this match because you and one of the players are connected by an invitation.",
+      "review": "Predictions aren't available for your account right now. Contact support if you think this is a mistake.",
+      "nothingCharged": "Nothing was charged.",
+      "support": "Contact support: {channel}"
+    },
+    "loadError": "Couldn't load predictions.",
+    "result": {
+      "won": "@{username} won. You get {payout} coins.",
+      "lost": "@{username} didn't win. Your stake of {amount} coins went to the winning side.",
+      "refundedCancelled": "The match was cancelled, so every stake was returned in full.",
+      "refundedOneSided": "Nobody predicted on one of the players, so every stake was returned in full.",
+      "held": "This pool's result is under review. You'll see the outcome here and in your wallet when the review ends.",
+      "pending": "The result will appear in My predictions shortly.",
+      "signWon": "+{amount} won",
+      "signLost": "−{amount} lost",
+      "signRefunded": "+{amount} refunded",
+      "wonLess": "@{username} won. Your share was {payout} coins, less than your {amount} stake, because the other side's total was small.",
+      "wonZero": "@{username} won, but your share rounded down to 0 coins.",
+      "stakePaid": "Stake {amount} · Paid {payout}",
+      "signNet": "{sign}{amount} net",
+      "returnedInFull": "Returned in full"
+    },
+    "mine": {
+      "title": "My predictions",
+      "intro": "Your predictions and their results",
+      "match": "@{a} vs @{b}",
+      "pick": "Your pick: @{username}",
+      "unknownMatch": "Match #{id}",
+      "status": {
+        "open": "Open",
+        "closed": "Waiting for result",
+        "held": "Under review",
+        "won": "Won",
+        "lost": "Not won",
+        "refunded": "Refunded",
+        "wonLess": "Won, less than stake"
+      },
+      "empty": "No predictions yet.",
+      "emptyAction": "Watch live matches",
+      "loadError": "Couldn't load your predictions.",
+      "stakes": "{count, plural, one {# stake} other {# stakes}} on this match",
+      "stakeRow": "{time} · {amount} coins",
+      "total": "Total stake: {amount} coins",
+      "accuracyBoard": "Accuracy board",
+      "cardLabel": "@{a} vs @{b}, your pick @{pick}, {status}, {amount}"
+    },
+    "insufficient": {
+      "changeStake": "Change stake"
+    },
+    "howItWorksNoPct": "Winners split the whole pool, minus a platform fee, in proportion to their stakes. If nobody picks one side, everyone gets their stake back.",
+    "estimateBelowStake": "If @{username} wins, you'd get about {estimate} coins back, less than your {total} stake, because the other side's total is small.",
+    "estimateZero": "At the current totals, this stake would pay 0 coins even if @{username} wins.",
+    "elo": "Rating {elo}"
   },
   "tournaments": {
     "unnamed": "Tournament #{id}",
@@ -2119,7 +2210,9 @@
       "started": "Started {relative}",
       "places": "{entries} of {capacity} registered",
       "refunded": "Your entry was refunded",
-      "label": "{name}, {status}, {variant}, {entry}, {start}, {places}"
+      "label": "{name}, {status}, {variant}, {entry}, {start}, {places}",
+      "myPlace": "Your place: {place}",
+      "myPlacePrize": "Your place: {place} · won {prize} coins"
     },
     "empty": {
       "upcoming": "No tournaments scheduled yet.",
@@ -2308,5 +2401,128 @@
     "loadError": "Couldn't load the leaderboard.",
     "howRatingsWork": "How ratings work",
     "announce": "{scope} leaderboard, {count, plural, one {# player} other {# players}}"
+  },
+  "referral": {
+    "title": "Invite friends",
+    "link": {
+      "heading": "Your invite link",
+      "label": "Invite link: {url}"
+    },
+    "code": "Your code: {code}",
+    "share": {
+      "title": "{app}",
+      "text": "Play backgammon with me on {app}: {url}"
+    },
+    "copyLink": "Copy link",
+    "copyCode": "Copy code",
+    "noCode": "Set a username to get your invite link.",
+    "shareSheet": {
+      "title": "Share your invite link"
+    },
+    "rules": {
+      "title": "How it works",
+      "entry": "You get {pct} of your friend's table entry each time they play a coin table. It's paid from the platform fee, so your friend pays nothing extra.",
+      "pot": "You get {pct} of the table's total pot each time your friend plays a coin table. It's paid from the platform fee, so your friend pays nothing extra.",
+      "activation": "Commissions start after your friend verifies their phone and adds coins for the first time (a purchase or a top-up by support).",
+      "noLimit": "There's no time limit.",
+      "days": "{days, plural, one {You earn for # day after your friend signs up.} other {You earn for # days after your friend signs up.}}",
+      "rounding": "Amounts are rounded down to whole coins, so small tables may earn nothing. Bot and tournament matches don't earn.",
+      "review": "Commissions for accounts that share a device or network are checked before they're paid."
+    },
+    "summary": {
+      "friends": "{referees, plural, one {# friend joined} other {# friends joined}} · {active} earning now",
+      "noFriends": "No friends have joined with your link yet.",
+      "earned": "Earned so far: {earned} coins from {commissions, plural, one {# match} other {# matches}}",
+      "held": "{held} coins on hold"
+    },
+    "earnings": {
+      "title": "Earnings",
+      "friend": "From @{username}'s match",
+      "loadError": "Couldn't load earnings."
+    },
+    "status": {
+      "paid": "Paid",
+      "held": "On hold",
+      "cancelled": "Not paid",
+      "heldNote": "Being checked. It will be paid or cancelled after the review.",
+      "cancelledNote": "Not paid after review."
+    },
+    "row": {
+      "label": "@{username}, {date}, {amount} coins, {status}"
+    },
+    "empty": "No earnings yet. Commissions start after your friend's first coin top-up.",
+    "hint": {
+      "firstVisit": "Share your link. When friends play coin tables, you get a small share of the platform fee."
+    },
+    "loadError": "Couldn't load your invite details.",
+    "shareAction": "Share invite link"
+  },
+  "news": {
+    "title": "News",
+    "banner": {
+      "details": "Details",
+      "open": "Open",
+      "dismiss": "Dismiss announcement",
+      "label": "Announcement: {title}"
+    },
+    "list": {
+      "new": "New",
+      "empty": "No news right now.",
+      "loadError": "Couldn't load the news.",
+      "rowLabel": "{title}{isNew, select, true {, new} other {}}"
+    },
+    "item": {
+      "open": "Open",
+      "unavailable": "This news item is no longer available.",
+      "allNews": "All news"
+    },
+    "hub": {
+      "row": "News",
+      "unseen": "{count, plural, one {# new} other {# new}}"
+    }
+  },
+  "install": {
+    "banner": {
+      "title": "Install the app",
+      "body": "Open the game from your home screen, full screen and faster.",
+      "install": "Install",
+      "how": "How to install",
+      "dismiss": "Dismiss install suggestion"
+    },
+    "sheet": {
+      "title": "Install the app"
+    },
+    "ios": {
+      "title": "Add to Home Screen",
+      "step1": "Tap the Share button in Safari's toolbar.",
+      "step2": "Choose “Add to Home Screen”.",
+      "step3": "Tap “Add”. The game then opens from its icon, full screen."
+    },
+    "manual": {
+      "body": "Open your browser's menu and choose “Install app” or “Add to Home screen”."
+    },
+    "installed": "The app is installed on this device.",
+    "done": "The app was installed."
+  },
+  "offline": {
+    "title": "You're offline",
+    "body": "Check your internet connection. Your matches and coins are safe on the server; we'll pick up where you left off.",
+    "home": "Go to the lobby"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "label": "Turn and tournament alerts",
+    "desc": "A notification when it's your turn in a match or your tournament starts.",
+    "sheet": {
+      "title": "Allow notifications?",
+      "body": "We'll only notify you when it's your turn in a match and when a tournament you joined starts. You can turn this off here any time.",
+      "allow": "Allow",
+      "notNow": "Not now"
+    },
+    "denied": "Notifications are blocked in your browser settings. Allow them there, then try again.",
+    "unsupported": "This browser can't show notifications. On iPhone, install the app first.",
+    "disabled": "Notifications aren't available right now.",
+    "failed": "Couldn't turn on notifications. Try again.",
+    "on": "Notifications are on."
   }
 }

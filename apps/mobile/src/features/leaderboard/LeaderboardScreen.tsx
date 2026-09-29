@@ -267,6 +267,9 @@ export function LeaderboardScreen() {
               {t("leaderboard.me.predictProgress", { count: f.number(mine.count), needed: f.number(mine.needed) })}
             </Typography>
           )}
+          <Link component={NextLink} href="/me/predictions" sx={{ alignSelf: "flex-start", minHeight: 44, display: "inline-flex", alignItems: "center" }}>
+            {t("leaderboard.me.myPredictions")}
+          </Link>
         </Stack>
       );
     }

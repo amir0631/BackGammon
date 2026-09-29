@@ -34,6 +34,8 @@ const row = (id: string, spectators = 0): LiveMatchRow => ({
   pool: 0,
   avg_elo: 1500,
   tournament_id: null,
+  pool_open: false,
+  tournament: null,
 });
 
 describe("live rules", () => {
@@ -124,6 +126,10 @@ const tour = (over: Partial<TournamentInfo>): TournamentInfo => ({
   prizes: [360, 180, 90, 90],
   joined: false,
   cancel_reason: null,
+  rake_pct: 10,
+  prize_items: [],
+  my_place: null,
+  my_prize: null,
   ...over,
 });
 const before = Date.parse("2026-10-01T09:00:00Z");

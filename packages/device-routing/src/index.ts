@@ -89,3 +89,21 @@ export function viewPrefCookie(pref: DeviceClass, config: RoutingConfig): string
   const secure = config.scheme === "https" ? "; Secure" : "";
   return `${VIEW_PREF_COOKIE}=${pref}; Domain=.${config.baseDomain}; Path=/; Max-Age=${VIEW_PREF_MAX_AGE}; SameSite=Lax${secure}`;
 }
+
+/**
+ * The base domain from a surface host (`m.x3d.ir` → `x3d.ir`), for client code that only knows its
+ * own location. Hosts without a known surface prefix are returned as-is (local dev, bare IPs).
+ */
+export function baseDomainFromHost(hostname: string): string {
+  const name = hostname.toLowerCase().replace(/:\d+$/, "");
+  const m = name.match(/^(?:m|app|www)\.(.+)$/);
+  return m ? m[1]! : name;
+}
+
+/**
+ * Rule 5: the installed PWA (`display-mode: standalone`) pins `view_pref=mobile`, so Phase 2
+ * detection never sends it to `app.`. Returns the `document.cookie` value to set.
+ */
+export function standaloneViewPrefCookie(hostname: string, protocol: string): string {
+  return viewPrefCookie("mobile", { baseDomain: baseDomainFromHost(hostname), desktopEnabled: false, scheme: protocol === "https:" ? "https" : "http" });
+}

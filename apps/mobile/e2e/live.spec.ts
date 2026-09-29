@@ -24,6 +24,8 @@ const rows: LiveMatchRow[] = [
     pool: 0,
     avg_elo: 1882,
     tournament_id: 7,
+    pool_open: false,
+    tournament: { id: 7, name: { fa: "جام پاییز", en: "Autumn Cup" }, round: 2, rounds: 3 },
   },
   {
     match_id: MATCH_ID,
@@ -41,6 +43,8 @@ const rows: LiveMatchRow[] = [
     pool: 120,
     avg_elo: 1684,
     tournament_id: null,
+    pool_open: true,
+    tournament: null,
   },
 ];
 
@@ -55,7 +59,8 @@ async function open(page: Page, baseURL: string | undefined, path: string, extra
       handlers: {
         ...playHandlers(),
         "GET /matches/live": { status: 200, body: { results: rows, next: null } },
-        "GET /predictions/open": { status: 200, body: { results: [{ match_id: MATCH_ID, players: ["ali_tbz", "mina"], entry: 100, total_a: 80, total_b: 40, open: true, max_stake_per_user: 1000, blocked: null }], next: null } },
+        "GET /predictions/open": { status: 200, body: { results: [{ match_id: MATCH_ID, players: ["ali_tbz", "mina"], entry: 100, total_a: 80, total_b: 40, open: true, max_stake_per_user: 1000, max_pool_total: 50000, rake_pct: 10, blocked: null }], next: null } },
+        [`GET /predictions/pool/${MATCH_ID}`]: { status: 200, body: { match_id: MATCH_ID, total_a: 80, total_b: 40, open: true, rake_pct: 10, max_stake_per_user: 1000, max_pool_total: 50000, blocked: null, mine: [] } },
         "GET /tournaments": { status: 200, body: { results: [], next: null } },
         ...extra,
       },
@@ -69,7 +74,8 @@ test("LV-01 lists live matches with chips and no layout faults", async ({ page, 
   await open(page, baseURL, "/live");
   await expect(page.locator("main ul > li a, main ul > li button").first()).toBeVisible();
   await expect(page.getByText("پیش‌بینی باز است").first()).toBeVisible();
-  await expect(page.locator("main").getByText("تورنمنت", { exact: true }).first()).toBeVisible();
+  // Rows carry their tournament, so the chip names it.
+  await expect(page.locator("main").getByText(/جام پاییز/).first()).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
   expect(await smallTargets(page)).toEqual([]);
 });

@@ -9,6 +9,7 @@ import { api, ApiRequestError } from "@bg/api-client";
 import { radii } from "@bg/design-tokens";
 import type { UserPrefs } from "@bg/protocol";
 import { SwitchRow } from "@/components/forms/SwitchRow";
+import { NotificationsSetting } from "@/components/pwa/NotificationsSetting";
 import { LanguageOptions, useChooseLanguage } from "@/components/i18n/LanguageControls";
 import { DevicesIcon, LockIcon } from "@/components/icons";
 import { InfoRow, NavGroup, NavRow } from "@/components/lists/NavList";
@@ -160,6 +161,15 @@ export function SettingsScreen() {
               onChange={(v) => void change("vibration", v)}
               note={!canVibrate ? t("settings.vibration.unsupported") : note("vibration")}
             />
+          </Card>
+        </section>
+
+        <section aria-labelledby="settings-notifications">
+          <Typography id="settings-notifications" variant="labelSmall" component="h2" color="text.secondary" sx={{ mb: 1, paddingInline: 1 }}>
+            {t("notifications.title")}
+          </Typography>
+          <Card>
+            <NotificationsSetting />
           </Card>
         </section>
 

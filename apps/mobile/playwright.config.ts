@@ -17,6 +17,8 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://m.localhost:8080",
     deviceScaleFactor: 1,
+    // API mocks use page.route, which a service worker would bypass (§11.5 worker in production builds).
+    serviceWorkers: "block",
     // SwiftShader gives headless Chromium WebGL2 for the 3D board (CLAUDE.md §11.4 minimum).
     launchOptions: {
       args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],

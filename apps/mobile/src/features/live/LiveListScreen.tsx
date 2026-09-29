@@ -17,7 +17,6 @@ import {
   liveFilterQuery,
   liveRequest,
   mergeLiveRefresh,
-  openPoolIds,
   parseLiveFilter,
   type LiveFilter,
 } from "@bg/api-client";
@@ -125,7 +124,6 @@ export function LiveListScreen() {
   const [error, setError] = useState<ApiError | null>(null);
   const [ended, setEnded] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState<LiveMatchRow[] | null>(null);
-  const [pools, setPools] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState<TournamentInfo[] | null>(null);
   const [sheet, setSheet] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -137,18 +135,6 @@ export function LiveListScreen() {
 
   const spectating = config?.spectating_enabled ?? true;
   const predictions = config?.predictions_enabled ?? false;
-  const predictionsRef = useRef(predictions);
-  predictionsRef.current = predictions;
-
-  // Open pools mark rows "Predictions open" (live.md §3.1 step 2; the list's own field has no open
-  // flag). Read as soon as the config says predictions are on, then with every refresh.
-  useEffect(() => {
-    if (!predictions) return;
-    api.predictions
-      .open()
-      .then((page) => setPools(openPoolIds(page.results)))
-      .catch(() => undefined);
-  }, [predictions]);
 
   // Session memory of the last filters (live.md §2): /live without a query restores them.
   useEffect(() => {
@@ -176,11 +162,7 @@ export function LiveListScreen() {
     async (mode: "replace" | "merge") => {
       if (!spectating) return;
       try {
-        const [page, open] = await Promise.all([
-          api.matches.live(liveRequest(filter)),
-          predictionsRef.current ? api.predictions.open().catch(() => null) : Promise.resolve(null),
-        ]);
-        if (open) setPools(openPoolIds(open.results));
+        const page = await api.matches.live(liveRequest(filter));
         setError(null);
         setRowsAt(Date.now());
         const current = rowsRef.current;
@@ -262,16 +244,17 @@ export function LiveListScreen() {
 
   const factsFor = useCallback(
     (row: LiveMatchRow): RowFacts => {
-      const tour = row.tournament_id !== null ? running?.find((x) => x.id === row.tournament_id) : undefined;
+      // Rows carry the pool flag and the tournament (older payloads: fall back to the running list).
+      const tour = row.tournament ?? (row.tournament_id !== null ? running?.find((x) => x.id === row.tournament_id) : undefined);
       const mine = me?.username?.toLowerCase();
       return {
-        poolOpen: predictions && pools.has(row.match_id) && !ended.has(row.match_id),
+        poolOpen: predictions && Boolean(row.pool_open) && !ended.has(row.match_id),
         yourMatch: Boolean(mine && row.players.some((p) => p.username.toLowerCase() === mine)),
         ended: ended.has(row.match_id),
         tournament: tour ? { name: nameOf(tour) } : null,
       };
     },
-    [running, me, predictions, pools, ended, nameOf],
+    [running, me, predictions, ended, nameOf],
   );
 
   const open = (id: string) => {

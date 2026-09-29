@@ -89,3 +89,13 @@ describe("excluded paths are never redirected", () => {
 it("ignores unrelated hosts", () => {
   expect(resolveRedirect(req({ host: "admin.x3d.ir" }), phase1)).toBeNull();
 });
+
+describe("standalone view_pref (rule 5)", () => {
+  it("derives the base domain and pins mobile", async () => {
+    const { baseDomainFromHost, standaloneViewPrefCookie } = await import("./index");
+    expect(baseDomainFromHost("m.x3d.ir")).toBe("x3d.ir");
+    expect(baseDomainFromHost("m.localhost:3000")).toBe("localhost");
+    expect(standaloneViewPrefCookie("m.x3d.ir", "https:")).toContain("view_pref=mobile; Domain=.x3d.ir");
+    expect(standaloneViewPrefCookie("m.x3d.ir", "https:")).toContain("Secure");
+  });
+});
