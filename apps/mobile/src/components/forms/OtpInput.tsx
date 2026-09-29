@@ -3,7 +3,7 @@
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { useTranslations } from "next-intl";
-import { useId, useRef, useState, type ChangeEvent } from "react";
+import { useId, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { borderWidth, focusRing, iconSize, layout, radii } from "@bg/design-tokens";
 import { digitsOnly } from "@bg/i18n";
 import { ErrorIcon } from "@/components/icons";
@@ -81,6 +81,8 @@ export interface OtpInputProps {
   disabled?: boolean;
   autoFocus?: boolean;
   name?: string;
+  /** The real input, for callers that manage focus (TaskFlow `initialFocus`). */
+  inputRef?: RefObject<HTMLInputElement | null>;
 }
 
 export function OtpInput({
@@ -94,12 +96,14 @@ export function OtpInput({
   disabled = false,
   autoFocus = false,
   name = "otp",
+  inputRef: externalRef,
 }: OtpInputProps) {
   const t = useTranslations("forms.otp");
   const f = useFormat();
   const id = useId();
   const describedBy = `${id}-desc`;
-  const inputRef = useRef<HTMLInputElement>(null);
+  const ownRef = useRef<HTMLInputElement>(null);
+  const inputRef = externalRef ?? ownRef;
   const [focused, setFocused] = useState(false);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {

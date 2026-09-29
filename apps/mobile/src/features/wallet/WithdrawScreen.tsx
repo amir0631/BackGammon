@@ -15,7 +15,7 @@ import {
   type AmountProblem,
   type AmountRules,
 } from "@bg/api-client";
-import { isolate, maskPhone } from "@bg/i18n";
+import { isolate } from "@bg/i18n";
 import type { WalletSummary } from "@bg/protocol";
 import { Banner } from "@/components/feedback/Banner";
 import { ConfirmDialog } from "@/components/feedback/ConfirmDialog";
@@ -23,8 +23,8 @@ import { CountdownText } from "@/components/feedback/CountdownText";
 import { SlowNotice, useSlowRequest } from "@/components/feedback/SlowNotice";
 import { TaskFlow } from "@/components/flow/TaskFlow";
 import { ActionButton } from "@/components/forms/ActionButton";
-import { FieldError } from "@/components/forms/FieldText";
 import { OtpInput } from "@/components/forms/OtpInput";
+import { FieldError } from "@/components/forms/FieldText";
 import { PasswordField } from "@/components/forms/PasswordField";
 import { StandaloneLink } from "@/components/forms/StandaloneLink";
 import { ClockIcon, LockIcon } from "@/components/icons";
@@ -41,7 +41,9 @@ import { useCountdown } from "@/lib/useCountdown";
 import { useFlowSteps } from "@/lib/useFlowSteps";
 import { useOnline } from "@/lib/useOnline";
 import { useWallet } from "@/lib/wallet";
-import { BankAccountBody, useBankAccountEditor } from "./BankAccountEditor";
+import { visuallyHidden } from "@/theme/layout";
+import { BankAccountBody } from "./BankAccountBody";
+import { useBankAccountEditor } from "./BankAccountEditor";
 import {
   detailNumber,
   detailString,
@@ -51,6 +53,9 @@ import {
   useAmountErrorText,
   useWalletFormat,
 } from "./shared";
+import { canGoBackInApp } from "@/lib/inAppNav";
+
+
 
 // Withdraw `/wallet/withdraw` (wallet.md §3.6, WD-01 … WD-05, WD-10; CLAUDE.md §7.12).
 // - WD-01 replaces step 1 when nothing can be withdrawn (welcome coins only, below the minimum,
@@ -110,7 +115,7 @@ export function WithdrawScreen() {
   const bank = useBankAccountEditor();
 
   const [stored, setStored] = useState<Stored>(() => readJson<Stored>("session", STORE) ?? EMPTY);
-  const [hadOrigin] = useState(() => typeof window !== "undefined" && window.history.length > 1);
+  const [hadOrigin] = useState(() => canGoBackInApp());
   const [ready, setReady] = useState(false);
   const [amountShown, setAmountShown] = useState(false);
   const [serverAmountError, setServerAmountError] = useState<string | null>(null);
@@ -130,6 +135,9 @@ export function WithdrawScreen() {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [hintSeen, setHintSeen] = useState(true);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
+  const [previewAnnounce, setPreviewAnnounce] = useState("");
   const firing = useRef(false);
   const rateId = useId();
 
@@ -539,7 +547,21 @@ export function WithdrawScreen() {
           onClose={close}
           onSubmit={goReview}
           footer={
-            <ActionButton type="submit" disabledReason={valid && !serverAmountError ? null : t("withdraw.amount.disabled")}>
+            <ActionButton
+              type="submit"
+              disabledReason={
+                valid && !serverAmountError
+                  ? null
+                  : stored.amount && (serverAmountError || problem)
+                    ? (serverAmountError ?? amountText(problem!))
+                    : t("withdraw.amount.disabled")
+              }
+              onBlockedClick={() => {
+                // W-06: the specific rule shows on Continue, not only on blur.
+                setAmountShown(true);
+                amountRef.current?.focus();
+              }}
+            >
               {t("withdraw.amount.cta")}
             </ActionButton>
           }
@@ -551,7 +573,11 @@ export function WithdrawScreen() {
               save({ amount: v });
               setServerAmountError(null);
             }}
-            onBlur={() => setAmountShown(Boolean(stored.amount))}
+            onBlur={() => {
+              setAmountShown(Boolean(stored.amount));
+              setPreviewAnnounce(typeof amount === "number" ? t("withdraw.amount.preview", { fee: f.number(fee), toman: f.number(payoutToman) }) : "");
+            }}
+            inputRef={amountRef}
             error={amountError}
             helpers={[
               t("withdraw.amount.helperMin", { min: f.number(summary.withdraw.min) }),
@@ -574,8 +600,12 @@ export function WithdrawScreen() {
             </Button>
           )}
           {typeof amount === "number" && (
-            <Typography role="status">{t("withdraw.amount.preview", { fee: f.number(fee), toman: f.number(payoutToman) })}</Typography>
+            <Typography>{t("withdraw.amount.preview", { fee: f.number(fee), toman: f.number(payoutToman) })}</Typography>
           )}
+          {/* Announced once on blur, not on every keystroke (W-16). */}
+          <span role="status" style={visuallyHidden}>
+            {previewAnnounce}
+          </span>
         </TaskFlow>
         {discard}
       </>
@@ -593,6 +623,7 @@ export function WithdrawScreen() {
           title={t("withdraw.review.title")}
           step={stepper(3)}
           stepKey="review"
+          footerMode="inline"
           onClose={close}
           closeDisabled={locked}
           onSubmit={() => void (passwordMode ? submit() : requestCode())}
@@ -690,10 +721,11 @@ export function WithdrawScreen() {
         title={t("withdraw.code.title")}
         step={stepper(4)}
         stepKey="code"
+        initialFocus={codeRef}
         onClose={close}
         closeDisabled={locked}
         onSubmit={() => void submit()}
-        intro={t("withdraw.code.sentTo", { phone: isolate(f.digits(maskPhone(me.phone))) })}
+        intro={t("withdraw.code.sentTo", { phone: `\u2066${f.maskedPhone(me.phone)}\u2069` })}
         footer={
           <>
             {errorBanner}
@@ -755,6 +787,7 @@ export function WithdrawScreen() {
           error={fieldError}
           helperText={inFlight ? t("auth.verify.verifying") : t("auth.verify.expiresIn", { time: `⁦${f.clock(expiresLeft)}⁩` })}
           disabled={dead || inFlight || uncertain}
+          inputRef={codeRef}
           autoFocus
           name="code"
         />

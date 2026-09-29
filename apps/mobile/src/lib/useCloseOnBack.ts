@@ -11,6 +11,33 @@ const KEY = "__bgSheet";
 
 let counter = 0;
 
+/**
+ * Backs issued by a closing sheet to drop its own entry. Their popstate can arrive after another
+ * sheet or overlay has opened (PL-03 closing as PL-06 opens), which must not read it as the user's
+ * Back. A capture listener registered first marks those events; every handler checks the mark.
+ */
+let ownBacks = 0;
+let ignoring = false;
+if (typeof window !== "undefined") {
+  window.addEventListener(
+    "popstate",
+    () => {
+      ignoring = ownBacks > 0;
+      if (ignoring) ownBacks -= 1;
+      // Reset after every listener of this event ran.
+      window.setTimeout(() => {
+        ignoring = false;
+      }, 0);
+    },
+    { capture: true },
+  );
+}
+
+/** True while the current popstate was caused by a sheet dropping its own entry (not the user). */
+export function isOwnBack(): boolean {
+  return ignoring;
+}
+
 export function useCloseOnBack(open: boolean, onClose: () => void, dismissible: boolean, enabled = true): void {
   const onCloseRef = useRef(onClose);
   const dismissibleRef = useRef(dismissible);
@@ -24,7 +51,7 @@ export function useCloseOnBack(open: boolean, onClose: () => void, dismissible: 
     let poppedByUser = false;
 
     const onPop = () => {
-      if (!pushed) return;
+      if (!pushed || ignoring) return;
       if (!dismissibleRef.current) {
         window.history.pushState({ ...window.history.state, [KEY]: token }, "");
         return;
@@ -44,7 +71,10 @@ export function useCloseOnBack(open: boolean, onClose: () => void, dismissible: 
       window.clearTimeout(timer);
       window.removeEventListener("popstate", onPop);
       // Closed from the UI: drop our entry, but never undo a navigation that happened meanwhile.
-      if (pushed && !poppedByUser && window.history.state?.[KEY] === token) window.history.back();
+      if (pushed && !poppedByUser && window.history.state?.[KEY] === token) {
+        ownBacks += 1;
+        window.history.back();
+      }
     };
   }, [open, enabled]);
 }

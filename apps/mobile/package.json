@@ -15,6 +15,7 @@
     "@bg/design-tokens": "workspace:*",
     "@bg/device-routing": "workspace:*",
     "@bg/game-core": "workspace:*",
+    "@bg/game3d": "workspace:*",
     "@bg/i18n": "workspace:*",
     "@bg/protocol": "workspace:*",
     "@emotion/cache": "^11.14.0",

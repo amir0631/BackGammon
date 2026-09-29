@@ -7,7 +7,7 @@ import { styled, useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTranslations } from "next-intl";
-import { useId, useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode, type RefObject } from "react";
 import { layout, minTouchTarget, radii } from "@bg/design-tokens";
 import { CloseIcon } from "@/components/icons";
 import { useCloseOnBack } from "@/lib/useCloseOnBack";
@@ -78,6 +78,8 @@ export interface BottomSheetProps {
   hideCloseButton?: boolean;
   /** Push a history entry so back closes the sheet (ia.md §3.5). Default true. */
   closeOnBack?: boolean;
+  /** Focus this element instead of the title on open (the safe option of a confirmation, P§3). */
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
 export function BottomSheet({
@@ -89,6 +91,7 @@ export function BottomSheet({
   dismissible = true,
   hideCloseButton = false,
   closeOnBack = true,
+  initialFocusRef,
 }: BottomSheetProps) {
   const t = useTranslations("common");
   const theme = useTheme();
@@ -101,7 +104,7 @@ export function BottomSheet({
   const requestClose = () => {
     if (dismissible) onClose();
   };
-  const focusTitle = () => titleRef.current?.focus();
+  const focusTitle = () => (initialFocusRef?.current ?? titleRef.current)?.focus();
 
   const content = (
     <>

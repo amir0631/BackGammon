@@ -555,6 +555,31 @@ export const boardDefaultTheme = {
   dicePip: "#241b16",
   legalMove: "#56c2b8",
   selection: "#ffd684",
+  /** Darker walnut: end grain at the corners, grain streaks, the tray floor. */
+  frameWoodDark: "#3d2615",
+  /** Grain streak tones painted into the procedural wood textures. */
+  grainDark: "#2e1c10",
+  grainLight: "#8a6440",
+  fieldGrain: "#b99d70",
+  trayFloor: "#2b1a10",
+  /** Khatam inlay on the bar: bone and ebony with the turquoise. */
+  inlayBone: "#efe3c6",
+  inlayEbony: "#1d1410",
+  /** Digit on the legal-move marker (≥ 4.5:1 on `legalMove`). */
+  markerInk: "#04201d",
+  /** Last opponent move trail (neutral, not a player color). */
+  trail: "#f2ebdc",
+  /** Soft contact shadow under the board and blobs under checkers and dice. */
+  shadow: "#000000",
+} as const;
+
+/** Scene lighting (docs/ui/3d-art-direction.md §4): warm key plus hemisphere fill; lite keeps the fill. */
+export const sceneLight = {
+  key: { color: "#ffe2b8", intensity: 1.9 },
+  sky: "#fff1dc",
+  ground: "#3b2718",
+  hemisphere: { normal: 0.95, lite: 1.9 },
+  exposure: 1.05,
 } as const;
 
 // ---------------------------------------------------------------------------------------------

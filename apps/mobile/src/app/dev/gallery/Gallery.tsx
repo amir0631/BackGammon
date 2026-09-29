@@ -43,6 +43,7 @@ import { OtpInput } from "@/components/forms/OtpInput";
 import { PasswordField } from "@/components/forms/PasswordField";
 import { PhoneField } from "@/components/forms/PhoneField";
 import * as Icons from "@/components/icons";
+import * as GameIcons from "@/components/icons/game";
 import type { IconProps } from "@/components/icons";
 import { CostConfirmation } from "@/components/money/CostConfirmation";
 import { AppShell } from "@/components/shell/AppShell";
@@ -52,7 +53,8 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { LoadingState } from "@/components/states/LoadingState";
 import { AmountField } from "@/components/wallet/AmountField";
-import { BankAccountCard, IbanField } from "@/components/wallet/BankAccount";
+import { BankAccountCard } from "@/components/wallet/BankAccount";
+import { IbanField } from "@/components/wallet/IbanField";
 import { SignedAmount } from "@/components/wallet/Ledger";
 import { RecipientCard } from "@/components/wallet/RecipientCard";
 import { WithdrawalStatusChip, WithdrawalTimeline } from "@/components/wallet/WithdrawalStatus";
@@ -321,6 +323,19 @@ const iconList: [string, ComponentType<IconProps>, boolean][] = [
   ["Clock", Icons.ClockIcon, false],
   ["Coin", Icons.CoinIcon, false],
   ["BrandMark", Icons.BrandMarkIcon, false],
+  ["Dot", Icons.DotIcon, false],
+  ["Bot", GameIcons.BotIcon, false],
+  ["Undo", GameIcons.UndoIcon, true],
+  ["Menu", GameIcons.MenuIcon, false],
+  ["Flag", GameIcons.FlagIcon, false],
+  ["Reaction", GameIcons.ReactionIcon, false],
+  ["Cube", GameIcons.CubeIcon, false],
+  ["Target", GameIcons.TargetIcon, false],
+  ["Rated", GameIcons.RatedIcon, false],
+  ["Hourglass", GameIcons.HourglassIcon, false],
+  ["Shield", GameIcons.ShieldIcon, false],
+  ["Keyboard", GameIcons.KeyboardIcon, false],
+  ["History", GameIcons.HistoryIcon, false],
 ];
 
 function IconGrid() {

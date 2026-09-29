@@ -76,12 +76,18 @@ export interface CostBlockProps {
   tomanEquivalent?: Amount;
   /** Fee in coins (transfer, withdrawal; shown even when 0). */
   fee?: Amount;
+  /** Fee row label when it needs values ("Platform fee (10% of the pot of 200)"); default "Fee". */
+  feeLabel?: string;
+  /** Coins the winner receives (table entry, play.md PL-03). */
+  winnerReceives?: Amount;
   /** Coins the recipient receives (transfer). */
   recipientReceives?: Amount;
   /** Toman paid to the user's bank account (withdrawal). */
   youReceiveToman?: Amount;
   balance: Amount;
   balanceAfter: Amount;
+  /** "Balance after the match starts" when the charge happens later (play.md §3.3). */
+  balanceAfterLabel?: string;
 }
 
 export function CostBlock({
@@ -89,10 +95,13 @@ export function CostBlock({
   costLabel = "cost",
   tomanEquivalent,
   fee,
+  feeLabel,
+  winnerReceives,
   recipientReceives,
   youReceiveToman,
   balance,
   balanceAfter,
+  balanceAfterLabel,
 }: CostBlockProps) {
   const t = useTranslations();
   const f = useFormat();
@@ -117,8 +126,14 @@ export function CostBlock({
       </Row>
       {fee !== undefined && (
         <Row>
-          <dt>{t("coins.fee")}</dt>
+          <dt>{feeLabel ?? t("coins.fee")}</dt>
           <dd>{coins(fee)}</dd>
+        </Row>
+      )}
+      {winnerReceives !== undefined && (
+        <Row data-emphasis="true">
+          <dt>{t("play.join.payout")}</dt>
+          <dd>{coins(winnerReceives)}</dd>
         </Row>
       )}
       {recipientReceives !== undefined && (
@@ -138,7 +153,7 @@ export function CostBlock({
         <dd>{coins(balance)}</dd>
       </Row>
       <Row data-emphasis="true">
-        <dt>{t("coins.balanceAfter")}</dt>
+        <dt>{balanceAfterLabel ?? t("coins.balanceAfter")}</dt>
         <dd>{coins(balanceAfter)}</dd>
       </Row>
     </List>

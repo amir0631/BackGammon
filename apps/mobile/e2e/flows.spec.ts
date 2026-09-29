@@ -50,10 +50,11 @@ test("signup without SMS: phone → account → avatar → /play", async ({ page
   expect(me.phone_verified).toBe(false);
 });
 
+// Signed-in pages keep the game socket open, so they never reach "networkidle"; wait for load.
 test("signed-in user opening guest routes lands on /play", async ({ page }) => {
   await logIn(page, phone);
   for (const path of ["/", "/login", "/signup"]) {
-    await page.goto(path, { waitUntil: "networkidle" });
+    await page.goto(path, { waitUntil: "load" });
     await page.waitForURL("**/play");
   }
 });
@@ -70,13 +71,14 @@ test("wrong password shows the neutral error and clears only the password", asyn
 
 test("edit avatar, settings toggles, and language persist on the account", async ({ browser, page, baseURL }) => {
   await logIn(page, phone);
-  await page.goto("/me/edit", { waitUntil: "networkidle" });
-  await page.locator("input[type=radio]").nth(9).check({ force: true });
+  await page.goto("/me/edit", { waitUntil: "load" });
+  await expect(() => page.locator("input[type=radio]").nth(9).check({ force: true, timeout: 2_000 })).toPass();
   await page.getByRole("button", { name: /Save avatar|ذخیره‌ی چهره/ }).click();
   await expect.poll(() => page.evaluate(() => fetch("/api/v1/me").then((r) => r.json()).then((m) => m.avatar))).toBe("avatar_10");
 
-  await page.goto("/settings", { waitUntil: "networkidle" });
-  await page.getByLabel(/^(Sound|صدا)/).uncheck();
+  await page.goto("/settings", { waitUntil: "load" });
+  // Retried until the page has hydrated (signed-in pages keep a socket open, so no networkidle).
+  await expect(() => page.getByLabel(/^(Sound|صدا)/).uncheck({ timeout: 2_000 })).toPass();
   await expect.poll(() => page.evaluate(() => fetch("/api/v1/me").then((r) => r.json()).then((m) => m.prefs.sound))).toBe(false);
 
   await page.getByRole("radio", { name: "English" }).check();
@@ -128,6 +130,6 @@ test("log out asks first, then lands on the welcome screen", async ({ page }) =>
   await expect(dialog.getByRole("button", { name: /Cancel|انصراف/ })).toBeFocused();
   await dialog.getByRole("button", { name: /^(Log out|خروج)$/ }).click();
   await page.waitForURL((url) => url.pathname === "/");
-  await page.goto("/me", { waitUntil: "networkidle" });
+  await page.goto("/me", { waitUntil: "load" });
   await page.waitForURL("**/login?next=%2Fme");
 });

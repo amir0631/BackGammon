@@ -5,8 +5,13 @@ import { err, type Handlers, type MockResponse } from "./mocks";
 // backend/wallet/services.py (bonus lock, rolling windows, fee floor) so screens look real.
 
 const HOUR = 3_600_000;
-const iso = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
-const ymd = (daysAhead: number) => new Date(Date.now() + daysAhead * 24 * HOUR).toISOString().slice(0, 10);
+/**
+ * Screenshots are visual-regression baselines, so fixtures use a fixed "now" (the browser clock is
+ * pinned to the same instant in wallet.spec.ts) instead of the real clock.
+ */
+export const FIXED_NOW = Date.parse("2026-09-28T08:30:00Z");
+const iso = (msAgo: number) => new Date(FIXED_NOW - msAgo).toISOString();
+const ymd = (daysAhead: number) => new Date(FIXED_NOW + daysAhead * 24 * HOUR).toISOString().slice(0, 10);
 
 export function summaryFixture(overrides: Partial<WalletSummary> = {}): WalletSummary {
   const base: WalletSummary = {
@@ -135,12 +140,12 @@ export function walletHandlers(o: WalletMockOptions = {}): Handlers {
     "GET /wallet/banks": ok(banks),
     "POST /wallet/transfer": (route) => {
       const body = route.request().postDataJSON() as { amount: number; username: string };
-      return ok({ tx_id: "9b2e7c41-58d3-4f0a-8e6b-2d9a0c7f1e35", balance: 1250 - body.amount, fee: 0, received: body.amount, created_at: new Date().toISOString() });
+      return ok({ tx_id: "9b2e7c41-58d3-4f0a-8e6b-2d9a0c7f1e35", balance: 1250 - body.amount, fee: 0, received: body.amount, created_at: new Date(FIXED_NOW).toISOString() });
     },
     "POST /wallet/withdrawals/otp": { status: 202, body: { sms: true, expires_in: 120, resend_after: 60 } },
     "POST /wallet/withdrawals": (route) => {
       const body = route.request().postDataJSON() as { amount: number };
-      return { status: 201, body: withdrawalFixture({ id: 32, amount: body.amount, payout_toman: body.amount * 1000, created_at: new Date().toISOString() }) as unknown as Record<string, unknown> };
+      return { status: 201, body: withdrawalFixture({ id: 32, amount: body.amount, payout_toman: body.amount * 1000, created_at: new Date(FIXED_NOW).toISOString() }) as unknown as Record<string, unknown> };
     },
     ...o.extra,
   };

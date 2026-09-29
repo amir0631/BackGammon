@@ -4,7 +4,7 @@ import Fade from "@mui/material/Fade";
 import { styled, useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, type FormEvent, type ReactNode, type RefObject } from "react";
 import { layout } from "@bg/design-tokens";
 import { SignedInShell } from "@/components/shell/SignedInShell";
 import { useFormat } from "@/lib/useFormat";
@@ -53,18 +53,22 @@ const Footer = styled("div")(({ theme }) => {
     paddingBlockStart: theme.spacing(3),
     paddingBlockEnd: `calc(${theme.spacing(2)} + ${safeInsetBottom})`,
     [`@media ${TALL} and (max-width: 599.98px)`]: {
-      position: "sticky",
+      "&:not([data-inline='true'])": {
+        position: "sticky",
       insetBlockEnd: 0,
-      zIndex: 1,
-      paddingBlockStart: theme.spacing(2),
-      backgroundColor: t.background,
-      borderBlockStart: `1px solid ${t.outlineSubtle}`,
-      marginInline: `-${layout.gutter.sm}px`,
-      paddingInline: `${layout.gutter.sm}px`,
+        zIndex: 1,
+        paddingBlockStart: theme.spacing(2),
+        backgroundColor: t.background,
+        borderBlockStart: `1px solid ${t.outlineSubtle}`,
+        marginInline: `-${layout.gutter.sm}px`,
+        paddingInline: `${layout.gutter.sm}px`,
+      },
     },
     [`@media ${TALL} and (max-width: 359.98px)`]: {
-      marginInline: `-${layout.gutter.xs}px`,
-      paddingInline: `${layout.gutter.xs}px`,
+      "&:not([data-inline='true'])": {
+        marginInline: `-${layout.gutter.xs}px`,
+        paddingInline: `${layout.gutter.xs}px`,
+      },
     },
     [mqMdUp]: { paddingBlockEnd: 0 },
   };
@@ -87,6 +91,13 @@ export interface TaskFlowProps {
   stepKey: string | number;
   /** Replaces the form (TR-00, WD-01, receipts). */
   plain?: boolean;
+  /**
+   * `inline` keeps the footer in the document flow after the content (review steps, whose
+   * password field and notes must not cover the cost block, P§2.1). Default `sticky` on tall phones.
+   */
+  footerMode?: "sticky" | "inline";
+  /** Focus this element instead of the heading when the step appears (the SMS code field). */
+  initialFocus?: RefObject<HTMLElement | null>;
 }
 
 export function TaskFlow({
@@ -101,6 +112,8 @@ export function TaskFlow({
   footer,
   stepKey,
   plain = false,
+  footerMode = "sticky",
+  initialFocus,
 }: TaskFlowProps) {
   const t = useTranslations();
   const f = useFormat();
@@ -108,8 +121,16 @@ export function TaskFlow({
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    headingRef.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0 });
+    const target = initialFocus?.current;
+    if (target) {
+      // The heading is still announced through the page title of the step; the field gets focus.
+      target.focus({ preventScroll: true });
+      return;
+    }
+    headingRef.current?.focus({ preventScroll: true });
+    // initialFocus is read once per step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepKey]);
 
   return (
@@ -147,7 +168,7 @@ export function TaskFlow({
             </Typography>
           )}
           <Fields>{children}</Fields>
-          {footer && <Footer>{footer}</Footer>}
+          {footer && <Footer data-inline={footerMode === "inline" ? "true" : undefined}>{footer}</Footer>}
         </Column>
       </Fade>
     </SignedInShell>

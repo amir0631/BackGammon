@@ -7,13 +7,13 @@ import Stack from "@mui/material/Stack";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { usePathname, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@bg/api-client";
 import { iconSize, layout, radii } from "@bg/design-tokens";
 import type { Withdrawal, WithdrawalStatus } from "@bg/protocol";
 import { Banner } from "@/components/feedback/Banner";
-import { ConfirmDialog } from "@/components/feedback/ConfirmDialog";
 import { useToast } from "@/components/feedback/Toast";
 import { ChevronForwardIcon, ClockIcon, CloseIcon, CoinIcon } from "@/components/icons";
 import { SignedInShell } from "@/components/shell/SignedInShell";
@@ -31,15 +31,18 @@ import { useWallet } from "@/lib/wallet";
 import { gutterStyles } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
 import { detailString, tehranToday, useWalletFormat } from "./shared";
+import { canGoBackInApp } from "@/lib/inAppNav";
 
 // WD-06 Withdrawal requests `/wallet/withdrawals`, WD-07 detail `/wallet/withdrawals/[id]`, and
 // WD-09 cancel (wallet.md §3.7). The route layout keeps the list mounted:
 // - Narrow: the list, or the detail alone on its own route.
-// - Container ≥ 44rem (md/lg with room): list + detail panel; the URL follows the selection
+// - Container ≥ 36rem (md portrait and up, W-05): list + detail panel; the URL follows the selection
 //   (ia.md §3.3), so deep links and Back behave the same at every width.
 // Status chips and timeline steps use icon + text, color is secondary (P§13).
 
-const WIDE = "44rem";
+const WIDE = "36rem";
+
+const CancelWithdrawalSheet = dynamic(() => import("./CancelWithdrawalSheet").then((m) => m.CancelWithdrawalSheet), { ssr: false });
 
 interface ListState {
   rows: Withdrawal[] | null;
@@ -66,7 +69,7 @@ const Frame = styled("div")(({ theme }) => ({
   "& .wd-detail, & .wd-list": { minWidth: 0, width: "100%", maxWidth: layout.taskFlowMaxWidth, marginInline: "auto" },
   [`@container withdrawals (min-width: ${WIDE})`]: {
     "& .wd-grid": {
-      gridTemplateColumns: `minmax(${layout.sidePanelWidth}px, ${layout.sidePanelWidthLg}px) minmax(0, 1fr)`,
+      gridTemplateColumns: "minmax(17.5rem, 20rem) minmax(0, 1fr)",
       alignItems: "start",
     },
     "&[data-detail='true'] .wd-list, &[data-detail='false'] .wd-detail": { display: "block" },
@@ -104,7 +107,14 @@ const Row = styled(ButtonBase)(({ theme }) => {
     "& .wd-main": { flex: "1 1 auto", minWidth: 0, display: "grid", gap: theme.spacing(0.5) },
     "& .wd-chevron": { flex: "none", color: t.textSecondary, alignSelf: "center", fontSize: iconSize.sm },
     "@media (hover: hover)": { "&:hover": { backgroundColor: theme.vars?.palette.action.hover } },
-    "&[aria-current='page']": { backgroundColor: t.primaryContainer, color: t.onPrimaryContainer },
+    // Selected: fill plus a start-edge bar and semibold text, not color alone (W-10).
+    "&[aria-current='page']": {
+      position: "relative",
+      backgroundColor: t.primaryContainer,
+      color: t.onPrimaryContainer,
+      "& .wd-main *": { fontWeight: 600 },
+      "&::before": { content: '""', position: "absolute", insetBlock: 0, insetInlineStart: 0, width: 3, backgroundColor: t.primary },
+    },
     "&[aria-current='page'] .wd-chevron": { color: "inherit" },
     "&.Mui-focusVisible": { outlineOffset: -2 },
   };
@@ -167,7 +177,7 @@ export function WithdrawalsLayout({ children }: { children: ReactNode }) {
   const value: ListState = { rows, next, error, loadingMore, reload, more, update };
 
   const back = () => {
-    if (selected !== null && window.history.length > 1) router.back();
+    if (selected !== null && canGoBackInApp()) router.back();
     else router.push(selected !== null ? "/wallet/withdrawals" : "/wallet");
   };
 
@@ -323,6 +333,16 @@ export function WithdrawalDetail({ id, submitted }: { id: number; submitted: boo
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
+  const [sheetUsed, setSheetUsed] = useState(false);
+  useEffect(() => {
+    if (dialog) setSheetUsed(true);
+  }, [dialog]);
+  // W-13: the "submitted" banner shows once; the query leaves the URL so reload or Back/Forward
+  // don't show it again.
+  const [justSubmitted] = useState(submitted);
+  useEffect(() => {
+    if (submitted) router.replace(`/wallet/withdrawals/${id}`, { scroll: false });
+  }, [submitted, id, router]);
 
   const { markWithdrawalSeen, refresh } = wallet;
   const update = list?.update;
@@ -355,8 +375,8 @@ export function WithdrawalDetail({ id, submitted }: { id: number; submitted: boo
 
   // The submitted banner takes focus once, right after the flow (wallet.md §8 WD-07).
   useEffect(() => {
-    if (submitted && state.kind === "ok") bannerRef.current?.focus();
-  }, [submitted, state.kind]);
+    if (justSubmitted && state.kind === "ok") bannerRef.current?.focus();
+  }, [justSubmitted, state.kind]);
 
   const cancel = async () => {
     if (state.kind !== "ok" || cancelling) return;
@@ -408,7 +428,7 @@ export function WithdrawalDetail({ id, submitted }: { id: number; submitted: boo
     {
       key: "waiting",
       label: t("withdrawals.detail.timeline.waiting", { date: f.dayOnly(w.expected_by) }),
-      state: w.status === "pending" ? "current" : "done",
+      state: w.status === "pending" ? "current" : w.status === "paid" ? "done" : "passed",
     },
   ];
   if (w.status === "paid") {
@@ -449,7 +469,7 @@ export function WithdrawalDetail({ id, submitted }: { id: number; submitted: boo
 
   return (
     <Stack spacing={3}>
-      {submitted && (
+      {justSubmitted && (
         <div ref={bannerRef} tabIndex={-1} style={{ outline: "none" }}>
           <Banner severity="success">{t("withdrawals.detail.submitted")}</Banner>
         </div>
@@ -496,8 +516,12 @@ export function WithdrawalDetail({ id, submitted }: { id: number; submitted: boo
         </div>
         <div>
           <dt>{t("withdrawals.detail.reference")}</dt>
-          <dd>
-            <bdi dir="ltr">{f.digits(String(w.id))}</bdi>
+          <dd style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {/* Identifiers read to support stay in Latin digits and can be copied (W-12). */}
+            <bdi dir="ltr" style={{ fontFamily: "monospace" }}>
+              {String(w.id)}
+            </bdi>
+            <CopyButton value={String(w.id)} label={t("withdrawals.detail.copyId")} />
           </dd>
         </div>
       </Facts>
@@ -520,31 +544,30 @@ export function WithdrawalDetail({ id, submitted }: { id: number; submitted: boo
         </Stack>
       )}
 
-      <ConfirmDialog
-        open={dialog}
-        onCancel={() => {
-          setDialog(false);
-          setDialogError(null);
-        }}
-        onConfirm={() => void cancel()}
-        title={t("withdrawals.cancel.title")}
-        confirmLabel={t("withdrawals.cancel.confirm")}
-        cancelLabel={t("withdrawals.cancel.keep")}
-        inFlight={cancelling}
-        inFlightLabel={t("withdrawals.cancel.cancelling")}
-        error={dialogError}
-        disabledReason={online ? null : t("net.offlineAction")}
-        onCheckStatus={() => {
-          void load(true).then((fresh) => {
-            if (fresh && fresh.status !== "pending") {
-              setDialog(false);
-              setCancelling(false);
-            }
-          });
-        }}
-      >
-        {t("withdrawals.cancel.body", { amount: f.number(w.amount) })}
-      </ConfirmDialog>
+      {/* W-09: a sheet (P§3), a centered dialog from md; loaded on first use (route JS budget). */}
+      {(dialog || sheetUsed) && (
+        <CancelWithdrawalSheet
+          open={dialog}
+          cancelling={cancelling}
+          online={online}
+          error={dialogError}
+          amount={w.amount}
+          onKeep={() => {
+            if (cancelling) return;
+            setDialog(false);
+            setDialogError(null);
+          }}
+          onConfirm={() => void cancel()}
+          onCheckStatus={() => {
+            void load(true).then((fresh) => {
+              if (fresh && fresh.status !== "pending") {
+                setDialog(false);
+                setCancelling(false);
+              }
+            });
+          }}
+        />
+      )}
     </Stack>
   );
 }

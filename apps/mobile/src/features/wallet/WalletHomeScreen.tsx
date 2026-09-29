@@ -18,7 +18,7 @@ import { isolate } from "@bg/i18n";
 import { iconSize, layout, radii } from "@bg/design-tokens";
 import type { BankAccountInfo, LedgerRow, Withdrawal } from "@bg/protocol";
 import { StandaloneLink } from "@/components/forms/StandaloneLink";
-import { AddCoinsIcon, BankIcon, ClockIcon, CoinIcon, SendIcon, WithdrawIcon, type IconProps } from "@/components/icons";
+import { AddCoinsIcon, BankIcon, ClockIcon, CoinIcon, RefreshIcon, SendIcon, WithdrawIcon, type IconProps } from "@/components/icons";
 import { NavGroup, NavRow } from "@/components/lists/NavList";
 import { SignedInShell } from "@/components/shell/SignedInShell";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -34,13 +34,15 @@ import { useWallet } from "@/lib/wallet";
 import { gutterStyles } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
 import { useWalletFormat } from "./shared";
+import { canGoBackInApp } from "@/lib/inAppNav";
 
 // WA-01 Wallet `/wallet` (wallet.md §3.1–§3.3, §4 WA-01, WA-02, WA-04).
 // - Server values only: the page computes nothing but the toman equivalent (§9 AC 1).
 // - Get coins · Send coins · Withdraw are three equal buttons; none is primary or highlighted
 //   (P§9.2). Suspended: Send and Get coins are disabled with the reason; Withdraw stays.
 // - History: newest first, 30 per page, "Show more" (no auto-load); focus goes to the first new row.
-// - Layout by container width: one column; two columns (summary | history) from 40rem; three
+// - Layout by container width: one column; two columns (summary | history) from 36rem (768 px
+//   portrait with the rail, W-05); three
 //   columns (summary | history | detail panel) from 64rem. Below that WA-02 opens as a sheet
 //   (a centered dialog at md).
 
@@ -48,7 +50,7 @@ import { useWalletFormat } from "./shared";
 const TxDetailSheet = dynamic(() => import("./WalletSheets").then((m) => m.TxDetailSheet), { ssr: false });
 const GetCoinsSheet = dynamic(() => import("./WalletSheets").then((m) => m.GetCoinsSheet), { ssr: false });
 
-const WIDE = "40rem";
+const WIDE = "36rem";
 /** Landscape phones (ia.md §3.3): the balance card collapses to one line (wallet.md §6). */
 const COMPACT = `@media (orientation: landscape) and (max-height: ${layout.compactHeight - 0.02}px)`;
 /** Side columns stick only when the viewport can show them whole. */
@@ -65,7 +67,7 @@ const Frame = styled("div")(({ theme }) => ({
   "& .wallet-detail": { display: "none" },
   [`@container wallet (min-width: ${WIDE})`]: {
     "& .wallet-grid": {
-      gridTemplateColumns: `minmax(${layout.sidePanelWidth}px, ${layout.sidePanelWidthLg}px) minmax(0, 1fr)`,
+      gridTemplateColumns: "minmax(17.5rem, 22.5rem) minmax(0, 1fr)",
       alignItems: "start",
     },
     [TALL]: { "& .wallet-summary": { position: "sticky", insetBlockStart: theme.spacing(10) } },
@@ -206,6 +208,7 @@ export function WalletHomeScreen({ initialTx }: { initialTx?: number | null }) {
   }, [sheetRow, getCoinsOpen]);
   const [whyOpen, setWhyOpen] = useState(false);
   const [triedSummary, setTriedSummary] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const reasonId = useId();
   const whyId = useId();
   const lastTrigger = useRef<HTMLElement | null>(null);
@@ -373,11 +376,28 @@ export function WalletHomeScreen({ initialTx }: { initialTx?: number | null }) {
             )}
           </>
         )}
-        {(!online || wallet.failed) && wallet.updatedAt && (
-          <Typography variant="caption" color="text.secondary">
-            {t("wallet.lastUpdated", { time: f.dateTime(new Date(wallet.updatedAt)) })}
-          </Typography>
-        )}
+        {/* W-08: an on-demand refresh (the installed PWA has no browser reload). */}
+        <Stack direction="row" sx={{ alignItems: "center", flexWrap: "wrap", columnGap: 1 }}>
+          {(!online || wallet.failed) && wallet.updatedAt && (
+            <Typography variant="caption" color="text.secondary" sx={{ flex: "1 1 auto" }}>
+              {t("wallet.lastUpdated", { time: f.dateTime(new Date(wallet.updatedAt)) })}
+            </Typography>
+          )}
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<RefreshIcon />}
+            loading={refreshing}
+            disabled={!online}
+            onClick={() => {
+              setRefreshing(true);
+              void Promise.all([refresh(), loadLedger()]).finally(() => setRefreshing(false));
+            }}
+            sx={{ minHeight: 44 }}
+          >
+            {t("wallet.refresh")}
+          </Button>
+        </Stack>
       </Card>
     );
   })();
@@ -486,7 +506,7 @@ export function WalletHomeScreen({ initialTx }: { initialTx?: number | null }) {
   );
 
   return (
-    <SignedInShell topBar={{ title: t("wallet.title"), leading: "back", onNavigate: () => (window.history.length > 1 ? router.back() : router.push("/me")) }}>
+    <SignedInShell topBar={{ title: t("wallet.title"), leading: "back", onNavigate: () => (canGoBackInApp() ? router.back() : router.push("/me")) }}>
       <Frame>
         <div className="wallet-grid">
           <Stack spacing={2.5} className="wallet-summary">

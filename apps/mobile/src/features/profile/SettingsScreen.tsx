@@ -13,7 +13,6 @@ import { LanguageOptions, useChooseLanguage } from "@/components/i18n/LanguageCo
 import { DevicesIcon, LockIcon } from "@/components/icons";
 import { InfoRow, NavGroup, NavRow } from "@/components/lists/NavList";
 import { DetailColumns } from "@/components/profile/AccountLayout";
-import { maskPhone } from "@bg/i18n";
 import { queuePendingPrefs, readPendingPrefs, useSession } from "@/lib/session";
 import { useFormat } from "@/lib/useFormat";
 import { useOnline } from "@/lib/useOnline";
@@ -166,7 +165,7 @@ export function SettingsScreen() {
 
         <NavGroup title={t("settings.account.title")}>
           {me && (
-            <InfoRow label={t("settings.account.phone")} value={<bdi dir="ltr">{f.digits(maskPhone(me.phone))}</bdi>} />
+            <InfoRow label={t("settings.account.phone")} value={<bdi dir="ltr">{f.maskedPhone(me.phone)}</bdi>} />
           )}
           <NavRow href="/password/reset?next=%2Fsettings" icon={LockIcon} label={t("settings.account.changePassword")} />
           <NavRow href="/me/sessions" icon={DevicesIcon} label={t("profile.hub.sessions")} />

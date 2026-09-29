@@ -228,3 +228,41 @@ There is no 2D fallback (§11.4). `/match/[id]` and `/replay/[id]` show the unsu
 4. A camera framing function per breakpoint and orientation, with screenshots at the six §11.7 viewports plus phone landscape.
 5. Normal and lite captures, with reduced motion demonstrated.
 6. A performance capture on the reference device: fps, draw calls, and triangles over a scripted 5-point match (§16).
+
+---
+
+## 12. Step 6 implementation (`packages/game3d/src/scene`)
+
+What shipped, and where it differs from the plan above. Numbers are measured, not targets.
+
+**Entry points.** `@bg/game3d/scene` exports `GameBoard` (React Three Fiber, lazy-loaded by the app) and the framing helpers; `@bg/game3d/framing` is the pure math only (no three.js), so the app can choose the orientation before the engine loads; `@bg/game3d` keeps the dice pre-simulation. The Rapier WASM is imported on the first physics throw (the app preloads it on the match route unless lite mode is on).
+
+**Models and textures are procedural, not GLB/KTX2 (deviation).** No authored assets exist yet, so the base models are built in code (`models.ts`) and every texture is painted on a canvas at runtime (`textures.ts`) from the tokens: walnut grain, the maple field with brass-edged points, the khatam star band on the bar, the checker top motifs (light side: engraved 8-point star; dark side: concentric rings), the dice face atlas, markers, and soft shadows. Nothing is downloaded, so the theme budgets (§8) are trivially met. The GLB/KTX2 pipeline in §8 stays the plan for authored themes; `theme.ts` already resolves theme keys and falls back to "default" for keys this build doesn't ship.
+
+| Item | Triangles | Draw calls |
+| --- | --- | --- |
+| Board: slab, top face, merged rails, merged brass caps, contact shadow | ≈ 220 | 5 |
+| Checkers: 2 instanced lathes (30 × ≈ 480) + 1 instanced blob layer | ≈ 14,600 | 3 |
+| Dice: 2 rounded cubes (≈ 590 each) + 2 blob shadows | ≈ 1,200 | 4 |
+| Highlights: source rings, selection ring, ≤ 4 targets, ≤ 8 trail arrows | < 40 | ≤ 21 |
+| **Worst case** | **≈ 16,000** | **≤ 33** |
+
+**Lighting.** A hemisphere fill plus one warm key light (`sceneLight` tokens); only the dice cast a real-time shadow (512² map, frustum fitted to the field). Lite mode: hemisphere only, no shadow map pass, DPR 1.5, half-resolution canvases, 28-segment checkers, no antialiasing. The canvas is transparent: the board floats on the chrome background with a baked contact shadow, so it works in dark and light schemes.
+
+**Rendering on demand.** `frameloop="demand"`: frames render only while checkers move, dice play back, a marker changes, or the camera re-frames. Idle battery cost is zero. The MA-16 frame monitor counts only continuous frames (gaps over 250 ms don't count) and calls `onSlow` once after 10 s of animation under 30 fps.
+
+**Framing (§6).** `fitCamera` solves the camera distance so the whole board, rails, and trays fit with a margin (8 px default), then re-centres the tilted projection. `bestOrientation` compares the checker size in both orientations; the app turns the board a quarter only when that is at least 15 % larger (portrait phones), so tablets in portrait keep the natural board (match.md §6 md row). Resizing and rotation re-frame without reloading the scene. In portrait, the viewer's home board and both trays sit at the bottom of the screen; the board never mirrors for RTL.
+
+**Checker size on phones (deviation from §11.1's 44 px).** Measured with the match screen's chrome (top strip 48, two player bars 56, action bar 88): 33 px at 360 × 800, 35 px at 390 × 844, 39 px at 430 × 932. 44 px checkers don't fit: 12 points plus the bar and a tray along the long axis need about 14.5 checker widths, and the short axis needs about 9.2 (two 4-checker points and the middle gap). Mitigations: the hit area of each point is the whole triangle strip plus half the middle gap (≈ 35 × 170 px), not the checker; the bar and tray are whole-region targets; drag works from anywhere on a source point; and MA-18 offers the full turn as a list of ≥ 44 px buttons. Needs a product decision (main agent / UX).
+
+**Checker stacking.** Four per row on a point; further checkers sit in the gaps of the row below (4, 3, 4, 3, 1). Borne-off checkers stand on edge in the tray; bar checkers wait on the bar half nearest the board they enter.
+
+**Motion (§7).** Checkers use the `checker` easing curve and the `checkerShort`/`checker`/`checkerLong` durations by distance, with a 0.45-unit arc (enough to clear a stack) in normal mode and a straight slide in lite or reduced motion. An opponent's move plays step by step (60 ms gap) from the `turn.moved` list; a full `match.state` snaps without animation. Checker identities follow the top of each stack, so undo animates the same checker back.
+
+**Dice (§11.1).** `simulateThrow` runs on the first frame after `turn.rolled`; the dice appear only when the recorded trajectory starts, and the visual mesh gets the face offset, so the rest face always equals the server value (verified visually for 5–3 in normal and lite, and by the existing 10,000-throw test in `dice.test.ts`). If a throw doesn't settle within the retry budget, the dice fade in at rest (the lite placement). The throw lands in the thrower's right-hand half: the viewer's rolls at the bottom, the opponent's at the top. **Reduced motion** uses the lite fade (`REDUCED_MOTION_DICE_FADE`, match.md §10 Q11, one-line change if the product decides otherwise). Rest poses and spins come from the throw seed's PRNG, never `Math.random`.
+
+**Highlights (§5).** Movable sources: a thin firouzeh ring on the top checker. Selected: lift + a `selection` ring. Legal destinations: a ring-and-dot disc in `legalMove` with a dark `markerInk` outline and the die digit in the viewer's locale (the "Off" word on the tray), counter-rotated so it reads upright in portrait. Hover (mouse) previews destinations at 60 %. The opponent's last move: chevron arrows on the origin and destination, until this player rolls. Markers are tested for contrast on the darker point color (`contrast.test.mjs`).
+
+**Preview route.** `/dev/board` (same production guard as the gallery) renders the scene alone: `?lite=1`, `?reduced=1`, `?side=1`, `?moves=1&select=13` (highlights), `?dice=5,3` (a throw), `?mid=1` (bar and borne-off checkers).
+
+**Not done in step 6:** authored GLB/KTX2 assets and baked lightmaps (procedural stand-ins above); the reference-device performance capture (§11, deliverable 6; needs the device lab); the doubling cube as a 3D model (match.md puts the cube chip in HTML, which is what shipped).

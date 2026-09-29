@@ -43,6 +43,8 @@ Dark is the default scheme. Light is fully supported. Both define every token. C
 | `coin` / `coinRim` | `#e9b949` / `#9a6e1c` | `#c8961e` / `#6b4a0c` | Coin glyph (decorative, always next to a number) |
 | `playerLight` / `playerLightRim`, `playerDark` / `playerDarkRim` | see code | see code | Player markers in bars, mirroring checker colors |
 
+**3D scene colors** (`boardDefaultTheme`, `sceneLight`): the board theme adds `frameWoodDark`, grain tones, `trayFloor`, the inlay `inlayBone`/`inlayEbony`, `markerInk` (the digit on a legal-destination marker, ≥ 4.5:1 on `legalMove`), `trail`, and `shadow`. `sceneLight` holds the key light, the hemisphere colors and intensities (normal and lite), and the exposure. See `3d-art-direction.md` §12.
+
 **Avatar art** (`avatarArt`, `avatarFallbackArt`): the 12 preset avatars (`avatar_01` … `avatar_12`, the keys `GET avatars` returns) are original flat motifs on a colored disc: khatam star, cypress, paisley, pomegranate, moon, sun, die, crown, bird, fish, tulip, mountain. Each has `ground`, `ink`, and `accent`. They are artwork, so they are the same in both schemes (like a photo). The test keeps `ink` at ≥ 3:1 on `ground` so each shape reads at 40 px.
 
 Contrast guarantees (tested for both schemes):
@@ -194,6 +196,8 @@ Rules:
   - Status: Info, Help, Error, Warning, Success, Pending, Offline.
   - Wallet (wallet.md): Wallet, Send (paper plane, mirrors), AddCoins, Bank, Withdraw (arrow into a tray), CoinsIn / CoinsOut (ledger rows), Gift (welcome coins and rewards), Support (headset), Clock (expected dates; never mirrors).
   - Brand: Coin, BrandMark.
+  - Timeline: Dot (a passed step that did not succeed, wallet review W-11).
+  - Game (`components/icons/game.tsx`, a separate module so wallet and account routes don't ship them): Bot, Undo (mirrors), Menu, Flag (resign), Reaction, Cube, Target (hit), Rated, Hourglass (time bank), Shield (fair dice), Keyboard (move entry), History.
 - **Mirroring (P§11):**
   - `BackIcon`, `ChevronForwardIcon`, `LogoutIcon`, and `SendIcon` mirror in RTL (`mirrorInRtl`). Vertical arrows (Withdraw, CoinsIn, CoinsOut) never do.
   - Clocks, refresh, media controls, and glyphs such as "?" never mirror.
@@ -408,6 +412,42 @@ Layout rules used by the wallet screens:
 - **Side columns stick** only when the viewport is at least 700 px tall.
 - **Review steps** put the password field in the sticky footer, directly above the action error and the button (P§2.6).
 
+### 9.10 Play hub (play.md)
+
+| Component | File | Notes |
+| --- | --- | --- |
+| `ChoiceGroup` | `forms/ChoiceGroup.tsx` | Native radio group as `cards` (label + description), `chips`, or a `grid`: one tab stop, arrows move, nothing pre-selected unless the caller passes a value. Selected = check icon + 2 px outline + bold label on `primaryContainer`. Options ≥ 44 px and grow with text. |
+| `ValueRows` | `money/ValueRows.tsx` | Label/value rows in the cost-block style for facts that aren't a charge: PL-05 shortfall, MA-13b coin rows. Stacks under an 18rem container. |
+| `CostBlock` additions | `money/CostBlock.tsx` | `feeLabel` (the fee row with values: "Platform fee (10% of the pot of 200)"), `winnerReceives`, `balanceAfterLabel` ("Balance after the match starts"). Still formats only. |
+| `useCostConfirmationParts` | `money/CostConfirmation.tsx` | The confirmation's body and footer for a multi-step sheet (PL-03 inside the one play sheet); `CostConfirmation` wraps it. |
+| `ResumeMatchBanner` | `play/ResumeMatchBanner.tsx` | PL-08 in `SignedInShell` on every non-immersive screen while `GET me/matches/active` has a match: opponent, score, whose turn (text), "Return". |
+| Lobby cards | `features/play/LobbyCards.tsx` | `TierCard` (one focus stop named by `play.tier.label`; "Needs N coins" icon + text; the "Play" pill is part of the card), `PracticeCard` (Bot label), `RankCard` + `TopPlayers` (lg), `PlayAgainCard`. The tier grid's items are the size container, so the pill drops under the text in 4-up grids and at 200 %. |
+| `PlaySheet` | `features/play/PlaySheet.tsx` | One `BottomSheet` whose content swaps between PL-02 setup, PL-03 confirm, PL-04 bot, PL-05 insufficient, and the WA-04 content. |
+| `MatchmakingOverlay` | `features/play/MatchmakingOverlay.tsx` | PL-06/PL-07: full screen on phones (theme dialog margins undone), a 480 px card from md, two columns on landscape phones. Cancel, Back, and Esc leave the queue; the elapsed time is announced only at 1 minute and at the long-wait note. |
+| `InsufficientOptions` | `features/play/InsufficientOptions.tsx` | Cheaper affordable tiers, practice vs bot, and "Get coins" only when `onGetCoins` is passed (never after a loss). |
+
+State: `lib/socket.tsx` (one `GameSocket` per signed-in tab, shared by the lobby and the match so leaving the match screen keeps the socket attached; the match store loads on first attach), `lib/activeMatch.tsx` (PL-08 data: app open, focus, after `match.found`), `lib/match/fresh.ts` (a just-created match attaches once the scene is ready), `lib/webgl.ts`, `features/play/usePlayQueue.ts` (queue view state from `queue.status`/`match.found`/`error`), `features/play/labels.ts`.
+
+### 9.11 Match screen (match.md)
+
+| Component | File | Notes |
+| --- | --- | --- |
+| `BoardStage` | `features/match/BoardStage.tsx` | The board region: loads `@bg/game3d/scene` lazily, measures its box, picks the orientation (quarter-turned only when ≥ 15 % larger), one focus stop whose Enter opens MA-18; HTML overlays go inside it. |
+| `PlayerBar`, `ClockDisplay`, `CheckerSwatch`, `CubeChip`, `DiceChips`, `StatusLine` | `features/match/parts.tsx` | Bars: avatar (peek), name or "Bot · level", level and rating, pips, the side's swatch (light + star / dark + rings, repeating the board), the turn underline + "Your turn" text. Clock: a ring of the turn time, then "Using time bank" with an hourglass; ≤ 10 s adds a warning icon and "N s left"; a static bar under reduced motion. Dice chips: used = struck through + "used" for screen readers. The bar wraps to two lines under a 22rem container. |
+| Panels | `features/match/panels.tsx` | `MatchInfo`, `MoveHistory` (this session's events), `ReactionPicker` (tabs, 3 s cooldown with text), `MoveEntry` (MA-18 list of sources and destinations, Undo, Confirm, "Read the board"), resign `Choice` cards. Used by sheets on phones and side panels on wide screens. |
+| `MatchOverlays` | `features/match/MatchOverlays.tsx` | One sheet for MA-03/04/05/08/09/15/18/19; MA-07 double dialog (equal-weight Take/Drop with the clock); MA-10 reconnect overlay; MA-19 and MA-13a board cards; MA-13b result sheet (not dismissible). |
+| `MatchLoader` | `features/match/MatchLoader.tsx` | MA-01 over the whole screen after 300 ms: header, staged determinate progress, tips (static under reduced motion), slow state, Cancel. |
+| `LiveMatch`, `MatchScreen` | `features/match/` | Layout grid: portrait phones stack strip / opponent / board / own / actions (primary ≥ 56 px, in the bottom 40 %); landscape phones put bars in a start column and actions in an end column; from 900 px landscape an end panel (info + reactions), from 1280 px also a start panel (moves). Match-local toasts sit at the top of the board, never over the action bar. |
+
+### 9.12 Wallet review fixes (docs/ux/reviews/wallet-2026-09-28.md)
+
+- `TaskFlow` gains `footerMode="inline"` (W-01: TR-03 and WD-04 keep the footer after the cost block and notes, so nothing covers "Balance after") and `initialFocus` (W-15: the WD-05 code field gets focus). `OtpInput` accepts `inputRef`.
+- Amount steps pass `onBlockedClick` and use the current rule as the disabled reason (W-06); the fee preview is announced once on blur (W-16).
+- `useFormat().maskedPhone` shows «۰۹۱۲ ***** ۶۷» (W-07): `*` can't be read as a Persian zero; thin spaces around the mask.
+- Two columns from a 36rem container on WA-01 and WD-06 (W-05, 768 × 1024 with the rail).
+- WA-01 "Refresh" next to "Last updated" (W-08); WD-09 is a bottom sheet with focus on "Keep request", loaded on first use (W-09); selected ledger and withdrawal rows add a start-edge bar and semibold text (W-10); a rejected or cancelled request's waiting step shows the neutral `passed` state (W-11); the request ID is Latin digits with a copy button (W-12); the `?submitted=1` query is replaced after the first render (W-13); `lib/inAppNav.ts` replaces the `history.length` heuristic so Back and Close never leave the app (W-14); TR-00 drops its second "Details" (W-17); TR-03 blocks Send while the only fix is changing the recipient (W-18).
+- Not done: W-19 (grouping while typing; needs caret mapping like `IbanField`) and W-20 (needs `withdraw.blocked` in `WalletSummary`).
+
 ### 9.8 Shared helpers
 
 | Helper | Location | Purpose |
@@ -470,11 +510,15 @@ These were run for this foundation with a throwaway Playwright script against `/
 
 **Wallet suite (wallet PR):** `e2e/wallet.spec.ts` + `e2e/wallet-mocks.ts`, same checks and flags as above, screenshots in `docs/ui/screenshots/wallet/`. It covers every WA/TR/WD screen state in the spec plus behaviour tests (one Idempotency-Key reused across retries, own username refused without a request, Persian-digit Sheba saved as `IR` + Latin digits, "Show more" stops at `next: null`, status chips with text). Pages are ready at `load` + h1 + no `aria-busy` skeleton instead of `networkidle`: against `next start` without Nginx, prefetches of routes that are not built yet (`/live`, `/shop`, `/tournaments`) never settle in Chromium, so `networkidle` hangs on any screen with the nav. Run: `E2E_BASE_URL=http://m.localhost:3000 pnpm --filter @bg/mobile e2e e2e/wallet.spec.ts`.
 
+**Play and match suites (step 6 PR):** `e2e/play.spec.ts`, `e2e/match.spec.ts`, `e2e/play-mocks.ts`. The WebSocket is mocked with `page.routeWebSocket` (auth → `auth.ok`, `queue.join` → `queue.status waiting`, `match.sync` → a full `match.state`); tests push further events. Headless Chromium renders the board through SwiftShader (launch flags in `playwright.config.ts`). Behaviour tests cover play.md AC 1–3, 5, 7, 8, 10 and match.md AC 1, 5, 6, 11, 12, 19.
+
+**Visual regression (wallet review W-03):** `screenshot()` in `e2e/checks.ts` writes `docs/ui/screenshots/<area>/` with `UPDATE_SCREENSHOTS=1`; otherwise it compares against those files with `toHaveScreenshot` (1 % pixel tolerance; `VISUAL=0` skips on a machine without the baseline fonts). The wallet and play suites use it; the match suite only writes screenshots, because its clocks tick. Wallet screen cases run at the six §11.7 viewports in fa and en plus 844 × 390 (fa) and 932 × 430 (en); states stay at 390 fa/en unless `ALL_VIEWPORTS=1`.
+
 **Still to add:**
 - axe-core (zero serious or critical issues): `@axe-core/playwright` is not a §3 dependency yet; it needs approval (CLAUDE.md §19).
 - Lighthouse on non-game routes.
 
-**Bundle size:** first-load JS (budget: 250 kB gzipped, §11.4) after the wallet step: `/` 221 kB, `/wallet` 248 kB, `/wallet/withdraw` 249 kB, `/wallet/transfer` 245 kB. The wallet routes are close to the budget; the next feature that adds weight to them should lazy-load the sheets (WA-02, WA-04) and the SMS code step. The gallery route is dev-only.
+**Bundle size:** first-load JS (budget: 250 kB gzipped for non-game routes, §11.4) after step 6: `/` 224 kB, `/play` 239 kB, `/wallet` 227 kB, `/wallet/transfer` 247 kB, `/wallet/withdraw` 252 kB (over by 2 kB; it was 249 kB before, and the growth is the app-wide socket and resume-banner plumbing), `/wallet/withdrawals` 225 kB. The game route `/match/[id]` is 264 kB before its lazy chunks: the scene (three.js + React Three Fiber, ≈ 234 KiB gzipped in three chunks) and Rapier (≈ 746 KiB gzipped, WASM inlined; skipped in lite mode). Icons used only by the game live in `icons/game.tsx`, the IBAN field and the bank-account body in their own modules, and WD-09 loads on first use. The gallery and `/dev/board` are dev-only.
 
 ---
 

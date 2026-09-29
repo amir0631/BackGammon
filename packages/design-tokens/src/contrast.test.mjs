@@ -120,6 +120,13 @@ describe("layout and motion", () => {
     expectContrast(boardDefaultTheme.legalMove, boardDefaultTheme.checkerDark, UI, "legal/checkerDark");
     expectContrast(boardDefaultTheme.selection, boardDefaultTheme.checkerDark, UI, "selection/checkerDark");
   });
+
+  it("keeps markers readable on the field and their digits on the marker", () => {
+    const b = boardDefaultTheme;
+    expectContrast(b.markerInk, b.legalMove, TEXT, "marker digit/legalMove");
+    expectContrast(b.legalMove, b.pointDark, UI, "legalMove/pointDark");
+    expectContrast(b.selection, b.pointDark, UI, "selection/pointDark");
+  });
 });
 
 describe("avatar art", () => {

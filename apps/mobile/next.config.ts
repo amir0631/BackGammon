@@ -13,6 +13,7 @@ const config: NextConfig = {
     "@bg/design-tokens",
     "@bg/device-routing",
     "@bg/game-core",
+    "@bg/game3d",
     "@bg/i18n",
     "@bg/protocol",
   ],

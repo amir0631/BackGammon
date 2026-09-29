@@ -21,7 +21,8 @@
     "copy": "Copy",
     "lastUpdated": "Last updated: {time}",
     "showMore": "Show more",
-    "copied": "Copied"
+    "copied": "Copied",
+    "listSep": " · "
   },
   "nav": {
     "label": "Main navigation",
@@ -820,7 +821,153 @@
     "placeholder": "The full text of this page will be published soon. For questions, contact support: {channel}"
   },
   "play": {
-    "placeholder": "The game lobby will be here soon."
+    "title": "Play",
+    "hint": {
+      "fees": "Coin tables: both players pay the entry; the winner gets the pot minus a platform fee."
+    },
+    "online": {
+      "title": "Play online · Rated"
+    },
+    "tier": {
+      "name": "{entry}-coin table",
+      "payout": "Winner receives {payout}",
+      "waiting": "{count, plural, one {# searching} other {# searching}}",
+      "needs": "Needs {entry} coins",
+      "play": "Play",
+      "label": "{entry}-coin table, winner receives {payout}, {waiting}"
+    },
+    "tiers": {
+      "empty": "No coin tables are open right now.",
+      "loadError": "Couldn't load the tables."
+    },
+    "again": {
+      "title": "Play again",
+      "summary": "{entry}-coin table · {variant} · First to {n}",
+      "label": "Play again: {summary}"
+    },
+    "practice": {
+      "title": "Practice",
+      "desc": "Free · unrated · no XP",
+      "button": "Play vs bot"
+    },
+    "rank": {
+      "title": "Your rank",
+      "elo": "Rating: {elo}",
+      "level": "Level {level}",
+      "leaderboard": "Leaderboard",
+      "top": "Top players"
+    },
+    "inMatch": {
+      "reason": "Finish your current match first."
+    },
+    "unsupported": {
+      "reason": "This device can't show the 3D board.",
+      "details": "Details",
+      "title": "This device can't show the 3D board"
+    },
+    "variant": {
+      "standard_cube": "Standard with doubling cube",
+      "standard_nocube": "Standard, no cube",
+      "traditional": "Traditional"
+    },
+    "variantDesc": {
+      "standard_cube": "Standard rules; you can double the stakes of a game.",
+      "standard_nocube": "Standard rules, no doubling.",
+      "traditional": "Local traditional scoring, no doubling; single, gammon, backgammon: {single}, {gammon}, {backgammon} points.",
+      "traditionalNoPoints": "Local traditional scoring, no doubling."
+    },
+    "length": {
+      "firstTo": "First to {n}",
+      "label": "Match length"
+    },
+    "setup": {
+      "title": "Choose your game",
+      "table": "Table",
+      "variant": "Variant",
+      "continue": "Continue",
+      "reason": {
+        "variant": "Choose a variant",
+        "length": "Choose a match length",
+        "level": "Choose a bot level"
+      }
+    },
+    "join": {
+      "title": "Enter {entry}-coin table",
+      "rated": "Rated match",
+      "entry": "Entry",
+      "fee": "Platform fee ({pct} of the pot of {pot})",
+      "payout": "Winner receives",
+      "balanceAfterWhen": "Balance after the match starts",
+      "timing": "Your entry is taken when an opponent is found. If the match is cancelled before the first roll, you get it back in full. Cancelling the search costs nothing.",
+      "cta": "Pay {entry} coins and search",
+      "connecting": "Connecting…"
+    },
+    "queue": {
+      "title": "Finding an opponent",
+      "elapsed": "Waiting: {time}",
+      "summary": "{entry}-coin table · {variant} · First to {n}",
+      "widening": "Looking for a player near your rating. The range widens the longer you wait.",
+      "waiting": "{count, plural, one {# player searching at this table} other {# players searching at this table}}",
+      "cancel": "Cancel search",
+      "longWait": "Few players are searching at this table right now.",
+      "changeTable": "Change table",
+      "offline": "Connection lost. You're not in the queue while offline.",
+      "searchingAgain": "Searching again",
+      "cancelledElsewhere": "Search cancelled on another device.",
+      "removed": {
+        "balance": "You left the queue because your balance is now below the entry. Nothing was charged.",
+        "generic": "You were removed from the queue. Nothing was charged."
+      },
+      "searchingAnnounce": "Searching for an opponent",
+      "minuteAnnounce": "Still searching: one minute so far"
+    },
+    "found": {
+      "title": "Opponent found",
+      "entryPaid": "Entry paid: {entry} coins",
+      "fairDice": "The dice for this match are fixed in advance and can be checked after the match.",
+      "go": "Go to match",
+      "race": "An opponent was found just before you cancelled. Your entry of {entry} coins has been taken for this match.",
+      "cancelMatch": "Cancel this match",
+      "opponentLabel": "Opponent: @{username}, level {level}, rating {elo}",
+      "announce": "Opponent found: @{username}"
+    },
+    "bot": {
+      "title": "Practice vs bot",
+      "label": "Bot",
+      "name": "Bot ({level})",
+      "levelLabel": "Bot level",
+      "level": {
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "levelDesc": {
+        "easy": "Makes more mistakes",
+        "medium": "Plays solid moves",
+        "hard": "Strongest bot"
+      },
+      "info": "Practice match: free, no rating change, no XP.",
+      "cta": "Start practice match",
+      "row": "Bot · {level}"
+    },
+    "insufficient": {
+      "lowerTier": "{entry}-coin table · winner receives {payout}",
+      "bot": "Practice vs bot (free)"
+    },
+    "error": {
+      "inProgress": "You already have a match in progress.",
+      "returnToMatch": "Return to match",
+      "tierGone": "This table is no longer available. Choose another one.",
+      "optionGone": "This option is no longer available. Choose another one."
+    },
+    "resume": {
+      "title": "Match in progress",
+      "detail": "@{username} · {score} · {turn}",
+      "yourTurn": "Your turn",
+      "theirTurn": "@{username}'s turn",
+      "return": "Return"
+    },
+    "blocked": {}
   },
   "avatars": {
     "avatar_01": "Khatam star",
@@ -961,7 +1108,8 @@
     },
     "backToWallet": "Back to wallet",
     "tomanLine": "Equals {amount} toman",
-    "historyRegion": "Transactions and details"
+    "historyRegion": "Transactions and details",
+    "refresh": "Refresh"
   },
   "shop": {
     "coins": {
@@ -1018,7 +1166,8 @@
       "late": "This is taking longer than usual. Contact support if you need help.",
       "cancel": "Cancel request",
       "decidedAt": "{date}",
-      "reference": "Request ID"
+      "reference": "Request ID",
+      "copyId": "Copy request ID"
     },
     "notFound": "We couldn't find this withdrawal request.",
     "backToList": "Back to requests",
@@ -1103,6 +1252,375 @@
     "tournamentStarted": {
       "title": "Tournament started",
       "body": "Your first match is ready."
+    }
+  },
+  "match": {
+    "leave": "Leave match screen",
+    "menu": {
+      "title": "Match menu",
+      "info": "Match info",
+      "entryPayout": "Entry {entry} coins · winner receives {payout}",
+      "rated": "Rated",
+      "unrated": "Unrated",
+      "practice": "Practice",
+      "seedCommit": "Fair-dice commitment",
+      "moves": "Move history",
+      "moveEntry": "Move entry by keyboard or screen reader",
+      "shortcuts": "Shortcuts: Space roll, Enter confirm, Ctrl+Z undo, D double, R reactions, M menu",
+      "resign": "Resign"
+    },
+    "score": "{self} – {opp}",
+    "scoreLabel": "Score: you {self}, @{username} {opp}",
+    "firstTo": "First to {n}",
+    "crawford": {
+      "label": "Crawford game",
+      "banner": "Crawford game: no doubling this game.",
+      "cube": "Crawford: no doubling"
+    },
+    "spectators": "{count, plural, one {# watching} other {# watching}}",
+    "spectatorsDetail": "{count, plural, one {# person is} other {# people are}} watching. Spectators see the board and both players' reactions. You can't see who they are.",
+    "bar": {
+      "you": "You",
+      "levelElo": "Level {level} · Rating {elo}",
+      "pips": "Pips {n}",
+      "label": "{name}, {pips} pips, time {time}, time bank {bank}"
+    },
+    "clock": {
+      "bank": "Time bank {time}",
+      "usingBank": "Using time bank",
+      "warning": "{seconds} s left",
+      "fiveLeft": "Five seconds left"
+    },
+    "turn": {
+      "yours": "Your turn",
+      "theirs": "@{username}'s turn",
+      "moving": "@{username} is moving",
+      "botThinking": "Bot is thinking"
+    },
+    "action": {
+      "roll": "Roll",
+      "confirm": "Confirm move",
+      "undo": "Undo",
+      "double": "Double to ×{value}",
+      "doubleShort": "×{value}",
+      "reactions": "Reactions",
+      "waitingCube": "Waiting for @{username} to take or drop"
+    },
+    "dice": {
+      "label": "Dice: {a} and {b}",
+      "used": "{value} used",
+      "unusable": "The {value} can't be used",
+      "remaining": "Remaining dice",
+      "chip": "Die {value}"
+    },
+    "game": {
+      "number": "Game {n}"
+    },
+    "opening": {
+      "title": "Opening roll",
+      "yourDie": "You: {value}",
+      "theirDie": "@{username}: {value}",
+      "tie": "Tie: rolling again",
+      "youStart": "You start with {a}–{b}",
+      "theyStart": "@{username} starts with {a}–{b}"
+    },
+    "rolled": {
+      "theirs": "@{username} rolled {a}–{b}"
+    },
+    "forced": {
+      "yours": "Only one move is possible. Playing it…",
+      "theirs": "@{username} has only one possible move",
+      "done": "Forced move"
+    },
+    "noMove": {
+      "yours": "No legal move. Your turn passes.",
+      "theirs": "@{username} has no legal move"
+    },
+    "auto": {
+      "timeout": "Time ran out: a move was played automatically"
+    },
+    "move": {
+      "hit": "Hit",
+      "cantMove": "This checker can't move now",
+      "selected": "Checker on point {point} selected. Possible destinations: {targets}",
+      "target": "Point {point} with the {die}",
+      "bearOff": "Bear off with the {die}",
+      "off": "Off",
+      "summary": "@{username} played {moves}"
+    },
+    "hint": {
+      "firstMove": "Tap a checker, then tap where it goes, or drag it. You can undo until you confirm."
+    },
+    "timeout": {
+      "notice": "Time ran out ({count} of {limit}). A move was played for you.",
+      "noticeTheirs": "@{username} ran out of time ({count} of {limit})",
+      "lastWarning": "One more timeout ends the match",
+      "countOnly": "{count} timeouts in a row"
+    },
+    "cube": {
+      "label": "Doubling cube ×{value}",
+      "centered": "Cube: ×{value}, centered",
+      "yours": "Your cube",
+      "theirs": "@{username}'s cube",
+      "tookTheirs": "@{username} took. The cube is now ×{value}.",
+      "tookYours": "You took. The cube is ×{value} and yours.",
+      "offer": {
+        "title": "@{username} offers to double to ×{value}",
+        "take": "Play this game for ×{value}. You'll own the cube.",
+        "drop": "Give up this game. @{username} gets {points, plural, one {# point} other {# points}}.",
+        "scoreAfter": "Score would be {self} – {opp}",
+        "wouldWin": "(@{username} would win the match)",
+        "takeCta": "Take (×{value})",
+        "dropCta": "Drop (lose {points})",
+        "timeoutNote": "If time runs out, the double is taken automatically and counts as a timeout."
+      }
+    },
+    "reactions": {
+      "title": "Reactions",
+      "emojis": "Emojis",
+      "phrases": "Phrases",
+      "note": "Your opponent and spectators see what you send.",
+      "wait": "Wait a moment",
+      "cooldown": "{seconds} s until the next reaction",
+      "received": "@{username}: {text}",
+      "showOpponent": "Show opponent's reactions"
+    },
+    "reconnect": {
+      "title": "Connection lost. Reconnecting…",
+      "attempt": "Attempt {n}",
+      "countdown": "{time} to reconnect before you forfeit the match",
+      "yourTurn": "It's your turn and your timer is running.",
+      "notYourTurn": "Your turn timer runs as usual when your turn comes.",
+      "retryNow": "Retry now",
+      "warning30": "30 seconds until you forfeit the match",
+      "warning10": "10 seconds until you forfeit the match",
+      "expired": "The time to reconnect has run out. We'll show the result when you're back online.",
+      "done": "Reconnected"
+    },
+    "opponent": {
+      "disconnected": "Disconnected · {time} until they forfeit",
+      "disconnectedNoTime": "Disconnected. They forfeit if they don't return in time.",
+      "disconnectedAnnounce": "@{username} disconnected. They have {time} to return.",
+      "back": "@{username} is back",
+      "warning": "{seconds} seconds until @{username} forfeits",
+      "forfeitsIfAway": "They forfeit if they don't return in time."
+    },
+    "join": {
+      "waiting": "Waiting for @{username} to join",
+      "elapsed": "Waiting: {time}",
+      "refundNote": "If @{username} doesn't join, the match is cancelled and your entry is refunded in full.",
+      "cancel": "Cancel match",
+      "cancelTitle": "Cancel this match?",
+      "cancelBody": "Both entries are refunded in full, and the match is unrated.",
+      "keepWaiting": "Keep waiting"
+    },
+    "loading": {
+      "title": "Getting the board ready",
+      "progress": "{percent} · {size} MB left",
+      "opponentWaiting": "Your opponent is waiting for you.",
+      "summary": "@{username} · {variant} · First to {n}",
+      "tip": {
+        "undo": "You can undo until you confirm your move.",
+        "lite": "If the game feels slow, turn on lite graphics in the match menu.",
+        "fairDice": "The dice are fixed in advance and can be checked after the match."
+      }
+    },
+    "history": {
+      "pips": "Your pips {self} · @{username} {opp}",
+      "empty": "No moves yet.",
+      "turn": "@{username} {a}–{b}: {moves}",
+      "forced": "forced",
+      "timeout": "timeout",
+      "noMove": "no move",
+      "doubled": "doubled to ×{value}",
+      "took": "took",
+      "dropped": "declined",
+      "opening": "Opening roll: {a}–{b}",
+      "you": "You",
+      "gameResult": "{winner} won · {points, plural, one {# point} other {# points}}",
+      "sessionNote": "Moves seen since this screen was opened.",
+      "bar": "bar",
+      "off": "off",
+      "sep": ", "
+    },
+    "moveEntry": {
+      "title": "Move entry",
+      "sources": "Checkers you can move",
+      "source": "{point, select, 25 {Bar} other {Point {label}}}, {count, plural, one {# checker} other {# checkers}}",
+      "destination": "To point {point}, uses {die}",
+      "bearOff": "Bear off, uses {die}",
+      "readBoard": "Read the board",
+      "board": "Your checkers: {mine}. @{username}'s checkers (your numbering): {theirs}. On the bar: you {barSelf}, @{username} {barOpp}. Borne off: you {offSelf}, @{username} {offOpp}.",
+      "lastMove": "Last move: {summary}",
+      "listSep": ", "
+    },
+    "resign": {
+      "title": "Resign",
+      "game": "Resign this game",
+      "gameBody": "@{username} gets {points, plural, one {# point} other {# points}} ({kind}, cube ×{cube}).",
+      "scoreAfter": "Score after: {self} – {opp}",
+      "endsMatch": "This ends the match: @{username} wins.",
+      "gameUnavailable": "The next game is about to start.",
+      "match": "Resign the match",
+      "matchBody": "@{username} wins the match.",
+      "matchCoins": "You lose your entry of {entry} coins; @{username} receives {payout}.",
+      "matchRated": "Your rating changes as for a loss.",
+      "practice": "Practice match: no coins or rating involved.",
+      "ctaGame": "Resign game",
+      "ctaMatch": "Resign match"
+    },
+    "kind": {
+      "single": "Single",
+      "gammon": "Gammon",
+      "backgammon": "Backgammon"
+    },
+    "leaveSheet": {
+      "title": "Leave the match screen?",
+      "body": "The match keeps going. Your turn timer runs while you're away.",
+      "yourTurn": "It's your turn now.",
+      "timeouts": "If time runs out, a move is played for you; {limit} timeouts in a row end the match.",
+      "stay": "Stay",
+      "leave": "Leave screen",
+      "resign": "Resign…"
+    },
+    "yourTurnElsewhere": "It's your turn in your match",
+    "gameEnded": {
+      "youWon": "You won game {n}",
+      "theyWon": "@{username} won game {n}",
+      "value": "{kind} · cube ×{cube} · {points, plural, one {# point} other {# points}}",
+      "reason": {
+        "bear_off": "by bearing off",
+        "dropTheirs": "@{username} declined the double",
+        "dropYours": "You declined the double",
+        "resignTheirs": "@{username} resigned the game",
+        "resignYours": "You resigned the game"
+      },
+      "score": "Score: {self} – {opp} · First to {n}",
+      "next": "Next game starting…"
+    },
+    "result": {
+      "youWon": "You won the match",
+      "theyWon": "@{username} won the match",
+      "cancelled": "Match cancelled",
+      "reason": {
+        "points": "Final score reached",
+        "resignTheirs": "@{username} resigned the match",
+        "resignYours": "You resigned the match",
+        "timeoutsTheirs": "@{username} ran out of time {limit} times in a row",
+        "timeoutsYours": "You ran out of time {limit} times in a row",
+        "disconnectTheirs": "@{username} didn't reconnect in time",
+        "disconnectYours": "You were disconnected for too long",
+        "aborted": "The match ended before the first roll."
+      },
+      "finalScore": "Final score {self} – {opp}",
+      "gameLine": "Game {n}: {winner} · {kind} · {points}",
+      "entry": "Entry",
+      "pot": "Pot",
+      "fee": "Platform fee",
+      "received": "You receive",
+      "net": "Net",
+      "signWon": "+{amount} won",
+      "signLost": "−{amount} lost",
+      "refunded": "Your entry of {refund} coins was refunded.",
+      "eloUp": "Rating +{delta} (up)",
+      "eloDown": "Rating −{delta} (down)",
+      "eloSame": "Rating unchanged",
+      "xp": "+{xp} XP",
+      "practice": "Practice match: no rating, coin, or XP changes.",
+      "tournament": "Tournament match: the bracket updates now.",
+      "viewBracket": "View bracket",
+      "seedTitle": "Fair dice",
+      "seedBody": "The match seed is now published. Anyone who played can check every roll.",
+      "seedCopy": "Copy seed",
+      "verify": "Verify dice",
+      "privacy": "Only you and @{username} can watch this replay.",
+      "playAgain": "Play again",
+      "playAgainUnaffordable": "Not enough coins for this table",
+      "searchAgain": "Search again",
+      "viewReplay": "View replay",
+      "backToLobby": "Back to lobby",
+      "gameWinnerYou": "You",
+      "coinsTitle": "Coins"
+    },
+    "summary": {
+      "title": "Match summary",
+      "won": "You won",
+      "lost": "You lost",
+      "voided": "Match voided",
+      "cancelledBody": "The match ended before the first roll. Entries were refunded in full.",
+      "watchReplay": "Watch replay",
+      "practiceVsBot": "Practice vs Bot ({level})",
+      "entry": "Table entry: {entry} coins",
+      "reason": {
+        "timeoutsTheirs": "@{username} ran out of time too many times in a row",
+        "timeoutsYours": "You ran out of time too many times in a row"
+      },
+      "xpLabel": "XP",
+      "ratingLabel": "Rating"
+    },
+    "notFound": {
+      "title": "Match not found",
+      "body": "Check the link, or open your match history.",
+      "history": "Match history"
+    },
+    "peek": {
+      "viewProfile": "View profile",
+      "keepsGoing": "The match keeps going while you look."
+    },
+    "lite": {
+      "suggest": "The game is running slowly on this device.",
+      "turnOn": "Turn on lite graphics"
+    },
+    "unsupported": {
+      "title": "This device can't show the 3D board",
+      "body": "The game needs WebGL 2. Update your browser or try another device.",
+      "inMatch": "Your match is still running and your turn timer keeps running. Continue on another device, or resign."
+    },
+    "error": {
+      "moveRejected": "That move wasn't accepted. The board has been updated.",
+      "stale": "The game moved on. The board has been updated.",
+      "cube": "You can't double now.",
+      "resignScope": "The next game is about to start. You can resign the match instead.",
+      "ended": "This match has ended.",
+      "busy": "The server is busy. Try again."
+    },
+    "signedOut": "You've been signed out.",
+    "board": {
+      "label": "Game board. Press Enter to enter moves with the keyboard."
+    },
+    "panel": {
+      "moves": "Moves",
+      "reactions": "Reactions",
+      "info": "Match info"
+    },
+    "hitCaption": "@{username} hit one of your checkers",
+    "hitCaptionYours": "You hit one of @{username}'s checkers",
+    "notPlayer": {
+      "body": "This match is in progress. Live spectating from this screen comes with the live view."
+    }
+  },
+  "reactions": {
+    "emoji": {
+      "smile": "Smile",
+      "laugh": "Laugh",
+      "wow": "Wow",
+      "sad": "Sad",
+      "angry": "Angry",
+      "thumbs_up": "Thumbs up",
+      "clap": "Clap",
+      "fire": "Fire",
+      "think": "Thinking",
+      "cool": "Cool"
+    },
+    "phrase": {
+      "hello": "Hello!",
+      "good_luck": "Good luck!",
+      "nice_move": "Nice move!",
+      "well_played": "Well played!",
+      "thanks": "Thanks!",
+      "oops": "Oops!",
+      "hurry": "A bit faster, please",
+      "good_game": "Good game!"
     }
   }
 }

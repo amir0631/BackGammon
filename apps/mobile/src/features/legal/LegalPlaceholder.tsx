@@ -11,6 +11,7 @@ import { AppShell } from "@/components/shell/AppShell";
 import { TopBar } from "@/components/shell/TopBar";
 import { gutterStyles } from "@/theme/layout";
 import { useSupportContact } from "@/lib/config";
+import { canGoBackInApp } from "@/lib/inAppNav";
 
 // Terms and Privacy placeholders (CLAUDE.md §18: placeholder pages with i18n keys; the real copy
 // comes with help-legal.md). Public, no nav; back returns to wherever the link was opened from, so
@@ -26,7 +27,7 @@ export function LegalPlaceholder({ titleKey }: { titleKey: "legal.terms.title" |
         <TopBar
           title={t(titleKey)}
           leading="back"
-          onNavigate={() => (window.history.length > 1 ? router.back() : router.push("/"))}
+          onNavigate={() => (canGoBackInApp() ? router.back() : router.push("/"))}
         />
       }
       banner={<OfflineBanner />}

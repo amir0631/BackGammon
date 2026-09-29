@@ -21,6 +21,7 @@ import { errorStatus, toApiError } from "@/lib/apiErrors";
 import { useSession } from "@/lib/session";
 import { gutterStyles, mqMdUp } from "@/theme/layout";
 import { tokensOf } from "@/theme/theme";
+import { canGoBackInApp } from "@/lib/inAppNav";
 
 // AC-05 Public profile `/profile/[username]` (profile.md §3.5, §4). Case-insensitive URL: the
 // canonical casing is displayed and replaces the URL. Shows only what the API returns (username,
@@ -71,7 +72,7 @@ export function PublicProfileScreen({ username }: { username: string }) {
 
   useEffect(load, [load]);
 
-  const back = () => (window.history.length > 1 ? router.back() : router.push("/me"));
+  const back = () => (canGoBackInApp() ? router.back() : router.push("/me"));
   const own = state.kind === "ok" && me?.username?.toLowerCase() === state.user.username.toLowerCase();
 
   return (

@@ -8,7 +8,9 @@ import { useTranslations } from "next-intl";
 import { layout } from "@bg/design-tokens";
 import { SignedInShell } from "@/components/shell/SignedInShell";
 import { gutterStyles } from "@/theme/layout";
-import { BankAccountBody, useBankAccountEditor } from "./BankAccountEditor";
+import { BankAccountBody } from "./BankAccountBody";
+import { useBankAccountEditor } from "./BankAccountEditor";
+import { canGoBackInApp } from "@/lib/inAppNav";
 
 // WD-08 Bank account `/wallet/bank-accounts` (wallet.md §3.5, §4 WD-08, WD-11). One Sheba per
 // user: the card with Change / Remove, or the empty state with the add form. Suspended accounts
@@ -29,7 +31,7 @@ export function BankAccountScreen() {
   const editor = useBankAccountEditor();
   return (
     <SignedInShell
-      topBar={{ title: t("bank.title"), leading: "back", onNavigate: () => (window.history.length > 1 ? router.back() : router.push("/wallet")) }}
+      topBar={{ title: t("bank.title"), leading: "back", onNavigate: () => (canGoBackInApp() ? router.back() : router.push("/wallet")) }}
     >
       <Column>
         <Stack spacing={3}>

@@ -144,7 +144,14 @@ const RowButton = styled(ButtonBase)(({ theme }) => {
     "& .tx-amount": { flex: "none" },
     "& .tx-chevron": { flex: "none", color: t.textSecondary, fontSize: iconSize.sm },
     "@media (hover: hover)": { "&:hover": { backgroundColor: theme.vars?.palette.action.hover } },
-    "&[aria-current='true']": { backgroundColor: t.primaryContainer, color: t.onPrimaryContainer },
+    // Selected: fill plus a start-edge bar and semibold text, not color alone (W-10).
+    "&[aria-current='true']": {
+      position: "relative",
+      backgroundColor: t.primaryContainer,
+      color: t.onPrimaryContainer,
+      "& .tx-main *": { fontWeight: 600 },
+      "&::before": { content: '""', position: "absolute", insetBlock: 0, insetInlineStart: 0, width: 3, backgroundColor: t.primary },
+    },
     "&[aria-current='true'] .tx-icon, &[aria-current='true'] .tx-chevron": { color: "inherit" },
     "&.Mui-focusVisible": { outlineOffset: -2 },
     // Narrow rows (xs at 200% text): the amount moves under the label.

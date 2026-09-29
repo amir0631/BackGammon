@@ -1,8 +1,7 @@
-import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { horizontalOverflow, setTextScale, smallTargets } from "./checks";
+import { horizontalOverflow, screenshot, setTextScale, smallTargets } from "./checks";
 import { err, meFixture, mockApi, type Scenario } from "./mocks";
-import { firstTimeSummary, summaryFixture, walletHandlers, withdrawalFixture, withdrawalsFixture, type WalletMockOptions } from "./wallet-mocks";
+import { FIXED_NOW, firstTimeSummary, summaryFixture, walletHandlers, withdrawalFixture, withdrawalsFixture, type WalletMockOptions } from "./wallet-mocks";
 
 // Screen catalog for wallet.md (WA-01 … WA-04, TR-00 … TR-05, WD-01 … WD-11) and the wallet entry
 // points on AC-01 / AC-05. Same checks as screens.spec.ts: no horizontal scroll, no target under
@@ -31,14 +30,12 @@ const V390_FA: Variant = { locale: "fa", width: 390, height: 844 };
 const V390_EN: Variant = { locale: "en", width: 390, height: 844 };
 const V360_FA: Variant = { locale: "fa", width: 360, height: 800 };
 const V1440_FA: Variant = { locale: "fa", width: 1440, height: 900 };
-const V768_FA: Variant = { locale: "fa", width: 768, height: 1024 };
-const V1024_EN: Variant = { locale: "en", width: 1024, height: 768 };
 const LAND_FA: Variant = { locale: "fa", width: 844, height: 390 };
 const MAIN = process.env.ALL_VIEWPORTS ? ALL : [V390_FA, V390_EN, V360_FA, V1440_FA];
-const WIDE = process.env.ALL_VIEWPORTS ? ALL : [V390_FA, V390_EN, V360_FA, V768_FA, V1024_EN, V1440_FA, LAND_FA];
 const STATE = process.env.ALL_VIEWPORTS ? ALL : [V390_FA, V390_EN];
+/** W-03: every wallet screen at the six §11.7 viewports in fa and en, plus two phone landscapes. */
+const SCREEN: Variant[] = [...ALL, LAND_FA, { locale: "en", width: 932, height: 430 }];
 
-const SHOTS = path.resolve(__dirname, "../../../docs/ui/screenshots/wallet");
 
 interface Case {
   id: string;
@@ -86,7 +83,7 @@ const hintSeen = { "bg.wallet.withdrawHintSeen.2": true };
 
 const cases: Case[] = [
   // ---- WA-01 / WA-02 / WA-04 ----
-  { id: "wa01-wallet", path: "/wallet", scenario: () => user(), variants: WIDE },
+  { id: "wa01-wallet", path: "/wallet", scenario: () => user(), variants: SCREEN },
   {
     id: "wa01-wallet-first-time",
     path: "/wallet",
@@ -95,7 +92,7 @@ const cases: Case[] = [
         summary: firstTimeSummary(),
         withdrawals: [],
         bank: null,
-        ledger: [{ id: 40, tx_id: "6f1c2a9e-0000-0000-0000-000000000040", type: "signup_bonus", amount: 100, created_at: new Date().toISOString(), counterparty: null, ref_type: null, ref_id: null }],
+        ledger: [{ id: 40, tx_id: "6f1c2a9e-0000-0000-0000-000000000040", type: "signup_bonus", amount: 100, created_at: new Date(FIXED_NOW).toISOString(), counterparty: null, ref_type: null, ref_id: null }],
       }),
     act: async (page) => {
       await button(page, /^(Why\?|چرا؟)$/).click();
@@ -122,7 +119,7 @@ const cases: Case[] = [
       await page.locator("[data-ledger-id='57']").filter({ visible: true }).first().click();
       await page.waitForTimeout(500);
     },
-    variants: [...STATE, V1440_FA],
+    variants: SCREEN,
   },
   {
     id: "wa04-get-coins",
@@ -133,10 +130,10 @@ const cases: Case[] = [
       await page.getByRole("dialog").waitFor();
       await page.waitForTimeout(400);
     },
-    variants: [...STATE, V1440_FA],
+    variants: SCREEN,
   },
   // ---- Transfer ----
-  { id: "tr00-bonus", path: "/wallet/transfer", scenario: () => user({ summary: firstTimeSummary() }), variants: STATE },
+  { id: "tr00-bonus", path: "/wallet/transfer", scenario: () => user({ summary: firstTimeSummary() }), variants: SCREEN },
   {
     id: "tr00-suspended",
     path: "/wallet/transfer",
@@ -150,7 +147,7 @@ const cases: Case[] = [
     act: async (page) => {
       await page.getByText(/Check the recipient|گیرنده را بررسی کنید/).waitFor();
     },
-    variants: MAIN,
+    variants: SCREEN,
   },
   {
     id: "tr01-self",
@@ -170,12 +167,12 @@ const cases: Case[] = [
       await toTransferAmount(page);
       await page.fill("input[name=amount]", "۱۵۰");
     },
-    variants: MAIN,
+    variants: SCREEN,
   },
   {
     id: "tr02-amount-limit",
     path: "/wallet/transfer?to=ali_tbz",
-    scenario: () => user({ summary: summaryFixture({ transfer: { daily_max: 5000, used_24h: 4900, remaining: 100, next_available_at: new Date(Date.now() + 3 * 3_600_000).toISOString(), min: 10, fee_pct: 2 } }) }),
+    scenario: () => user({ summary: summaryFixture({ transfer: { daily_max: 5000, used_24h: 4900, remaining: 100, next_available_at: new Date(FIXED_NOW + 3 * 3_600_000).toISOString(), min: 10, fee_pct: 2 } }) }),
     act: async (page) => {
       await toTransferAmount(page);
       await page.fill("input[name=amount]", "400");
@@ -183,7 +180,7 @@ const cases: Case[] = [
     },
     variants: STATE,
   },
-  { id: "tr03-review", path: "/wallet/transfer?to=ali_tbz", scenario: () => user(), act: (page) => toTransferReview(page), variants: MAIN },
+  { id: "tr03-review", path: "/wallet/transfer?to=ali_tbz", scenario: () => user(), act: (page) => toTransferReview(page), variants: SCREEN },
   {
     id: "tr03-wrong-password",
     path: "/wallet/transfer?to=ali_tbz",
@@ -218,7 +215,7 @@ const cases: Case[] = [
       await page.press("input[name=password]", "Enter");
       await page.getByRole("heading", { name: /^(Sent|ارسال شد)$/ }).waitFor();
     },
-    variants: MAIN,
+    variants: SCREEN,
   },
   {
     id: "tr05-discard",
@@ -231,11 +228,11 @@ const cases: Case[] = [
       await page.getByRole("dialog").waitFor();
       await page.waitForTimeout(300);
     },
-    variants: STATE,
+    variants: SCREEN,
   },
   // ---- Withdraw ----
-  { id: "wd01-bonus", path: "/wallet/withdraw", scenario: () => user({ summary: firstTimeSummary() }), variants: STATE },
-  { id: "wd02-bank-empty", path: "/wallet/withdraw", scenario: () => user({ bank: null, withdrawals: [] }), variants: MAIN },
+  { id: "wd01-bonus", path: "/wallet/withdraw", scenario: () => user({ summary: firstTimeSummary() }), variants: SCREEN },
+  { id: "wd02-bank-empty", path: "/wallet/withdraw", scenario: () => user({ bank: null, withdrawals: [] }), variants: SCREEN },
   {
     id: "wd02-bank-card",
     path: "/wallet/withdraw",
@@ -250,9 +247,9 @@ const cases: Case[] = [
       await toWithdrawAmount(page);
       await page.fill("input[name=amount]", "500");
     },
-    variants: MAIN,
+    variants: SCREEN,
   },
-  { id: "wd04-review-password", path: "/wallet/withdraw", scenario: () => user({}, { local: hintSeen }), act: (page) => toWithdrawReview(page), variants: MAIN },
+  { id: "wd04-review-password", path: "/wallet/withdraw", scenario: () => user({}, { local: hintSeen }), act: (page) => toWithdrawReview(page), variants: SCREEN },
   {
     id: "wd04-review-sms",
     path: "/wallet/withdraw",
@@ -269,12 +266,12 @@ const cases: Case[] = [
       await page.locator("form").first().evaluate((f: HTMLFormElement) => f.requestSubmit());
       await page.locator("input[name=code]").waitFor();
     },
-    variants: STATE,
+    variants: SCREEN,
   },
   // ---- Requests, detail, cancel, bank ----
-  { id: "wd06-list", path: "/wallet/withdrawals", scenario: () => user(), variants: WIDE },
+  { id: "wd06-list", path: "/wallet/withdrawals", scenario: () => user(), variants: SCREEN },
   { id: "wd06-empty", path: "/wallet/withdrawals", scenario: () => user({ withdrawals: [] }), variants: STATE },
-  { id: "wd07-pending", path: "/wallet/withdrawals/31?submitted=1", scenario: () => user(), variants: MAIN },
+  { id: "wd07-pending", path: "/wallet/withdrawals/31?submitted=1", scenario: () => user(), variants: SCREEN },
   { id: "wd07-paid", path: "/wallet/withdrawals/24", scenario: () => user(), variants: STATE },
   { id: "wd07-rejected", path: "/wallet/withdrawals/19", scenario: () => user(), variants: STATE },
   {
@@ -293,9 +290,9 @@ const cases: Case[] = [
       await page.getByRole("dialog").waitFor();
       await page.waitForTimeout(300);
     },
-    variants: STATE,
+    variants: SCREEN,
   },
-  { id: "wd08-bank-locked", path: "/wallet/bank-accounts", scenario: () => user(), variants: MAIN },
+  { id: "wd08-bank-locked", path: "/wallet/bank-accounts", scenario: () => user(), variants: SCREEN },
   {
     id: "wd08-bank-errors",
     path: "/wallet/bank-accounts",
@@ -330,6 +327,8 @@ for (const c of cases) {
       const scenario = c.scenario();
       if (scenario.me) scenario.me = { ...scenario.me, lang: v.locale };
       await mockApi(page, scenario, base);
+      // The same instant as the fixtures, so dates and "Today" match the baselines.
+      await page.clock.setFixedTime(FIXED_NOW);
       await page.goto(c.path, { waitUntil: "load" });
       await page.locator("h1").first().waitFor();
       await expect(page.locator("main [aria-busy=true]")).toHaveCount(0);
@@ -339,13 +338,7 @@ for (const c of cases) {
       expect(await horizontalOverflow(page), "horizontal overflow").toBe(0);
       expect(await smallTargets(page), "targets under 44 px").toEqual([]);
 
-      if (process.env.UPDATE_SCREENSHOTS) {
-        await page.screenshot({
-          path: path.join(SHOTS, `${c.id}--${v.locale}-${v.width}x${v.height}.png`),
-          animations: "disabled",
-          caret: "hide",
-        });
-      }
+      await screenshot(page, "wallet", `${c.id}--${v.locale}-${v.width}x${v.height}`);
 
       await setTextScale(page, 200);
       expect(await horizontalOverflow(page), "horizontal overflow at 200% text").toBe(0);
@@ -358,6 +351,48 @@ test.describe("wallet behaviour", () => {
   test.beforeEach(async ({ page, baseURL }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.context().addCookies([{ name: "NEXT_LOCALE", value: "en", domain: new URL(baseURL!).hostname, path: "/" }]);
+  });
+
+  // W-01: on the review steps nothing sticky or fixed covers the cost block or the notes.
+  for (const [w, h] of [
+    [360, 800],
+    [390, 844],
+  ] as const) {
+    test(`TR-03 and WD-04 keep the cost block and notes uncovered at ${w}x${h}`, async ({ page, baseURL }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await mockApi(page, { me: meFixture({ lang: "en" }), handlers: walletHandlers(), local: hintSeen }, baseURL!);
+      const covered = async () =>
+        page.evaluate(() => {
+          const targets = [...document.querySelectorAll("main dl, main p")].map((el) => el.getBoundingClientRect());
+          const overlays = [...document.querySelectorAll<HTMLElement>("main *")].filter((el) => {
+            const pos = getComputedStyle(el).position;
+            return pos === "sticky" || pos === "fixed";
+          });
+          return overlays.some((o) => {
+            const r = o.getBoundingClientRect();
+            return targets.some((t) => t.bottom > r.top && t.top < r.bottom && t.right > r.left && t.left < r.right && !o.contains(document.elementFromPoint(t.left + 1, t.top + 1)));
+          });
+        });
+      await page.goto("/wallet/transfer?to=ali_tbz", { waitUntil: "load" });
+      await toTransferReview(page);
+      expect(await covered()).toBe(false);
+      await page.goto("/wallet/withdraw", { waitUntil: "load" });
+      await toWithdrawReview(page);
+      expect(await covered()).toBe(false);
+    });
+  }
+
+  // W-06: Continue with an amount over the 24-hour limit shows that rule, not a generic message.
+  test("TR-02 shows the specific limit error on Continue", async ({ page, baseURL }) => {
+    const summary = summaryFixture({ transfer: { daily_max: 5000, used_24h: 4900, remaining: 100, next_available_at: new Date(FIXED_NOW + 3_600_000).toISOString(), min: 10, fee_pct: 0 } });
+    await mockApi(page, { me: meFixture({ lang: "en" }), handlers: walletHandlers({ summary }) }, baseURL!);
+    await page.goto("/wallet/transfer?to=ali_tbz", { waitUntil: "load" });
+    await toTransferAmount(page);
+    await page.fill("input[name=amount]", "400");
+    await page.press("input[name=amount]", "Enter");
+    await expect(page.getByText("You can send up to 100 more coins right now", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("More becomes available from", { exact: false }).first()).toBeVisible();
+    await expect(page.locator("input[name=amount]")).toBeFocused();
   });
 
   test("transfer sends exactly one request and reuses the Idempotency-Key", async ({ page, baseURL }) => {
@@ -430,7 +465,7 @@ test.describe("wallet behaviour", () => {
             tx_id: `tx-${base - i}`,
             type: "match_entry",
             amount: -10,
-            created_at: new Date(Date.now() - (base - i) * 60_000).toISOString(),
+            created_at: new Date(FIXED_NOW - (base - i) * 60_000).toISOString(),
             counterparty: null,
             ref_type: null,
             ref_id: null,

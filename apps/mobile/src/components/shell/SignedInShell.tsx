@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, type ReactNode } from "react";
 import { OfflineBanner, SuspensionBanner } from "@/components/feedback/StatusBanners";
+import { ResumeMatchBanner } from "@/components/play/ResumeMatchBanner";
 import { readJson, storageKeys } from "@/lib/storage";
 import { ErrorState } from "@/components/states/ErrorState";
 import { useRequireUser, useSession } from "@/lib/session";
@@ -53,6 +54,7 @@ export function SignedInShell({ topBar, children, hideNav, isStatusPage = false,
       banner={
         <>
           {!isStatusPage && <SuspensionBanner me={me} />}
+          {me && <ResumeMatchBanner />}
           <OfflineBanner />
         </>
       }

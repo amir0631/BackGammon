@@ -9,6 +9,7 @@ import {
   formatPercent,
   isLocale,
   localizeDigits,
+  maskPhone,
   type Locale,
 } from "@bg/i18n";
 import { clock } from "./useCountdown";
@@ -65,6 +66,11 @@ export function useFormat() {
       monthYear: (value: string | Date) => formatDate(locale, new Date(value), { year: "numeric", month: "long" }),
       /** "۲ ساعت پیش" / "2 hours ago" */
       relative: (value: string | Date) => relativeTime(locale, new Date(value)),
+      /**
+       * Masked phone «۰۹۱۲ ***** ۶۷» (P§18): "*" can't be read as a digit in either script (the bullet
+       * looks like the Persian zero), with thin spaces around the mask. Wrap in <bdi dir="ltr">.
+       */
+      maskedPhone: (phone: string) => localizeDigits(locale, maskPhone(phone, "*").replace(/(\*+)/, "\u2009$1\u2009")),
       /** mm:ss in locale digits, for countdowns (wrap in <bdi dir="ltr">). */
       clock: (seconds: number) => localizeDigits(locale, clock(seconds)),
     }),

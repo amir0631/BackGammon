@@ -18,7 +18,6 @@ import { TaskFlow } from "@/components/flow/TaskFlow";
 import { ActionButton } from "@/components/forms/ActionButton";
 import { FieldError } from "@/components/forms/FieldText";
 import { PasswordField } from "@/components/forms/PasswordField";
-import { StandaloneLink } from "@/components/forms/StandaloneLink";
 import { LockIcon, SuccessIcon } from "@/components/icons";
 import { CostBlock } from "@/components/money/CostBlock";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -34,6 +33,7 @@ import { useCountdown } from "@/lib/useCountdown";
 import { useFlowSteps } from "@/lib/useFlowSteps";
 import { useOnline } from "@/lib/useOnline";
 import { useWallet } from "@/lib/wallet";
+import { visuallyHidden } from "@/theme/layout";
 import {
   detailNumber,
   detailString,
@@ -43,6 +43,7 @@ import {
   useAmountErrorText,
   useWalletFormat,
 } from "./shared";
+import { canGoBackInApp } from "@/lib/inAppNav";
 
 // Transfer `/wallet/transfer` (wallet.md §3.4, TR-00 … TR-05; CLAUDE.md §7.13).
 // - TR-00 replaces step 1 when nothing can be sent (suspended, welcome coins only, below the
@@ -96,11 +97,13 @@ export function TransferScreen({ to }: { to: string | null }) {
   const amountText = useAmountErrorText("transfer");
 
   const [stored, setStored] = useState<Stored>(() => readJson<Stored>("session", STORE) ?? EMPTY);
-  const [hadOrigin] = useState(() => typeof window !== "undefined" && window.history.length > 1);
+  const [hadOrigin] = useState(() => canGoBackInApp());
   const [ready, setReady] = useState(false);
   const [lookup, setLookup] = useState<Lookup>({ kind: "idle" });
   const [amountShown, setAmountShown] = useState(false);
   const [serverAmountError, setServerAmountError] = useState<string | null>(null);
+  const [previewAnnounce, setPreviewAnnounce] = useState("");
+  const amountRef = useRef<HTMLInputElement>(null);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<ActionError>(null);
@@ -482,7 +485,6 @@ export function TransferScreen({ to }: { to: string | null }) {
         }
       >
         {c.body && <Typography color="text.secondary">{c.body}</Typography>}
-        {blockedBy === "suspended" && <StandaloneLink href="/account/status?next=%2Fwallet">{t("account.suspended.details")}</StandaloneLink>}
       </TaskFlow>
     );
   }
@@ -565,7 +567,21 @@ export function TransferScreen({ to }: { to: string | null }) {
           onClose={close}
           onSubmit={goReview}
           footer={
-            <ActionButton type="submit" disabledReason={valid && !serverAmountError ? null : t("transfer.amount.disabled")}>
+            <ActionButton
+              type="submit"
+              disabledReason={
+                valid && !serverAmountError
+                  ? null
+                  : stored.amount && (serverAmountError || problem)
+                    ? (serverAmountError ?? amountText(problem!))
+                    : t("transfer.amount.disabled")
+              }
+              onBlockedClick={() => {
+                // W-06: the specific rule shows on Continue, not only on blur.
+                setAmountShown(true);
+                amountRef.current?.focus();
+              }}
+            >
               {t("transfer.amount.cta")}
             </ActionButton>
           }
@@ -583,7 +599,11 @@ export function TransferScreen({ to }: { to: string | null }) {
               save({ amount: v });
               setServerAmountError(null);
             }}
-            onBlur={() => setAmountShown(Boolean(stored.amount))}
+            onBlur={() => {
+              setAmountShown(Boolean(stored.amount));
+              setPreviewAnnounce(typeof amount === "number" ? `${t("transfer.amount.preview", { fee: f.number(fee), received: f.number(amount - fee) })}` : "");
+            }}
+            inputRef={amountRef}
             error={amountError}
             helpers={[
               t("transfer.amount.helperMin", { min: f.number(summary.transfer.min) }),
@@ -592,13 +612,17 @@ export function TransferScreen({ to }: { to: string | null }) {
             ]}
           />
           {typeof amount === "number" && (
-            <Stack spacing={0.5} role="status">
+            <Stack spacing={0.5}>
               <Typography variant="body1">{t("transfer.amount.preview", { fee: f.number(fee), received: f.number(amount - fee) })}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {t("transfer.amount.tomanPreview", { amount: f.number(amount * summary.coin_price_toman) })}
               </Typography>
             </Stack>
           )}
+          {/* Announced once on blur, not on every keystroke (W-16). */}
+          <span role="status" style={visuallyHidden}>
+            {previewAnnounce}
+          </span>
         </TaskFlow>
         {discard}
       </>
@@ -614,6 +638,7 @@ export function TransferScreen({ to }: { to: string | null }) {
         title={t("transfer.review.title")}
         step={{ current: 3, total: 3 }}
         stepKey="review"
+        footerMode="inline"
         onClose={close}
         closeDisabled={locked}
         onSubmit={() => void submit()}
@@ -634,6 +659,7 @@ export function TransferScreen({ to }: { to: string | null }) {
               helperText={passwordError ? <FieldError>{passwordError}</FieldError> : t("transfer.review.passwordHelper")}
             />
             {actionError && (
+              <div id="transfer-action-error">
               <Banner
                 severity="error"
                 action={
@@ -656,6 +682,7 @@ export function TransferScreen({ to }: { to: string | null }) {
                   </Typography>
                 )}
               </Banner>
+              </div>
             )}
             {lockSeconds > 0 && (
               <div id="transfer-lock">
@@ -671,7 +698,7 @@ export function TransferScreen({ to }: { to: string | null }) {
               loading={inFlight}
               loadingLabel={t("transfer.review.sending")}
               disabledReason={blockedReason}
-              blockedBy={lockSeconds > 0 ? "transfer-lock" : null}
+              blockedBy={lockSeconds > 0 ? "transfer-lock" : actionError?.changeRecipient ? "transfer-action-error" : null}
             >
               {t("transfer.review.cta", { amount: f.number(amountValue) })}
             </ActionButton>

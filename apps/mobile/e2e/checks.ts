@@ -1,4 +1,5 @@
-import type { Page } from "@playwright/test";
+import path from "node:path";
+import { expect, type Page } from "@playwright/test";
 import { minTouchTarget } from "@bg/design-tokens";
 
 // Automated layout checks from CLAUDE.md §16 (Responsive) and docs/ui/design-system.md §10:
@@ -54,4 +55,22 @@ export async function setTextScale(page: Page, percent: 100 | 200): Promise<void
     document.documentElement.style.fontSize = p === 200 ? "200%" : "";
   }, percent);
   await page.waitForTimeout(200);
+}
+
+/**
+ * Visual regression against the committed baselines in docs/ui/screenshots/<area>/ (§16
+ * Responsive): UPDATE_SCREENSHOTS=1 rewrites them; otherwise the page is compared with
+ * `toHaveScreenshot` (VISUAL=0 skips the comparison, e.g. on a machine without the baseline fonts).
+ */
+export async function screenshot(page: Page, area: string, name: string): Promise<void> {
+  if (process.env.UPDATE_SCREENSHOTS) {
+    await page.screenshot({
+      path: path.resolve(__dirname, "../../../docs/ui/screenshots", area, `${name}.png`),
+      animations: "disabled",
+      caret: "hide",
+    });
+    return;
+  }
+  if (process.env.VISUAL === "0") return;
+  await expect(page).toHaveScreenshot([area, `${name}.png`], { animations: "disabled", caret: "hide", maxDiffPixelRatio: 0.01 });
 }

@@ -45,11 +45,10 @@ export interface CostConfirmationProps {
   helpHref?: string;
 }
 
-export function CostConfirmation({
-  open,
+/** Body and footer of the confirmation, for sheets that show it as one step (play.md PL-03). */
+export function useCostConfirmationParts({
   onCancel,
   onConfirm,
-  title,
   summary,
   cost,
   facts,
@@ -60,7 +59,7 @@ export function CostConfirmation({
   error,
   onCheckStatus,
   helpHref,
-}: CostConfirmationProps) {
+}: Omit<CostConfirmationProps, "open" | "title">): { body: ReactNode; footer: ReactNode } {
   const t = useTranslations("common");
   const reasonId = useId();
   const [slow, setSlow] = useState(false);
@@ -85,7 +84,6 @@ export function CostConfirmation({
       firing.current = false;
     }, 0);
   };
-
   const footer = (
     <>
       {error && (
@@ -133,27 +131,36 @@ export function CostConfirmation({
     </>
   );
 
+  const body = (
+    <Stack spacing={2}>
+      {summary}
+      <CostBlock {...cost} />
+      {facts && (
+        <Typography variant="body2" color="text.secondary" component="div">
+          {facts}
+        </Typography>
+      )}
+      {helpHref && (
+        <MuiLink
+          component={NextLink}
+          href={helpHref}
+          sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, alignSelf: "flex-start", minHeight: minTouchTarget }}
+        >
+          <HelpIcon sx={{ fontSize: iconSize.sm }} />
+          {t("help")}
+        </MuiLink>
+      )}
+    </Stack>
+  );
+  return { body, footer };
+}
+
+export function CostConfirmation(props: CostConfirmationProps) {
+  const { open, onCancel, title, inFlight = false } = props;
+  const { body, footer } = useCostConfirmationParts(props);
   return (
     <BottomSheet open={open} onClose={onCancel} title={title} footer={footer} dismissible={!inFlight}>
-      <Stack spacing={2}>
-        {summary}
-        <CostBlock {...cost} />
-        {facts && (
-          <Typography variant="body2" color="text.secondary" component="div">
-            {facts}
-          </Typography>
-        )}
-        {helpHref && (
-          <MuiLink
-            component={NextLink}
-            href={helpHref}
-            sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, alignSelf: "flex-start", minHeight: minTouchTarget }}
-          >
-            <HelpIcon sx={{ fontSize: iconSize.sm }} />
-            {t("help")}
-          </MuiLink>
-        )}
-      </Stack>
+      {body}
     </BottomSheet>
   );
 }

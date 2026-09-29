@@ -7,6 +7,8 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // The committed screenshots are the visual-regression baselines (see e2e/checks.ts screenshot()).
+  snapshotPathTemplate: "{testDir}/../../../docs/ui/screenshots/{arg}{ext}",
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
@@ -15,6 +17,10 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://m.localhost:8080",
     deviceScaleFactor: 1,
-    launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
+    // SwiftShader gives headless Chromium WebGL2 for the 3D board (CLAUDE.md §11.4 minimum).
+    launchOptions: {
+      args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
+      ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}),
+    },
   },
 });

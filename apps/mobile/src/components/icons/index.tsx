@@ -20,7 +20,7 @@ interface IconSpec {
   body: ReactNode;
 }
 
-function createIcon({ name, mirrorInRtl = false, body }: IconSpec) {
+export function createIcon({ name, mirrorInRtl = false, body }: IconSpec) {
   function Icon(props: IconProps) {
     const theme = useTheme();
     const mirror = mirrorInRtl && theme.direction === "rtl";
@@ -47,13 +47,13 @@ function createIcon({ name, mirrorInRtl = false, body }: IconSpec) {
 }
 
 /** Small filled dot used for pips and the dot of "!" / "i" / "?". */
-function Dot({ cx, cy, r = 1.2 }: { cx: number; cy: number; r?: number }) {
+export function Dot({ cx, cy, r = 1.2 }: { cx: number; cy: number; r?: number }) {
   return <circle cx={cx} cy={cy} r={r} fill="currentColor" stroke="none" />;
 }
 
 // ---- Navigation ------------------------------------------------------------------------------
 
-export const PlayIcon = createIcon({
+export const PlayIcon = /*#__PURE__*/ createIcon({
   name: "Play",
   body: (
     <>
@@ -65,7 +65,7 @@ export const PlayIcon = createIcon({
   ),
 });
 
-export const LiveIcon = createIcon({
+export const LiveIcon = /*#__PURE__*/ createIcon({
   name: "Live",
   body: (
     <>
@@ -76,7 +76,7 @@ export const LiveIcon = createIcon({
   ),
 });
 
-export const TournamentsIcon = createIcon({
+export const TournamentsIcon = /*#__PURE__*/ createIcon({
   name: "Tournaments",
   body: (
     <>
@@ -87,7 +87,7 @@ export const TournamentsIcon = createIcon({
   ),
 });
 
-export const ShopIcon = createIcon({
+export const ShopIcon = /*#__PURE__*/ createIcon({
   name: "Shop",
   body: (
     <>
@@ -97,7 +97,7 @@ export const ShopIcon = createIcon({
   ),
 });
 
-export const AccountIcon = createIcon({
+export const AccountIcon = /*#__PURE__*/ createIcon({
   name: "Account",
   body: (
     <>
@@ -110,31 +110,31 @@ export const AccountIcon = createIcon({
 // ---- Actions ---------------------------------------------------------------------------------
 
 /** Back: points against the reading direction, so it mirrors in RTL. */
-export const BackIcon = createIcon({
+export const BackIcon = /*#__PURE__*/ createIcon({
   name: "Back",
   mirrorInRtl: true,
   body: <path d="M19 12H5M11 6l-6 6 6 6" />,
 });
 
 /** Forward chevron for list rows; mirrors in RTL. */
-export const ChevronForwardIcon = createIcon({
+export const ChevronForwardIcon = /*#__PURE__*/ createIcon({
   name: "ChevronForward",
   mirrorInRtl: true,
   body: <path d="M9.5 6l6 6-6 6" />,
 });
 
-export const CloseIcon = createIcon({
+export const CloseIcon = /*#__PURE__*/ createIcon({
   name: "Close",
   body: <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,
 });
 
-export const CheckIcon = createIcon({
+export const CheckIcon = /*#__PURE__*/ createIcon({
   name: "Check",
   body: <path d="M5 12.5l4.5 4.5L19 7.5" />,
 });
 
 /** Circular arrow; never mirrored (clock direction stays clockwise). */
-export const RefreshIcon = createIcon({
+export const RefreshIcon = /*#__PURE__*/ createIcon({
   name: "Refresh",
   body: (
     <>
@@ -144,7 +144,7 @@ export const RefreshIcon = createIcon({
   ),
 });
 
-export const EyeIcon = createIcon({
+export const EyeIcon = /*#__PURE__*/ createIcon({
   name: "Eye",
   body: (
     <>
@@ -154,7 +154,7 @@ export const EyeIcon = createIcon({
   ),
 });
 
-export const EyeOffIcon = createIcon({
+export const EyeOffIcon = /*#__PURE__*/ createIcon({
   name: "EyeOff",
   body: (
     <>
@@ -166,7 +166,7 @@ export const EyeOffIcon = createIcon({
 });
 
 /** Pencil: edit. Never mirrored (a tool, not a direction). */
-export const EditIcon = createIcon({
+export const EditIcon = /*#__PURE__*/ createIcon({
   name: "Edit",
   body: (
     <>
@@ -177,7 +177,7 @@ export const EditIcon = createIcon({
 });
 
 /** Two overlapping sheets: copy to clipboard. */
-export const CopyIcon = createIcon({
+export const CopyIcon = /*#__PURE__*/ createIcon({
   name: "Copy",
   body: (
     <>
@@ -188,7 +188,7 @@ export const CopyIcon = createIcon({
 });
 
 /** Door with an arrow leaving it: log out. Mirrors in RTL (the arrow points outward, end side). */
-export const LogoutIcon = createIcon({
+export const LogoutIcon = /*#__PURE__*/ createIcon({
   name: "Logout",
   mirrorInRtl: true,
   body: (
@@ -200,7 +200,7 @@ export const LogoutIcon = createIcon({
 });
 
 /** Globe: language. Never mirrored. */
-export const GlobeIcon = createIcon({
+export const GlobeIcon = /*#__PURE__*/ createIcon({
   name: "Globe",
   body: (
     <>
@@ -211,7 +211,7 @@ export const GlobeIcon = createIcon({
 });
 
 /** Gear with eight teeth (a nod to the khatam star): settings. */
-export const SettingsIcon = createIcon({
+export const SettingsIcon = /*#__PURE__*/ createIcon({
   name: "Settings",
   body: (
     <>
@@ -222,7 +222,7 @@ export const SettingsIcon = createIcon({
 });
 
 /** Phone in front of a laptop: signed-in devices. */
-export const DevicesIcon = createIcon({
+export const DevicesIcon = /*#__PURE__*/ createIcon({
   name: "Devices",
   body: (
     <>
@@ -235,7 +235,7 @@ export const DevicesIcon = createIcon({
 });
 
 /** Page with lines: terms and other documents. */
-export const DocumentIcon = createIcon({
+export const DocumentIcon = /*#__PURE__*/ createIcon({
   name: "Document",
   body: (
     <>
@@ -246,7 +246,7 @@ export const DocumentIcon = createIcon({
 });
 
 /** Padlock: password and privacy. */
-export const LockIcon = createIcon({
+export const LockIcon = /*#__PURE__*/ createIcon({
   name: "Lock",
   body: (
     <>
@@ -260,7 +260,7 @@ export const LockIcon = createIcon({
 // ---- Wallet (wallet.md) -------------------------------------------------------------------------
 
 /** Wallet: the balance card and the account hub row. */
-export const WalletIcon = createIcon({
+export const WalletIcon = /*#__PURE__*/ createIcon({
   name: "Wallet",
   body: (
     <>
@@ -272,7 +272,7 @@ export const WalletIcon = createIcon({
 });
 
 /** Paper plane: send coins. Points in the reading direction, so it mirrors in RTL (P§11). */
-export const SendIcon = createIcon({
+export const SendIcon = /*#__PURE__*/ createIcon({
   name: "Send",
   mirrorInRtl: true,
   body: (
@@ -284,7 +284,7 @@ export const SendIcon = createIcon({
 });
 
 /** Coin with a plus: get coins. */
-export const AddCoinsIcon = createIcon({
+export const AddCoinsIcon = /*#__PURE__*/ createIcon({
   name: "AddCoins",
   body: (
     <>
@@ -296,7 +296,7 @@ export const AddCoinsIcon = createIcon({
 });
 
 /** Bank building with columns: bank account and withdrawals. */
-export const BankIcon = createIcon({
+export const BankIcon = /*#__PURE__*/ createIcon({
   name: "Bank",
   body: (
     <>
@@ -308,7 +308,7 @@ export const BankIcon = createIcon({
 });
 
 /** Arrow into a tray: withdraw to the bank. Vertical, never mirrored. */
-export const WithdrawIcon = createIcon({
+export const WithdrawIcon = /*#__PURE__*/ createIcon({
   name: "Withdraw",
   body: (
     <>
@@ -319,7 +319,7 @@ export const WithdrawIcon = createIcon({
 });
 
 /** Coins added to the balance (ledger rows): arrow down into a line. Never mirrored. */
-export const CoinsInIcon = createIcon({
+export const CoinsInIcon = /*#__PURE__*/ createIcon({
   name: "CoinsIn",
   body: (
     <>
@@ -330,7 +330,7 @@ export const CoinsInIcon = createIcon({
 });
 
 /** Coins deducted from the balance (ledger rows): arrow up. Never mirrored. */
-export const CoinsOutIcon = createIcon({
+export const CoinsOutIcon = /*#__PURE__*/ createIcon({
   name: "CoinsOut",
   body: (
     <>
@@ -341,7 +341,7 @@ export const CoinsOutIcon = createIcon({
 });
 
 /** Gift box: welcome coins and rewards. */
-export const GiftIcon = createIcon({
+export const GiftIcon = /*#__PURE__*/ createIcon({
   name: "Gift",
   body: (
     <>
@@ -353,7 +353,7 @@ export const GiftIcon = createIcon({
 });
 
 /** Headset: support. */
-export const SupportIcon = createIcon({
+export const SupportIcon = /*#__PURE__*/ createIcon({
   name: "Support",
   body: (
     <>
@@ -366,7 +366,7 @@ export const SupportIcon = createIcon({
 });
 
 /** Clock: expected dates and countdowns. Never mirrored (P§11). */
-export const ClockIcon = createIcon({
+export const ClockIcon = /*#__PURE__*/ createIcon({
   name: "Clock",
   body: (
     <>
@@ -378,7 +378,7 @@ export const ClockIcon = createIcon({
 
 // ---- Status ----------------------------------------------------------------------------------
 
-export const InfoIcon = createIcon({
+export const InfoIcon = /*#__PURE__*/ createIcon({
   name: "Info",
   body: (
     <>
@@ -389,7 +389,7 @@ export const InfoIcon = createIcon({
   ),
 });
 
-export const HelpIcon = createIcon({
+export const HelpIcon = /*#__PURE__*/ createIcon({
   name: "Help",
   body: (
     <>
@@ -400,7 +400,7 @@ export const HelpIcon = createIcon({
   ),
 });
 
-export const ErrorIcon = createIcon({
+export const ErrorIcon = /*#__PURE__*/ createIcon({
   name: "Error",
   body: (
     <>
@@ -411,7 +411,7 @@ export const ErrorIcon = createIcon({
   ),
 });
 
-export const WarningIcon = createIcon({
+export const WarningIcon = /*#__PURE__*/ createIcon({
   name: "Warning",
   body: (
     <>
@@ -422,7 +422,7 @@ export const WarningIcon = createIcon({
   ),
 });
 
-export const SuccessIcon = createIcon({
+export const SuccessIcon = /*#__PURE__*/ createIcon({
   name: "Success",
   body: (
     <>
@@ -432,13 +432,19 @@ export const SuccessIcon = createIcon({
   ),
 });
 
+/** A timeline step that was passed without succeeding: a small outline dot (no check). */
+export const DotIcon = /*#__PURE__*/ createIcon({
+  name: "Dot",
+  body: <circle cx="12" cy="12" r="4.5" />,
+});
+
 /** Unmet requirement marker (hollow circle); paired with text, never color alone. */
-export const PendingIcon = createIcon({
+export const PendingIcon = /*#__PURE__*/ createIcon({
   name: "Pending",
   body: <circle cx="12" cy="12" r="7" strokeDasharray="2.5 2.5" />,
 });
 
-export const OfflineIcon = createIcon({
+export const OfflineIcon = /*#__PURE__*/ createIcon({
   name: "Offline",
   body: (
     <>
@@ -473,7 +479,7 @@ export function CoinIcon(props: IconProps) {
 }
 
 /** Eight-point khatam star used as the app mark in the top bar. */
-export const BrandMarkIcon = createIcon({
+export const BrandMarkIcon = /*#__PURE__*/ createIcon({
   name: "BrandMark",
   body: (
     <>

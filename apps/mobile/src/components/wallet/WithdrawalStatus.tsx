@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import type { ComponentType, ReactNode } from "react";
 import { iconSize, space } from "@bg/design-tokens";
 import type { WithdrawalStatus } from "@bg/protocol";
-import { CloseIcon, ErrorIcon, PendingIcon, SuccessIcon, type IconProps } from "@/components/icons";
+import { CloseIcon, ErrorIcon, PendingIcon, SuccessIcon, type IconProps, DotIcon } from "@/components/icons";
 import { tokensOf } from "@/theme/theme";
 
 // Withdrawal status chip and timeline (wallet.md WD-06, WD-07; P§6.2, P§13). Icon + text on every
@@ -69,6 +69,7 @@ const List = styled("ol")(({ theme }) => {
     "& [data-state='current'] .tl-icon": { color: t.warning },
     "& [data-state='stopped'] .tl-icon": { color: t.error },
     "& [data-state='neutral'] .tl-icon": { color: t.textSecondary },
+    "& [data-state='passed'] .tl-icon": { color: t.textSecondary },
   };
 });
 
@@ -76,7 +77,8 @@ export interface TimelineStep {
   key: string;
   label: string;
   detail?: ReactNode;
-  state: "done" | "current" | "stopped" | "neutral";
+  /** `passed`: a step that was left behind without succeeding (waiting, then rejected or cancelled). */
+  state: "done" | "current" | "stopped" | "neutral" | "passed";
 }
 
 const STEP_ICON: Record<TimelineStep["state"], ComponentType<IconProps>> = {
@@ -84,6 +86,7 @@ const STEP_ICON: Record<TimelineStep["state"], ComponentType<IconProps>> = {
   current: PendingIcon,
   stopped: ErrorIcon,
   neutral: CloseIcon,
+  passed: DotIcon,
 };
 
 export function WithdrawalTimeline({ steps, label }: { steps: TimelineStep[]; label: string }) {
