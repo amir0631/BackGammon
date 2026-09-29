@@ -28,6 +28,8 @@ def production_problems() -> list[str]:
     # Separate keys: a leaked user-token key must not also sign admin tokens (§12.1).
     if len(set(keys.values())) < len(keys):
         problems.append("DJANGO_SECRET_KEY, JWT_SIGNING_KEY and ADMIN_SECRET_KEY must all differ")
+    if not settings.ADMIN_2FA_REQUIRED:
+        problems.append("ADMIN_2FA_REQUIRED must be true (admin two-step sign-in, §12.1)")
     if not settings.SEED_ENCRYPTION_KEY:
         problems.append("SEED_ENCRYPTION_KEY must be set (match seeds are encrypted at rest, §6)")
     return problems

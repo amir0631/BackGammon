@@ -50,7 +50,7 @@ def admin_payload(admin: AdminUser) -> dict[str, Any]:
 class LoginSerializer(serializers.Serializer[Any]):
     username = serializers.CharField(max_length=40)
     password = serializers.CharField(max_length=128, trim_whitespace=False)
-    totp = serializers.CharField(max_length=10)
+    totp = serializers.CharField(max_length=10, required=False, allow_blank=True, default="")
 
 
 class LoginView(AdminView):
@@ -68,7 +68,10 @@ class LoginView(AdminView):
         ok = (
             admin is not None
             and admin.check_password(s.validated_data["password"])
-            and totp.verify(totp.decrypt(admin.totp_secret_encrypted), s.validated_data["totp"])
+            and (
+                not settings.ADMIN_2FA_REQUIRED
+                or totp.verify(totp.decrypt(admin.totp_secret_encrypted), s.validated_data["totp"])
+            )
         )
         if not ok or admin is None:
             lock = ratelimit.record_failure(
@@ -93,6 +96,15 @@ class LoginView(AdminView):
             samesite="Strict",
         )
         return response
+
+
+class LoginConfigView(AdminView):
+    """What the sign-in form must ask for (§12.1): the code field is hidden while 2FA is off."""
+
+    permission_classes = (AdminGate,)
+
+    def get(self, request: Request) -> Response:
+        return Response({"totp_required": settings.ADMIN_2FA_REQUIRED})
 
 
 class LogoutView(AdminView):

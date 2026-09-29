@@ -153,6 +153,8 @@ ADMIN_SECRET_KEY = env("ADMIN_SECRET_KEY", "") or SECRET_KEY
 ADMIN_COOKIE = "bga_session"
 ADMIN_SESSION_TTL_SECONDS = 8 * 3600
 ADMIN_ENFORCE_HOST = env_bool("ADMIN_ENFORCE_HOST", default=True)
+# Two-step sign-in (TOTP) for admins (§12.1). Off only for local or staging review; production refuses it.
+ADMIN_2FA_REQUIRED = env_bool("ADMIN_2FA_REQUIRED", default=True)
 ADMIN_IP_ALLOWLIST = [n.strip() for n in env("ADMIN_IP_ALLOWLIST", "").split(",") if n.strip()]
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},

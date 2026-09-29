@@ -64,6 +64,21 @@ class TestAdminAuth:
         assert cookie["httponly"] and cookie["samesite"] == "Strict" and not cookie["domain"]
         assert c.get("/api/v1/admin/me").status_code == 200
 
+    def test_two_step_can_be_switched_off_for_local_review(self, settings):
+        make_admin()
+        c = APIClient(HTTP_HOST=HOST)
+        assert c.get("/api/v1/admin/auth/config").json() == {"totp_required": True}
+        body = {"username": "boss", "password": PASSWORD}
+        assert c.post("/api/v1/admin/auth/login", body, format="json").status_code == 401
+        settings.ADMIN_2FA_REQUIRED = False
+        assert c.get("/api/v1/admin/auth/config").json() == {"totp_required": False}
+        assert c.post("/api/v1/admin/auth/login", body, format="json").status_code == 200
+        # The password is still checked.
+        bad = {"username": "boss", "password": "wrong"}
+        assert (
+            APIClient(HTTP_HOST=HOST).post("/api/v1/admin/auth/login", bad, format="json").status_code == 401
+        )
+
     def test_wrong_totp_is_rejected(self):
         make_admin()
         res = APIClient(HTTP_HOST=HOST).post(

@@ -8,6 +8,7 @@ GOOD = {
     "JWT_SIGNING_KEY": "b" * 40,
     "ADMIN_SECRET_KEY": "c" * 40,
     "SEED_ENCRYPTION_KEY": "k",
+    "ADMIN_2FA_REQUIRED": True,
 }
 
 
@@ -26,6 +27,7 @@ def test_production_refuses_insecure_configuration(settings):
     settings.JWT_SIGNING_KEY = settings.SECRET_KEY  # the default fallback
     settings.ADMIN_SECRET_KEY = "change-me"
     settings.SEED_ENCRYPTION_KEY = ""
+    settings.ADMIN_2FA_REQUIRED = False
     problems = " ".join(checks.production_problems())
     for fragment in (
         "DJANGO_DEBUG",
@@ -33,6 +35,7 @@ def test_production_refuses_insecure_configuration(settings):
         "ADMIN_SECRET_KEY must be",
         "must all differ",
         "SEED_ENCRYPTION_KEY",
+        "ADMIN_2FA_REQUIRED",
     ):
         assert fragment in problems
     assert {e.id for e in checks.check_production()} == {"config.E001"}

@@ -418,6 +418,8 @@ export const api = {
   admin: {
     login: (username: string, password: string, totp: string) =>
       apiRequest<AdminMe>("/admin/auth/login", { method: "POST", body: { username, password, totp } }),
+    /** Whether sign-in asks for the two-step code (§12.1; off only on local or staging review). */
+    loginConfig: (o?: Opts) => apiRequest<{ totp_required: boolean }>("/admin/auth/config", o),
     logout: () => apiRequest<void>("/admin/auth/logout", { method: "POST" }),
     me: (o?: Opts) => apiRequest<AdminMe>("/admin/me", o),
     settings: (o?: Opts) => apiRequest<Paginated<AdminSetting>>("/admin/settings", o),

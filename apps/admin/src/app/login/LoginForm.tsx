@@ -35,9 +35,20 @@ export function LoginForm() {
   const [failure, setFailure] = useState<Failure | null>(null);
   const [failedOnce, setFailedOnce] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Assume the code is needed until the server says otherwise (the safe default).
+  const [totpRequired, setTotpRequired] = useState(true);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const lockedSeconds = failure?.kind === "locked" ? Math.max(0, Math.ceil((failure.until - now) / 1000)) : 0;
+  useEffect(() => {
+    const controller = new AbortController();
+    api.admin
+      .loginConfig({ signal: controller.signal })
+      .then((c) => setTotpRequired(c.totp_required))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
   useEffect(() => {
     if (failure?.kind !== "locked") return;
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -45,7 +56,7 @@ export function LoginForm() {
   }, [failure]);
 
   const normalizedCode = normalizeDigits(code).replace(/\D/g, "").slice(0, 6);
-  const complete = username.trim() !== "" && password !== "" && normalizedCode.length === 6;
+  const complete = username.trim() !== "" && password !== "" && (!totpRequired || normalizedCode.length === 6);
   const canSubmit = complete && !busy && lockedSeconds === 0 && (typeof navigator === "undefined" || navigator.onLine);
 
   async function submit(event: FormEvent) {
@@ -54,7 +65,7 @@ export function LoginForm() {
     setBusy(true);
     setFailure(null);
     try {
-      const me = await api.admin.login(username.trim(), password, normalizedCode);
+      const me = await api.admin.login(username.trim(), password, totpRequired ? normalizedCode : "");
       signedIn(me);
       router.replace(safeNext(params.get("next")));
     } catch (error) {
@@ -131,16 +142,18 @@ export function LoginForm() {
               },
             }}
           />
-          <TextField
-            label={t("admin.login.totp")}
-            value={code}
-            onChange={(e) => setCode(normalizeDigits(e.target.value).replace(/\D/g, "").slice(0, 6))}
-            autoComplete="one-time-code"
-            helperText={failedOnce ? t("admin.login.totpHelp") : undefined}
-            slotProps={{
-              htmlInput: { dir: "ltr", inputMode: "numeric", maxLength: 6, style: { letterSpacing: "0.4em" } },
-            }}
-          />
+          {totpRequired && (
+            <TextField
+              label={t("admin.login.totp")}
+              value={code}
+              onChange={(e) => setCode(normalizeDigits(e.target.value).replace(/\D/g, "").slice(0, 6))}
+              autoComplete="one-time-code"
+              helperText={failedOnce ? t("admin.login.totpHelp") : undefined}
+              slotProps={{
+                htmlInput: { dir: "ltr", inputMode: "numeric", maxLength: 6, style: { letterSpacing: "0.4em" } },
+              }}
+            />
+          )}
           <Box aria-live="assertive">
             {failure?.kind === "invalid" && <Alert severity="error">{t("errors.admin.invalidCredentials")}</Alert>}
             {failure?.kind === "locked" && lockedSeconds > 0 && (
