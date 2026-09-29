@@ -67,6 +67,21 @@ class TestPurchase:
         assert services.reconcile(date.today()) == []
         assert invariants.check() == []
 
+    def test_sandbox_never_pays_in_production(self, settings):
+        registry.set_value("payments.enabled", True)
+        user = make_user()
+        c = client(user)
+        package = c.get("/api/v1/shop/packages").json()["results"][1]
+        page = checkout(c, {"package_id": package["id"]}).json()["redirect_url"].split("m.localhost")[1]
+        settings.APP_ENV = "production"
+        # Even with purchases switched on, the free sandbox can't be reached or verified.
+        res = checkout(c, {"package_id": package["id"]}, key="k2")
+        assert res.status_code == 502 and res.json()["code"] == "PAYMENT_GATEWAY_UNAVAILABLE"
+        assert c.get(page).status_code == 404
+        assert c.post(page, {"action": "pay"}).status_code == 404
+        assert Wallet.objects.get(user=user).balance == 0
+        assert not LedgerEntry.objects.filter(type="purchase").exists()
+
     def test_cancelled_payment_credits_nothing(self):
         registry.set_value("payments.enabled", True)
         user = make_user()

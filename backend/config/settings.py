@@ -143,13 +143,13 @@ CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = SECURE_COOKIES
 
 # Player auth (CLAUDE.md §3): access JWT 15 min, refresh 30 days, HttpOnly cookies.
-JWT_SIGNING_KEY = env("JWT_SIGNING_KEY", SECRET_KEY)
+JWT_SIGNING_KEY = env("JWT_SIGNING_KEY", "") or SECRET_KEY  # empty in .env: fall back (dev only)
 ACCESS_TOKEN_TTL_SECONDS = 15 * 60
 REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 3600
 ACCESS_COOKIE = "bg_access"
 REFRESH_COOKIE = "bg_refresh"
 # Admin panel (CLAUDE.md §12.1): separate host-only cookie, TOTP, optional IP allowlist.
-ADMIN_SECRET_KEY = env("ADMIN_SECRET_KEY", SECRET_KEY)
+ADMIN_SECRET_KEY = env("ADMIN_SECRET_KEY", "") or SECRET_KEY
 ADMIN_COOKIE = "bga_session"
 ADMIN_SESSION_TTL_SECONDS = 8 * 3600
 ADMIN_ENFORCE_HOST = env_bool("ADMIN_ENFORCE_HOST", default=True)

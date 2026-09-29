@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 
 from accounts.models import User
 from payments import services
+from payments.gateways import sandbox_allowed
 from payments.gateways.sandbox import SandboxGateway
 from payments.models import Payment
 from settingsapp import registry
@@ -103,9 +104,11 @@ def callback(request: HttpRequest) -> HttpResponse:
 
 def sandbox_page(request: HttpRequest, authority: str) -> HttpResponse:
     """A stand-in for the bank's page (sandbox gateway only; the real page belongs to the PSP)."""
+    if settings.PAYMENT_GATEWAY != "sandbox" or not sandbox_allowed():
+        return HttpResponse(status=404)
     gateway = SandboxGateway()
     data = gateway.get(authority)
-    if settings.PAYMENT_GATEWAY != "sandbox" or data is None:
+    if data is None:
         return HttpResponse(status=404)
     if request.method == "POST":
         gateway.decide(authority, paid=request.POST.get("action") == "pay")
