@@ -596,6 +596,9 @@ def after_play(live: Live, side: int, play: Play, result: GameResult | None, aut
     _stop_clock(live)
     _cancel(live, "auto")
     live.auto = None
+    if result is None:
+        # The next turn's clock starts first, so the event carries its actor and deadline (§5.4).
+        start_turn(live)
     emit(
         live,
         "turn.moved",
@@ -612,8 +615,6 @@ def after_play(live: Live, side: int, play: Play, result: GameResult | None, aut
     _record_move(live, side, moves=play.as_lists(), position=play.position.encode())
     if result is not None:
         game_over(live, result)
-    else:
-        start_turn(live)
 
 
 def start_turn(live: Live) -> None:
@@ -754,9 +755,9 @@ def _on_turn_timeout(live: Live) -> None:
 def _pass(live: Live, side: int) -> None:
     live.engine.pass_turn(side)
     live.auto = None
+    start_turn(live)  # before the event, so it carries the next turn's clock
     emit(live, "turn.passed", {"player": side, "clock": clock_payload(live)}, side)
     _record_move(live, side)
-    start_turn(live)
 
 
 def _on_auto(live: Live) -> None:

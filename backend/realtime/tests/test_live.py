@@ -75,6 +75,8 @@ class TestFlow:
         assert live.handle(mid, mover.id, "turn.move", {"moves": legal[0]}, seq(mid)) == []
         moved = last(published, "turn.moved")["payload"]
         assert moved["player"] == side and moved["moves"] == legal[0] and moved["auto"] is None
+        # The event carries the next turn's running clock, so the roller sees their deadline (§5.4).
+        assert moved["clock"]["actor"] == 1 - side and moved["clock"]["deadline"] is not None
         other = user_of(1 - side, a, b)
         # A stale seq is ignored and answered with the current state.
         replies = live.handle(mid, other.id, "turn.roll", {}, seq(mid) - 1)
