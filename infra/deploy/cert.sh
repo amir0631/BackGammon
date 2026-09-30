@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 ENV_FILE=${ENV_FILE:-/opt/backgammon/.env}
 
-env_get() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '' || true; }
+env_get() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '\r' || true; }
 DOMAIN=$(env_get BASE_DOMAIN)
 EMAIL=$(env_get ACME_EMAIL)
 [ -n "$DOMAIN" ] || { echo "BASE_DOMAIN missing in $ENV_FILE" >&2; exit 1; }

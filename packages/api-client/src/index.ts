@@ -76,9 +76,22 @@ import type {
   Withdrawal,
 } from "@bg/protocol";
 
+/**
+ * A random v4 UUID. `crypto.randomUUID` exists only in secure contexts (HTTPS), so plain-HTTP staging
+ * builds it from `getRandomValues`, which browsers offer everywhere.
+ */
+function randomUuid(): string {
+  if (typeof globalThis.crypto.randomUUID === "function") return globalThis.crypto.randomUUID();
+  const b = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6]! & 0x0f) | 0x40;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const hex = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 /** A fresh Idempotency-Key for one user action; reuse it when retrying that same action. */
 export function newIdempotencyKey(): string {
-  return globalThis.crypto.randomUUID();
+  return randomUuid();
 }
 
 export const API_PREFIX = "/api/v1";
@@ -174,8 +187,8 @@ function currentDeviceId(): string | null {
     const stored = globalThis.localStorage?.getItem(DEVICE_KEY);
     if (stored) {
       deviceId = stored;
-    } else if (globalThis.localStorage && globalThis.crypto?.randomUUID) {
-      deviceId = globalThis.crypto.randomUUID();
+    } else if (globalThis.localStorage && globalThis.crypto) {
+      deviceId = randomUuid();
       globalThis.localStorage.setItem(DEVICE_KEY, deviceId);
     }
   } catch {

@@ -71,4 +71,5 @@ DEPLOY_TARGET=root@<server-ip> infra/deploy/deploy.sh   # deploys the committed 
 
 It uploads `git archive HEAD` to `/opt/backgammon/src`, issues the certificate if missing, builds the images one
 at a time, runs migrations and starts the stack. A daily cron renews the certificate. To move to another domain,
-change `BASE_DOMAIN` in the server `.env` and deploy again.
+change `BASE_DOMAIN` in the server `.env` and deploy again. With `URL_SCHEME=http` the server skips TLS and
+serves plain HTTP on port 80 (staging preview only: no PWA install, no dice verification, no secure cookies).
