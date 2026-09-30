@@ -1,0 +1,89 @@
+# Server (TLS) variant of templates/default.conf.template, mounted by docker-compose.server.yml.
+# Same server blocks and locations; keep the two files in sync. Port 80 only answers ACME challenges
+# and redirects to HTTPS. Certificate: one Let's Encrypt certificate named ${BASE_DOMAIN} that covers
+# the root, www., app., m. and admin. (infra/deploy/cert.sh).
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ""      close;
+}
+
+# Re-resolve container names through Docker DNS, so recreated containers (new IPs after a
+# deploy) are picked up without restarting nginx. Needs nginx >= 1.27.3.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+upstream backend { zone backend 64k; server backend:8000 resolve; }
+upstream mobile  { zone mobile 64k;  server mobile:3000 resolve; }
+upstream admin   { zone admin 64k;   server admin:3001 resolve; }
+
+server_tokens off;
+client_max_body_size 2m;
+
+ssl_certificate     /etc/letsencrypt/live/${BASE_DOMAIN}/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/${BASE_DOMAIN}/privkey.pem;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 1d;
+
+# Unknown hosts get nothing.
+server {
+    listen 80 default_server;
+    return 444;
+}
+server {
+    listen 443 ssl default_server;
+    ssl_reject_handshake on;
+}
+
+# Port 80: ACME HTTP-01 challenges, everything else to HTTPS.
+server {
+    listen 80;
+    server_name ${BASE_DOMAIN} www.${BASE_DOMAIN} app.${BASE_DOMAIN} m.${BASE_DOMAIN} admin.${BASE_DOMAIN};
+
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+# m. — mobile surface and PWA (serves every device in Phase 1).
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name m.${BASE_DOMAIN};
+    include /etc/nginx/snippets/security.conf;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location /api/v1/admin/ { return 404; }  # admin API only on admin. (CLAUDE.md §12.1)
+    location /api/ { include /etc/nginx/snippets/proxy.conf; proxy_pass http://backend; }
+    location /ws   { include /etc/nginx/snippets/websocket.conf; proxy_pass http://backend; }
+    location /     { include /etc/nginx/snippets/proxy.conf; proxy_pass http://mobile; }
+}
+
+# admin. — admin panel, separate host-only cookies (CLAUDE.md §12.1).
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name admin.${BASE_DOMAIN};
+    include /etc/nginx/snippets/security.conf;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location /api/ { include /etc/nginx/snippets/proxy.conf; proxy_pass http://backend; }
+    # Hidden spectating only: the backend accepts nothing but spectate.join/leave from admin sockets.
+    location /ws   { include /etc/nginx/snippets/websocket.conf; proxy_pass http://backend; }
+    location /     { include /etc/nginx/snippets/proxy.conf; proxy_pass http://admin; }
+}
+
+# app. and root — Phase 1 (DESKTOP_ENABLED=false): redirect every page to the same path and
+# query on m. (CLAUDE.md §11.0). API and WebSocket are never redirected.
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name app.${BASE_DOMAIN} ${BASE_DOMAIN} www.${BASE_DOMAIN};
+    include /etc/nginx/snippets/security.conf;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location /api/v1/admin/ { return 404; }  # admin API only on admin. (CLAUDE.md §12.1)
+    location /api/ { include /etc/nginx/snippets/proxy.conf; proxy_pass http://backend; }
+    location /ws   { include /etc/nginx/snippets/websocket.conf; proxy_pass http://backend; }
+    location /     { return 302 https://m.${BASE_DOMAIN}$request_uri; }
+}

@@ -1,0 +1,14 @@
+# Server override (CLAUDE.md §22.2): TLS on nginx with Let's Encrypt certificates from the host.
+# docker compose -f infra/docker-compose.yml -f infra/docker-compose.server.yml --env-file .env up -d --build
+# Issue the certificate first with infra/deploy/cert.sh; infra/deploy/deploy.sh does both.
+
+services:
+  nginx:
+    volumes: !override
+      - ./nginx/templates-tls:/etc/nginx/templates:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    ports: !override
+      - "80:80"
+      - "443:443"

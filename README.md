@@ -59,4 +59,16 @@ docker compose -f infra/docker-compose.yml --env-file .env run --rm \
 
 ## Deployment
 
-Local first; the server is configured from `Arvan.txt` once provided (CLAUDE.md §22.2). Never commit `.env` or `Arvan.txt`.
+Local first, then the server (CLAUDE.md §22.2). Never commit `.env` or `Arvan.txt`.
+
+The server runs the same Compose stack plus [infra/docker-compose.server.yml](infra/docker-compose.server.yml)
+(TLS on nginx, Let's Encrypt certificate for the root, `www.`, `app.`, `m.` and `admin.`). Its environment lives
+only at `/opt/backgammon/.env` on the server (same keys as `.env.example`, with `URL_SCHEME=https`).
+
+```sh
+DEPLOY_TARGET=root@<server-ip> infra/deploy/deploy.sh   # deploys the committed HEAD
+```
+
+It uploads `git archive HEAD` to `/opt/backgammon/src`, issues the certificate if missing, builds the images one
+at a time, runs migrations and starts the stack. A daily cron renews the certificate. To move to another domain,
+change `BASE_DOMAIN` in the server `.env` and deploy again.
